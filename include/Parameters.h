@@ -3,6 +3,7 @@
 
 #define param_confidence_tol						0.7
 #define param_min_num_confidence_tol_sample_points	0.5
+#define param_num_neighbors							8
 #define param_neighbor_distance						0.1
 #define param_min_num_cuboid_sample_points			10
 #define param_min_cuboid_bbox_size					0.1

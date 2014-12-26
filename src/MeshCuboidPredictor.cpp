@@ -66,7 +66,6 @@ Real MeshCuboidPredictor::get_pair_potential(
 	return potential;
 }
 
-/*
 void MeshCuboidPredictor::get_single_quadratic_form(
 	MeshCuboid *_cuboid, const unsigned int _cuboid_index,
 	Eigen::MatrixXd &_quadratic_term, Eigen::VectorXd &_linear_term, double& _constant_term) const
@@ -79,167 +78,6 @@ void MeshCuboidPredictor::get_single_quadratic_form(
 
 	unsigned int num_sample_points = _cuboid->num_sample_points();
 	unsigned int num_cuboid_surface_points = _cuboid->num_cuboid_surface_points();
-	assert(num_cuboid_surface_points > 0);
-
-	const unsigned int mat_size = _quadratic_term.cols();
-
-
-	// X: sample points, Y: cuboid surface points, Z: occlusion test points.
-	unsigned int num_X_points = num_sample_points;
-	unsigned int num_Y_points = num_cuboid_surface_points;
-
-	if (num_X_points == 0 || num_Y_points == 0)
-		return;
-
-	Eigen::MatrixXd X_points(3, num_X_points);
-	Eigen::MatrixXd Y_points(3, num_Y_points);
-	Eigen::MatrixXd Y_normals(3, num_Y_points);
-	Eigen::MatrixXd Y_coeffs(MeshCuboid::k_num_corners, num_Y_points);
-	Eigen::VectorXd Y_visibilities(num_Y_points);
-
-	for (unsigned int point_index = 0; point_index < num_X_points; ++point_index)
-		for (unsigned int i = 0; i < 3; ++i)
-			X_points.col(point_index)(i) = _cuboid->get_sample_points()[point_index]->point_[i];
-	
-	for (unsigned int point_index = 0; point_index < num_Y_points; ++point_index)
-	{
-		for (unsigned int i = 0; i < 3; ++i)
-		{
-			Y_points.col(point_index)(i) = _cuboid->get_cuboid_surface_point(point_index)->point_[i];
-			Y_normals.col(point_index)(i) = _cuboid->get_cuboid_surface_point(point_index)->normal_[i];
-		}
-
-		for (unsigned int corner_index = 0; corner_index < MeshCuboid::k_num_corners; ++corner_index)
-		{
-			Y_coeffs.col(point_index)(corner_index) =
-				_cuboid->get_cuboid_surface_point(point_index)->corner_weights_[corner_index];
-		}
-
-		Y_normals.col(point_index).normalize();
-		Y_visibilities(point_index) = _cuboid->get_cuboid_surface_point(point_index)->visibility_;
-	}
-
-
-#ifdef DEBUG_TEST
-	MeshCuboidAttributes attribute;
-	attribute.compute_attributes(_cuboid);
-	Eigen::VectorXd x = attribute.get_attributes();
-
-	for (unsigned int point_index = 0; point_index < num_Y_points; ++point_index)
-	{
-		Eigen::Vector3d Y_point = Y_points.col(point_index);
-		Eigen::VectorXd Y_coeff = Y_coeffs.col(point_index);
-		assert(Y_coeff.size() == MeshCuboid::k_num_corners);
-
-		Eigen::MatrixXd A0(3, MeshCuboidAttributes::k_num_attributes);
-		A0.setZero();
-
-		for (unsigned int corner_index = 0; corner_index < MeshCuboid::k_num_corners; ++corner_index)
-		{
-			for (unsigned int i = 0; i < 3; ++i)
-				A0.col(MeshCuboidAttributes::k_corner_index + 3 * corner_index + i)(i) =
-				Y_coeff(corner_index);
-		}
-
-		Real error = std::abs(((A0 * x) - Y_point).norm());
-		CHECK_NUMERICAL_ERROR(__FUNCTION__, error);
-	}
-#endif
-
-	ANNpointArray X_ann_points = NULL;
-	ANNkd_tree* X_ann_kd_tree = ICP::create_kd_tree(X_points, X_ann_points);
-	assert(X_ann_kd_tree);
-
-	ANNpointArray Y_ann_points = NULL;
-	ANNkd_tree* Y_ann_kd_tree = ICP::create_kd_tree(Y_points, Y_ann_points);
-	assert(Y_ann_kd_tree);
-
-	Eigen::MatrixXd all_X_points(3, num_X_points + num_Y_points);
-	Eigen::MatrixXd all_Y_coeffs(MeshCuboid::k_num_corners, num_X_points + num_Y_points);
-	Eigen::VectorXd all_weights(num_X_points + num_Y_points);
-
-
-	// X -> Y.
-	Eigen::MatrixXd closest_Y_coeffs;
-	ICP::get_closest_points(X_points, Y_coeffs, closest_Y_coeffs, Y_ann_kd_tree);
-	assert(closest_Y_coeffs.cols() == num_X_points);
-
-	all_X_points.block(0, 0, all_X_points.rows(), num_X_points) = X_points;
-	all_Y_coeffs.block(0, 0, all_Y_coeffs.rows(), num_X_points) = closest_Y_coeffs;
-	all_weights.segment(0, num_X_points) = Eigen::VectorXd::Ones(num_X_points);
-
-
-	// Y -> X.
-	Eigen::MatrixXd closest_X_points;
-	ICP::get_closest_points(Y_points, X_points, closest_X_points, X_ann_kd_tree);
-	assert(closest_X_points.cols() == num_Y_points);
-
-	all_X_points.block(0, num_X_points, all_X_points.rows(), num_Y_points) = closest_X_points;
-	all_Y_coeffs.block(0, num_X_points, all_Y_coeffs.rows(), num_Y_points) = Y_coeffs;
-	all_weights.segment(num_X_points, num_Y_points) = Y_visibilities;
-
-
-	if (X_ann_points) annDeallocPts(X_ann_points);
-	if (Y_ann_points) annDeallocPts(Y_ann_points);
-	delete X_ann_kd_tree;
-	delete Y_ann_kd_tree;
-
-
-	assert(_quadratic_term.rows() == mat_size);
-	assert(_linear_term.rows() == mat_size);
-	assert(_cuboid_index * MeshCuboidAttributes::k_num_attributes <= mat_size);
-
-	for (unsigned int point_index = 0; point_index < num_X_points + num_Y_points; ++point_index)
-	{
-		Eigen::Vector3d X_point = all_X_points.col(point_index);
-		Eigen::VectorXd Y_coeff = all_Y_coeffs.col(point_index);
-		assert(Y_coeff.size() == MeshCuboid::k_num_corners);
-		double weight = all_weights(point_index);
-
-		Eigen::MatrixXd A0(3, MeshCuboidAttributes::k_num_attributes);
-		A0.setZero();
-
-		for (unsigned int corner_index = 0; corner_index < MeshCuboid::k_num_corners; ++corner_index)
-		{
-			for (unsigned int i = 0; i < 3; ++i)
-				A0.col(MeshCuboidAttributes::k_corner_index + 3 * corner_index + i)(i) =
-				Y_coeff(corner_index);
-		}
-
-		Eigen::Vector3d b = -X_point;
-
-		Eigen::MatrixXd A = Eigen::MatrixXd::Zero(3, mat_size);
-		unsigned int start_index = (_cuboid_index * MeshCuboidAttributes::k_num_attributes);
-		A.block<3, MeshCuboidAttributes::k_num_attributes>(0, start_index) = A0;
-
-		_quadratic_term = _quadratic_term + weight * (A.transpose() * A);
-		_linear_term = _linear_term + weight * (A.transpose() * b);
-		_constant_term = _constant_term + weight * (b.transpose() * b)(0);
-	}
-
-	if (all_weights.sum() > 0)
-	{
-		_quadratic_term = _quadratic_term / all_weights.sum();
-		_linear_term = _linear_term / all_weights.sum();
-		_constant_term = _constant_term / all_weights.sum();
-	}
-}
-*/
-
-void MeshCuboidPredictor::get_single_quadratic_form(
-	MeshCuboid *_cuboid, const unsigned int _cuboid_index,
-	Eigen::MatrixXd &_quadratic_term, Eigen::VectorXd &_linear_term, double& _constant_term) const
-{
-	assert(_cuboid);
-
-	_quadratic_term.setZero();
-	_linear_term.setZero();
-	_constant_term = 0;
-
-	unsigned int num_sample_points = _cuboid->num_sample_points();
-	unsigned int num_cuboid_surface_points = _cuboid->num_cuboid_surface_points();
-	assert(num_cuboid_surface_points > 0);
-
 	const unsigned int mat_size = _quadratic_term.cols();
 
 	// X: sample points, Y: cuboid surface points.
@@ -247,6 +85,17 @@ void MeshCuboidPredictor::get_single_quadratic_form(
 	unsigned int num_Y_points = num_cuboid_surface_points;
 
 	if (num_X_points == 0 || num_Y_points == 0)
+		return;
+
+	double sum_visibility = 0.0;
+	for (int cuboid_surface_point_index = 0;
+		cuboid_surface_point_index < num_cuboid_surface_points;
+		++cuboid_surface_point_index)
+	{
+		sum_visibility += _cuboid->get_cuboid_surface_point(cuboid_surface_point_index)->visibility_;
+	}
+
+	if (sum_visibility == 0)
 		return;
 
 	Eigen::MatrixXd all_X_points(3, num_X_points + num_Y_points);
@@ -258,8 +107,7 @@ void MeshCuboidPredictor::get_single_quadratic_form(
 
 
 	// Sample point -> Cuboid surface point.
-	for (int sample_point_index = 0;
-		sample_point_index < _cuboid->num_sample_points(); ++sample_point_index)
+	for (int sample_point_index = 0; sample_point_index < num_sample_points; ++sample_point_index)
 	{
 		int cuboid_surface_point_index =
 			_cuboid->get_sample_to_cuboid_surface_correspondences(sample_point_index);
@@ -283,7 +131,7 @@ void MeshCuboidPredictor::get_single_quadratic_form(
 		all_X_points.col(pair_index) = X_point;
 		all_Y_coeffs.col(pair_index) = Y_coeff;
 		all_Y_points.col(pair_index) = Y_point;
-		all_weights(pair_index) = 1;
+		all_weights(pair_index) = 1.0 / num_sample_points;
 
 		++pair_index;
 		//
@@ -291,7 +139,7 @@ void MeshCuboidPredictor::get_single_quadratic_form(
 
 	// Cuboid surface point -> Sample point.
 	for (int cuboid_surface_point_index = 0;
-		cuboid_surface_point_index < _cuboid->num_cuboid_surface_points();
+		cuboid_surface_point_index < num_cuboid_surface_points;
 		++cuboid_surface_point_index)
 	{
 		int sample_point_index =
@@ -313,12 +161,12 @@ void MeshCuboidPredictor::get_single_quadratic_form(
 			Y_coeff(corner_index) = _cuboid->get_cuboid_surface_point(
 			cuboid_surface_point_index)->corner_weights_[corner_index];
 
-		double Y_visibility = _cuboid->get_cuboid_surface_point(cuboid_surface_point_index)->visibility_;
+		double visibility = _cuboid->get_cuboid_surface_point(cuboid_surface_point_index)->visibility_;
 
 		all_X_points.col(pair_index) = X_point;
 		all_Y_coeffs.col(pair_index) = Y_coeff;
 		all_Y_points.col(pair_index) = Y_point;
-		all_weights(pair_index) = Y_visibility;
+		all_weights(pair_index) = visibility / sum_visibility;
 
 		++pair_index;
 		//
@@ -368,13 +216,6 @@ void MeshCuboidPredictor::get_single_quadratic_form(
 		_linear_term = _linear_term + weight * (A.transpose() * b);
 		_constant_term = _constant_term + weight * (b.transpose() * b)(0);
 	}
-
-	if (all_weights.sum() > 0)
-	{
-		_quadratic_term = _quadratic_term / all_weights.sum();
-		_linear_term = _linear_term / all_weights.sum();
-		_constant_term = _constant_term / all_weights.sum();
-	}
 }
 
 Real MeshCuboidPredictor::get_pair_quadratic_form(
@@ -398,7 +239,7 @@ Real MeshCuboidPredictor::get_pair_quadratic_form(
 }
 
 MeshCuboidCondNormalRelationPredictor::MeshCuboidCondNormalRelationPredictor(
-	const std::vector<std::vector<MeshCuboidCondNormalRelations>> &_relations)
+	const std::vector< std::vector<MeshCuboidCondNormalRelations> > &_relations)
 	: MeshCuboidPredictor(_relations.size())
 	, relations_(_relations)
 {
@@ -672,7 +513,7 @@ void MeshCuboidCondNormalRelationPredictor::get_conditional_pair_quadratic_form(
 }
 
 MeshCuboidJointNormalRelationPredictor::MeshCuboidJointNormalRelationPredictor(
-	const std::vector<std::vector<MeshCuboidJointNormalRelations>> &_relations)
+	const std::vector< std::vector<MeshCuboidJointNormalRelations> > &_relations)
 	: MeshCuboidPredictor(_relations.size())
 	, relations_(_relations)
 {
@@ -859,7 +700,7 @@ Real MeshCuboidJointNormalRelationPredictor::get_pair_quadratic_form(
 
 /*
 MeshCuboidPCARelationPredictor::MeshCuboidPCARelationPredictor(
-	const std::vector<std::vector<MeshCuboidPCARelations>> &_relations)
+	const std::vector< std::vector<MeshCuboidPCARelations> > &_relations)
 	: MeshCuboidPredictor(_relations.size())
 	, relations_(_relations)
 {
@@ -1058,7 +899,7 @@ Real MeshCuboidPCARelationPredictor::get_pair_quadratic_form(
 }
 
 MeshCuboidCCARelationPredictor::MeshCuboidCCARelationPredictor(
-	const std::vector<std::vector<std::vector<MeshCuboidCCARelations>>>& _relations)
+	const std::vector< std::vector< std::vector<MeshCuboidCCARelations> > >& _relations)
 	: MeshCuboidPredictor(_relations.size())
 	, relations_(_relations)
 {
@@ -1124,7 +965,7 @@ Real MeshCuboidCCARelationPredictor::get_pair_potential(
 
 MeshCuboidManualRelationPredictor::MeshCuboidManualRelationPredictor(
 	const std::vector<MeshCuboidStats> &_single_stats,
-	const std::vector<std::vector<MeshCuboidStats>> &_pair_stats)
+	const std::vector< std::vector<MeshCuboidStats> > &_pair_stats)
 	: MeshCuboidPredictor(_single_stats.size())
 	, single_stats_(_single_stats)
 	, pair_stats_(_pair_stats)

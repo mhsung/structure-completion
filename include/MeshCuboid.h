@@ -155,7 +155,7 @@ public:
 	std::pair<MyMesh::Normal, MyMesh::Point> get_bbox_faces(const unsigned int _face_index,
 		MyMesh::Normal *_axis_direction = NULL)const;
 
-	std::vector<std::pair<MyMesh::Normal, MyMesh::Point>> get_bbox_faces()const;
+	std::vector< std::pair<MyMesh::Normal, MyMesh::Point> > get_bbox_faces()const;
 
 	Real get_bbox_volume()const;
 
@@ -209,10 +209,13 @@ public:
 		const Real _radius,
 		const std::vector<MeshSamplePoint *>& _all_sample_points);
 
+	void update_point_correspondences();
+
 	// NOTE:
 	// Do not use corner points, but use only center, size, and axes.
-	Eigen::Matrix<bool, 1, Eigen::Dynamic>
-	is_point_included(const Eigen::MatrixXd& _points);
+	// The distance becomes less than zero when the point is inside the cuboid.
+	void points_to_cuboid_distances(const Eigen::MatrixXd& _points,
+		Eigen::VectorXd &_distances);
 
 	void print_cuboid()const;
 
@@ -235,8 +238,6 @@ protected:
 	void compute_axis_aligned_bbox();
 
 	void compute_oriented_bbox();
-
-	void compute_point_correspondences();
 
 	void create_sub_cuboids(const Real _object_diameter, ANNkd_tree* _kd_tree, std::vector<MeshCuboid *> &_sub_cuboids);
 

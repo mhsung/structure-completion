@@ -148,7 +148,7 @@ public:
 	MeshCuboidJointNormalRelations();
 	~MeshCuboidJointNormalRelations();
 
-	const unsigned int mat_size_ = 2 * MeshCuboidFeatures::k_num_features;
+	static const unsigned int k_mat_size = 2 * MeshCuboidFeatures::k_num_features;
 
 	bool load_joint_normal_csv(const char* _filename);
 	bool save_joint_normal_csv(const char* _filename);
@@ -177,7 +177,7 @@ public:
 	MeshCuboidPCARelations();
 	~MeshCuboidPCARelations();
 
-	const unsigned int mat_size_ = 2 * (MeshCuboidFeatures::k_num_features);
+	static const unsigned int k_mat_size = 2 * (MeshCuboidFeatures::k_num_features);
 
 	bool load_pca_csv(const char* _filename);
 	bool save_pca_csv(const char* _filename);

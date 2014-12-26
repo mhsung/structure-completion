@@ -120,7 +120,7 @@ public:
 	bool load_face_label(const char *_filename, bool _verbose = true);
 	bool save_face_label(const char *_filename, bool _verbose = true) const;
 
-	void get_all_label_faces(std::list<std::vector<FaceIndex>> &_all_label_faces) const;
+	void get_all_label_faces(std::list< std::vector<FaceIndex> > &_all_label_faces) const;
 	void set_vertex_label_from_face_label();
 
 	void clear_colors();
