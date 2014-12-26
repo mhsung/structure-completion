@@ -12,7 +12,7 @@ void update_cuboid_surface_points(
 	MeshCuboidStructure &_cuboid_structure,
 	const Real _modelview_matrix[16]);
 
-void reassign_sample_point_membership(
+void segment_sample_points(
 	MeshCuboidStructure &_cuboid_structure);
 
 void compute_labels_and_axes_configuration_potentials(
@@ -68,6 +68,6 @@ bool add_missing_cuboids(
 MeshCuboid *test_joint_normal_training(
 	const MeshCuboid *_cuboid_1, const MeshCuboid *_cuboid_2,
 	const LabelIndex _label_index_1, const LabelIndex _label_index_2,
-	const std::vector<std::vector<MeshCuboidJointNormalRelations>>& _relations);
+	const std::vector< std::vector<MeshCuboidJointNormalRelations> >& _relations);
 
 #endif	// _MESH_CUBOID_SOLVER_H_

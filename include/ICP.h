@@ -12,14 +12,20 @@
 #include <Eigen/Core>
 
 namespace ICP {
-	ANNkd_tree* create_kd_tree(const Eigen::MatrixXd &_points, ANNpointArray &_ann_points);
+	ANNkd_tree* create_kd_tree(
+		const Eigen::MatrixXd &_points,
+		ANNpointArray &_ann_points);
 
 	// _X_points: Query points.
 	// _Y_values: Data values.
 	// _closest_Y_value: Associated Y values for each X (based on the closest distance between X and Y).
 	// _Y_ann_kd_tree: KD-tree of Y points. If it is not given, it is created by considering _Y as Y points.
-	void get_closest_points(const Eigen::MatrixXd &_X_points, const Eigen::MatrixXd &_Y_values,
-		Eigen::MatrixXd &_closest_Y_values, ANNkd_tree *_Y_ann_kd_tree = NULL);
+	template<typename T>
+	void get_closest_points(
+		ANNkd_tree *_data_ann_kd_tree,
+		const Eigen::MatrixXd &_query_points,
+		const Eigen::MatrixBase<T> &_data_values,
+		Eigen::MatrixBase<T> &_closest_data_values);
 
 	double compute_rigid_transformation(const Eigen::MatrixXd &_X, const Eigen::MatrixXd &_Y,
 		Eigen::Matrix3d &_rotation_mat, Eigen::Vector3d &_translation_vec);

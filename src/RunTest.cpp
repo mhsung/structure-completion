@@ -41,7 +41,7 @@ void MeshViewerWidget::run_test_initialize()
 	test_joint_normal_predictor_ = new MeshCuboidJointNormalRelationPredictor(joint_normal_relations_);
 
 	all_cuboids_.clear();
-	for (std::vector<std::vector<MeshCuboid *>>::iterator it = cuboid_structure_.label_cuboids_.begin();
+	for (std::vector< std::vector<MeshCuboid *> >::iterator it = cuboid_structure_.label_cuboids_.begin();
 		it != cuboid_structure_.label_cuboids_.end(); ++it)
 		all_cuboids_.insert(all_cuboids_.end(), (*it).begin(), (*it).end());
 

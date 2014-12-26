@@ -572,7 +572,7 @@ void MeshViewerWidget::draw_openmesh(const std::string& _drawmode)
 		// Draw occlusion test points.
 		if (draw_occlusion_test_points_)
 		{
-			for (std::vector<std::pair<Mesh::Point, Real>>::iterator it = occlusion_test_points_.begin();
+			for (std::vector< std::pair<Mesh::Point, Real> >::iterator it = occlusion_test_points_.begin();
 				it != occlusion_test_points_.end(); ++it)
 			{
 				GLdouble *point = &(*it).first[0];
@@ -592,36 +592,43 @@ void MeshViewerWidget::draw_openmesh(const std::string& _drawmode)
 		}
 		*/
 
+		bool draw_all_labels = (cuboid_structure_.query_label_index_ ==
+			cuboid_structure_.label_cuboids_.size());
+
 		// Draw sample points (Black).
-		for (std::vector<MeshSamplePoint *>::iterator it = cuboid_structure_.sample_points_.begin();
-			it != cuboid_structure_.sample_points_.end(); it++)
+		if (draw_all_labels)
 		{
-			GLdouble *point = &(*it)->point_[0];
-
-			Real radius = 1.0;
-			if (cuboid_structure_.query_label_index_ < cuboid_structure_.num_labels())
+			for (std::vector<MeshSamplePoint *>::iterator it = cuboid_structure_.sample_points_.begin();
+				it != cuboid_structure_.sample_points_.end(); it++)
 			{
-				assert((*it)->label_index_confidence_.size() == cuboid_structure_.num_labels());
-				radius = (*it)->label_index_confidence_[cuboid_structure_.query_label_index_];
-			}
+				GLdouble *point = &(*it)->point_[0];
 
-			radius = radius * (mesh_.get_object_diameter() * 0.002) * point_size_;
-			if (radius > 0)
-			{
-				glPushMatrix();
-				glTranslatef(point[0], point[1], point[2]);
-				black_color();
+				Real radius = 1.0;
+				if (cuboid_structure_.query_label_index_ < cuboid_structure_.num_labels())
+				{
+					assert((*it)->label_index_confidence_.size() == cuboid_structure_.num_labels());
+					radius = (*it)->label_index_confidence_[cuboid_structure_.query_label_index_];
+				}
 
-				glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
-				glutSolidSphere(radius, 20, 20);
-				glPopMatrix();
+				radius = radius * (mesh_.get_object_diameter() * 0.002) * point_size_;
+				if (radius > 0)
+				{
+					glPushMatrix();
+					glTranslatef(point[0], point[1], point[2]);
+					black_color();
+
+					glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
+					glutSolidSphere(radius, 20, 20);
+					glPopMatrix();
+				}
 			}
 		}
+
 		
 		// For each label.
 		for (LabelIndex label_index = 0; label_index < cuboid_structure_.label_cuboids_.size(); ++label_index)
 		{
-			// "mesh_.render_label_idx_ == mesh_.sample_point_num_labels_" draws all parts.
+			// "cuboid_structure_.query_label_index_ == cuboid_structure_.label_cuboids_.size()" draws all parts.
 			if (cuboid_structure_.query_label_index_ < cuboid_structure_.label_cuboids_.size())
 			{
 				if (label_index != cuboid_structure_.query_label_index_)
@@ -640,26 +647,27 @@ void MeshViewerWidget::draw_openmesh(const std::string& _drawmode)
 			{
 				MeshCuboid *cuboid = (*it);
 
-				/*
 				// Draw sample points (Black).
-				for (unsigned int point_index = 0; point_index < cuboid->num_sample_points(); ++point_index)
+				if (!draw_all_labels)
 				{
-					const MeshSamplePoint *sample_point = cuboid->get_sample_point(point_index);
-					const GLdouble *point = &(sample_point->point_[0]);
-
-					Real radius = (mesh_.get_object_diameter() * 0.002) * point_size_;
-					if (radius > 0)
+					for (unsigned int point_index = 0; point_index < cuboid->num_sample_points(); ++point_index)
 					{
-						glPushMatrix();
-						glTranslatef(point[0], point[1], point[2]);
-						black_color();
+						const MeshSamplePoint *sample_point = cuboid->get_sample_point(point_index);
+						const GLdouble *point = &(sample_point->point_[0]);
 
-						glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
-						glutSolidSphere(radius, 20, 20);
-						glPopMatrix();
+						Real radius = (mesh_.get_object_diameter() * 0.005) * point_size_;
+						if (radius > 0)
+						{
+							glPushMatrix();
+							glTranslatef(point[0], point[1], point[2]);
+							black_color();
+
+							glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
+							glutSolidSphere(radius, 20, 20);
+							glPopMatrix();
+						}
 					}
 				}
-				*/
 
 				// Draw cuboid surface points (Red).
 				for (unsigned int point_index = 0; point_index < cuboid->num_cuboid_surface_points(); ++point_index)

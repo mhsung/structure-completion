@@ -14,7 +14,6 @@ include_directories (
   ${LIBRARY_ROOT_PATH}/gflags-2.1.1/build/include
   ${LIBRARY_ROOT_PATH}/glew-1.9.0/include
   ${LIBRARY_ROOT_PATH}/glog-0.3.3/src/windows
-  ${LIBRARY_ROOT_PATH}/Trimesh
   ${LIBRARY_ROOT_PATH}/TRW_S-v1.3
   ${LIBRARY_ROOT_PATH}/wingsit_QP
 )
@@ -25,11 +24,6 @@ if (MSVC)
     "${CMAKE_CURRENT_SOURCE_DIR}/shader/*.h"
 	"${CMAKE_CURRENT_SOURCE_DIR}/shader/*.cpp")
   source_group("Shader Files" FILES ${SHADER_SOURCES})
-  
-  file (GLOB TRIMESH_SOURCES
-    "${LIBRARY_ROOT_PATH}/Trimesh/*.h"
-	"${LIBRARY_ROOT_PATH}/Trimesh/*.cc")
-  source_group("Trimesh" FILES ${TRIMESH_SOURCES})
   
   file (GLOB TRWS_SOURCES
     "${LIBRARY_ROOT_PATH}/TRW_S-v1.3/*.h"
@@ -44,7 +38,6 @@ endif()
 
 set (directories
   ${CMAKE_CURRENT_SOURCE_DIR}/shader
-  ${LIBRARY_ROOT_PATH}/Trimesh
   ${LIBRARY_ROOT_PATH}/TRW_S-v1.3
   ${LIBRARY_ROOT_PATH}/wingsit_QP
 )

@@ -104,7 +104,7 @@ public:
 
 	std::vector<MeshSamplePoint *> sample_points_;
 	std::vector<Label> labels_;
-	std::vector<std::vector<MeshCuboid *>> label_cuboids_;
+	std::vector< std::vector<MeshCuboid *> > label_cuboids_;
 
 	LabelIndex query_label_index_;
 

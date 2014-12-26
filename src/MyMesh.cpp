@@ -672,13 +672,13 @@ bool MyMesh::save_face_label(const char *_filename, bool _verbose) const
 	if (_verbose)
 		std::cout << "Saving " << _filename << "..." << std::endl;
 
-	std::list<std::vector<FaceIndex>> all_label_faces;
+	std::list< std::vector<FaceIndex> > all_label_faces;
 	get_all_label_faces(all_label_faces);
 
 	if (_verbose)
 		std::cout << "Number of face clusters: " << all_label_faces.size() << std::endl;
 
-	for (std::list<std::vector<FaceIndex>>::iterator l_it = all_label_faces.begin();
+	for (std::list< std::vector<FaceIndex> >::iterator l_it = all_label_faces.begin();
 		l_it != all_label_faces.end(); ++l_it)
 	{
 		std::vector<FaceIndex> &label_faces = (*l_it);
@@ -712,7 +712,7 @@ bool MyMesh::save_face_label(const char *_filename, bool _verbose) const
 	return true;
 }
 
-void MyMesh::get_all_label_faces(std::list<std::vector<FaceIndex>> &_all_label_faces) const
+void MyMesh::get_all_label_faces(std::list< std::vector<FaceIndex> > &_all_label_faces) const
 {
 	_all_label_faces.clear();
 
@@ -729,7 +729,7 @@ void MyMesh::get_all_label_faces(std::list<std::vector<FaceIndex>> &_all_label_f
 
 		bool is_new_label = true;
 
-		for (std::list<std::vector<FaceIndex>>::iterator c_it = _all_label_faces.begin();
+		for (std::list< std::vector<FaceIndex> >::iterator c_it = _all_label_faces.begin();
 			c_it != _all_label_faces.end(); ++c_it)
 		{
 			std::vector<FaceIndex> &face_cluster = (*c_it);
@@ -921,13 +921,13 @@ void MyMesh::set_face_label_colors(bool _verbose)
 {
 	mesh_coloring_option_ = FACE_COLOR;
 
-	std::list<std::vector<FaceIndex>> all_label_faces;
+	std::list< std::vector<FaceIndex> > all_label_faces;
 	get_all_label_faces(all_label_faces);
 
 	if (_verbose)
 		std::cout << "Number of labels: " << all_label_faces.size() << std::endl;
 
-	for (std::list<std::vector<FaceIndex>>::iterator l_it = all_label_faces.begin();
+	for (std::list< std::vector<FaceIndex> >::iterator l_it = all_label_faces.begin();
 		l_it != all_label_faces.end(); ++l_it)
 	{
 		std::vector<FaceIndex> &label_faces = (*l_it);

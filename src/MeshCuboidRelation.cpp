@@ -790,8 +790,8 @@ double MeshCuboidCondNormalRelations::compute_error(
 
 MeshCuboidJointNormalRelations::MeshCuboidJointNormalRelations()
 {
-	mean_ = Eigen::VectorXd::Zero(mat_size_);
-	inv_cov_ = Eigen::MatrixXd::Zero(mat_size_, mat_size_);
+	mean_ = Eigen::VectorXd::Zero(k_mat_size);
+	inv_cov_ = Eigen::MatrixXd::Zero(k_mat_size, k_mat_size);
 }
 
 MeshCuboidJointNormalRelations::~MeshCuboidJointNormalRelations()
@@ -819,7 +819,7 @@ bool MeshCuboidJointNormalRelations::load_joint_normal_csv(const char* _filename
 	strstr.clear();
 	strstr.str(buffer);
 
-	for (int j = 0; j < mat_size_; ++j)
+	for (int j = 0; j < k_mat_size; ++j)
 	{
 		if (strstr.eof())
 		{
@@ -833,7 +833,7 @@ bool MeshCuboidJointNormalRelations::load_joint_normal_csv(const char* _filename
 		mean_(j) = atof(token.c_str());
 	}
 
-	for (int i = 0; i < mat_size_; ++i)
+	for (int i = 0; i < k_mat_size; ++i)
 	{
 		if (file.eof())
 		{
@@ -846,7 +846,7 @@ bool MeshCuboidJointNormalRelations::load_joint_normal_csv(const char* _filename
 		strstr.clear();
 		strstr.str(buffer);
 
-		for (int j = 0; j < mat_size_; ++j)
+		for (int j = 0; j < k_mat_size; ++j)
 		{
 			if (strstr.eof())
 			{
@@ -919,7 +919,7 @@ bool MeshCuboidJointNormalRelations::load_joint_normal_dat(const char* _filename
 	rows = 0, cols = 0;
 	file.read((char*)(&rows), sizeof(int16_t));
 	file.read((char*)(&cols), sizeof(int16_t));
-	assert(static_cast<int>(rows) == mat_size_);
+	assert(static_cast<int>(rows) == k_mat_size);
 	assert(static_cast<int>(cols) == 1);
 	mean_.resize(rows);
 	file.read((char *)mean_.data(), rows*cols*sizeof(Eigen::MatrixXd::Scalar));
@@ -927,8 +927,8 @@ bool MeshCuboidJointNormalRelations::load_joint_normal_dat(const char* _filename
 	rows = 0, cols = 0;
 	file.read((char*)(&rows), sizeof(int16_t));
 	file.read((char*)(&cols), sizeof(int16_t));
-	assert(static_cast<int>(rows) == mat_size_);
-	assert(static_cast<int>(cols) == mat_size_);
+	assert(static_cast<int>(rows) == k_mat_size);
+	assert(static_cast<int>(cols) == k_mat_size);
 	inv_cov_.resize(rows, cols);
 	file.read((char *)inv_cov_.data(), rows*cols*sizeof(Eigen::MatrixXd::Scalar));
 
@@ -1000,8 +1000,8 @@ double MeshCuboidJointNormalRelations::compute_error(
 /*
 MeshCuboidPCARelations::MeshCuboidPCARelations()
 {
-	mean_ = Eigen::VectorXd::Zero(mat_size_);
-	pca_bases_ = Eigen::MatrixXd::Zero(mat_size_, mat_size_);
+	mean_ = Eigen::VectorXd::Zero(k_mat_size);
+	pca_bases_ = Eigen::MatrixXd::Zero(k_mat_size, k_mat_size);
 }
 
 MeshCuboidPCARelations::~MeshCuboidPCARelations()
@@ -1029,7 +1029,7 @@ bool MeshCuboidPCARelations::load_pca_csv(const char* _filename)
 	strstr.clear();
 	strstr.str(buffer);
 
-	for (int j = 0; j < mat_size_; ++j)
+	for (int j = 0; j < k_mat_size; ++j)
 	{
 		if (strstr.eof())
 		{
@@ -1041,7 +1041,7 @@ bool MeshCuboidPCARelations::load_pca_csv(const char* _filename)
 		mean_(j) = atof(token.c_str());
 	}
 
-	for (int i = 0; i < mat_size_; ++i)
+	for (int i = 0; i < k_mat_size; ++i)
 	{
 		if (file.eof())
 		{
@@ -1054,7 +1054,7 @@ bool MeshCuboidPCARelations::load_pca_csv(const char* _filename)
 		strstr.clear();
 		strstr.str(buffer);
 
-		for (int j = 0; j < mat_size_; ++j)
+		for (int j = 0; j < k_mat_size; ++j)
 		{
 			if (strstr.eof())
 			{

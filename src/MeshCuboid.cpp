@@ -246,6 +246,8 @@ MeshCuboid& MeshCuboid::operator=(const MeshCuboid& _other)
 		MeshCuboidSurfacePoint *cuboid_surface_point = new MeshCuboidSurfacePoint(**it);
 		this->cuboid_surface_points_.push_back(cuboid_surface_point);
 	}
+
+	return (*this);
 }
 
 MeshCuboid::~MeshCuboid()
@@ -400,10 +402,10 @@ MeshCuboid::get_bbox_faces(const unsigned int _face_index,
 	return std::make_pair(face_normal, face_point);
 }
 
-std::vector<std::pair<MyMesh::Normal, MyMesh::Point>> MeshCuboid::get_bbox_faces() const
+std::vector< std::pair<MyMesh::Normal, MyMesh::Point> > MeshCuboid::get_bbox_faces() const
 {
 	const unsigned int num_faces = 6;
-	std::vector<std::pair<MyMesh::Normal, MyMesh::Point>> bbox_faces(num_faces);
+	std::vector< std::pair<MyMesh::Normal, MyMesh::Point> > bbox_faces(num_faces);
 
 	for (unsigned int face_index = 0; face_index < num_faces; ++face_index)
 		bbox_faces[face_index] = get_bbox_faces(face_index);
@@ -739,9 +741,9 @@ void MeshCuboid::create_random_points_on_cuboid_surface(
 			normal = -normal;
 
 		Real face_area = get_bbox_face_area(face_index);
-		unsigned int num_face_points = std::round(face_area / all_faces_area * _num_cuboid_surface_points);
+		int num_face_points = std::round(face_area / all_faces_area * _num_cuboid_surface_points);
 
-		for (unsigned int point_index = 0; point_index < num_face_points
+		for (int point_index = 0; point_index < num_face_points
 			&& cuboid_surface_points_.size() < _num_cuboid_surface_points; ++point_index)
 		{
 			Real w1 = distribution(generator);
@@ -784,7 +786,7 @@ void MeshCuboid::create_random_points_on_cuboid_surface(
 
 
 	// Update point correspondences.
-	compute_point_correspondences();
+	update_point_correspondences();
 }
 
 void MeshCuboid::create_grid_points_on_cuboid_surface(
@@ -877,10 +879,10 @@ void MeshCuboid::create_grid_points_on_cuboid_surface(
 	}
 
 	// Update point correspondences.
-	compute_point_correspondences();
+	update_point_correspondences();
 }
 
-void MeshCuboid::compute_point_correspondences()
+void MeshCuboid::update_point_correspondences()
 {
 	sample_to_cuboid_surface_correspondence_.clear();
 	cuboid_surface_to_sample_corresopndence_.clear();
@@ -900,21 +902,24 @@ void MeshCuboid::compute_point_correspondences()
 	Eigen::MatrixXd X_points(3, num_X_points);
 	Eigen::MatrixXd Y_points(3, num_Y_points);
 
-	Eigen::RowVectorXd X_indices(num_X_points);
-	Eigen::RowVectorXd Y_indices(num_Y_points);
+	// FIXME:
+	// The type of indices should integer.
+	// But, it causes compile errors in the 'ICP::get_closest_points' function.
+	Eigen::MatrixXd X_indices(1, num_X_points);
+	Eigen::MatrixXd Y_indices(1, num_Y_points);
 
 	for (unsigned int X_point_index = 0; X_point_index < num_X_points; ++X_point_index)
 	{
 		for (unsigned int i = 0; i < 3; ++i)
 			X_points.col(X_point_index)(i) = get_sample_points()[X_point_index]->point_[i];
-		X_indices(X_point_index) = X_point_index;
+		X_indices.col(X_point_index)(0) = X_point_index;
 	}
 
 	for (unsigned int Y_point_index = 0; Y_point_index < num_Y_points; ++Y_point_index)
 	{
 		for (unsigned int i = 0; i < 3; ++i)
 			Y_points.col(Y_point_index)(i) = get_cuboid_surface_points()[Y_point_index]->point_[i];
-		Y_indices(Y_point_index) = Y_point_index;
+		Y_indices.col(Y_point_index)(0) = Y_point_index;
 	}
 
 	ANNpointArray X_ann_points = NULL;
@@ -927,12 +932,12 @@ void MeshCuboid::compute_point_correspondences()
 
 	// X -> Y.
 	Eigen::MatrixXd closest_Y_indices;
-	ICP::get_closest_points(X_points, Y_indices, closest_Y_indices, Y_ann_kd_tree);
+	ICP::get_closest_points(Y_ann_kd_tree, X_points, Y_indices, closest_Y_indices);
 	assert(closest_Y_indices.cols() == num_X_points);
 
 	// Y -> X.
 	Eigen::MatrixXd closest_X_indices;
-	ICP::get_closest_points(Y_points, X_indices, closest_X_indices, X_ann_kd_tree);
+	ICP::get_closest_points(X_ann_kd_tree, Y_points, X_indices, closest_X_indices);
 	assert(closest_X_indices.cols() == num_Y_points);
 
 
@@ -1334,6 +1339,7 @@ std::vector<MeshCuboid *> MeshCuboid::split_cuboid(const Real _object_diameter)
 	remove_small_sub_cuboids(sub_cuboids);
 	//align_sub_cuboids(_object_diameter, sub_cuboids);
 
+	if (data_pts) annDeallocPts(data_pts);
 	delete kd_tree;
 	annClose();
 
@@ -1343,16 +1349,16 @@ std::vector<MeshCuboid *> MeshCuboid::split_cuboid(const Real _object_diameter)
 void MeshCuboid::create_sub_cuboids(const Real _object_diameter,
 	ANNkd_tree* _kd_tree, std::vector<MeshCuboid *> &_sub_cuboids)
 {
-	const unsigned int num_samples = num_sample_points();
 	const int dim = 3;
-	const int num_neighbors = std::min(8, static_cast<int>(num_samples));
+	const int num_neighbors = std::min(param_num_neighbors,
+		static_cast<int>(num_sample_points()));
 	
 	ANNpoint q = annAllocPt(dim);
-	ANNidxArray nn_idx = new ANNidx[num_samples];
-	ANNdistArray dd = new ANNdist[num_samples];
+	ANNidxArray nn_idx = new ANNidx[num_neighbors];
+	ANNdistArray dd = new ANNdist[num_neighbors];
 
-	bool *is_sample_visited = new bool[num_samples];
-	memset(is_sample_visited, false, num_samples * sizeof(bool));
+	bool *is_sample_visited = new bool[num_sample_points()];
+	memset(is_sample_visited, false, num_sample_points() * sizeof(bool));
 
 
 	for (std::vector<MeshCuboid *>::iterator it = _sub_cuboids.begin(); it != _sub_cuboids.end(); ++it)
@@ -1368,7 +1374,8 @@ void MeshCuboid::create_sub_cuboids(const Real _object_diameter,
 		// 1. Find the seed point that has the highest confidence.
 		int seed_sample_point_index = -1;
 
-		for (SamplePointIndex sample_point_index = 0; sample_point_index < num_samples; sample_point_index++)
+		for (SamplePointIndex sample_point_index = 0;
+			sample_point_index < num_sample_points(); sample_point_index++)
 		{
 			if (is_sample_visited[sample_point_index])
 			{
@@ -1398,7 +1405,8 @@ void MeshCuboid::create_sub_cuboids(const Real _object_diameter,
 
 		if (seed_sample_point_index < 0) break;
 		assert(!is_sample_visited[seed_sample_point_index]);
-		assert(sample_points_[seed_sample_point_index]->label_index_confidence_[label_index_] >= param_confidence_tol);
+		assert(sample_points_[seed_sample_point_index]->label_index_confidence_[label_index_]
+			>= param_confidence_tol);
 
 
 		// 2. Propagate to close points.
@@ -1410,7 +1418,7 @@ void MeshCuboid::create_sub_cuboids(const Real _object_diameter,
 		{
 			int curr_sample_point_index = queue.front();
 			queue.pop_front();
-			assert(curr_sample_point_index >= 0 && curr_sample_point_index < num_samples);
+			assert(curr_sample_point_index >= 0 && curr_sample_point_index < num_sample_points());
 
 			sub_cuboid_sample_points.push_back(sample_points_[curr_sample_point_index]);
 
@@ -1418,7 +1426,7 @@ void MeshCuboid::create_sub_cuboids(const Real _object_diameter,
 			q[0] = curr_pos[0]; q[1] = curr_pos[1]; q[2] = curr_pos[2];
 
 			int num_searched_neighbors = _kd_tree->annkFRSearch(q,
-				param_neighbor_distance * _object_diameter, num_neighbors, nn_idx);
+				param_neighbor_distance * _object_diameter, num_neighbors, nn_idx, dd);
 
 			for (int i = 0; i < std::min(num_neighbors, num_searched_neighbors); i++)
 			{
@@ -1555,8 +1563,8 @@ void MeshCuboid::draw_cuboid()const
 	}
 }
 
-Eigen::Matrix<bool, 1, Eigen::Dynamic>
-MeshCuboid::is_point_included(const Eigen::MatrixXd& _points)
+void MeshCuboid::points_to_cuboid_distances(const Eigen::MatrixXd& _points,
+	Eigen::VectorXd &_distances)
 {
 	unsigned int num_points = _points.cols();
 
@@ -1565,25 +1573,40 @@ MeshCuboid::is_point_included(const Eigen::MatrixXd& _points)
 		bbox_center_vec[i] = bbox_center_[i];
 
 	Eigen::MatrixXd centered_points = (_points.colwise() - bbox_center_vec);
-	Eigen::MatrixXd axis_coeff(3, num_points);
+	Eigen::MatrixXd axis_distances(3, num_points);
 
 	for (unsigned int axis_index = 0; axis_index < 3; ++axis_index)
 	{
 		Eigen::Vector3d bbox_axis_vec;
 		for (unsigned int i = 0; i < 3; ++i)
 			bbox_axis_vec[i] = bbox_axes_[axis_index][i];
+		bbox_axis_vec.normalize();
 
-		axis_coeff.row(axis_index) = 
-			(bbox_axis_vec.transpose() * centered_points).array()
-			/ (0.5 * bbox_size_[axis_index]);
+		// Distance from center along each direction.
+		axis_distances.row(axis_index) =
+			(bbox_axis_vec.transpose() * centered_points).array();
 
-		axis_coeff.row(axis_index) = axis_coeff.row(axis_index).cwiseAbs();
+		axis_distances.row(axis_index) = axis_distances.row(axis_index).cwiseAbs();
+
+		// Compute the distance from cuboid surface.
+		axis_distances.row(axis_index) = axis_distances.row(axis_index).array()
+			- (0.5 * bbox_size_[axis_index]);
 	}
 
-	Eigen::MatrixXd max_axis_coeff = (axis_coeff.colwise().maxCoeff());
-	Eigen::Matrix<bool, 1, Eigen::Dynamic> is_point_included = (max_axis_coeff.array() < 1.05);
-
-	return is_point_included;
+	_distances = Eigen::VectorXd(num_points);
+	for (unsigned int point_index = 0; point_index < num_points; ++point_index)
+	{
+		Eigen::Vector3d axis_distance = axis_distances.col(point_index);
+		if ((axis_distance.array() <= 0).all())
+		{
+			_distances[point_index] = axis_distance.maxCoeff();
+		}
+		else
+		{
+			axis_distance = (axis_distance.array() < 0).select(0, axis_distance);
+			_distances[point_index] = axis_distance.norm();
+		}
+	}
 }
 
 /*
@@ -1654,7 +1677,7 @@ void MeshCuboid::split_cuboid_once(ANNkd_tree* _kd_tree, std::vector<MeshCuboid 
 	};
 
 	typedef std::priority_queue < std::pair<int, Real>,
-		std::vector<std::pair<int, Real>>, DistanceComparison > DistanceQueue;
+		std::vector< std::pair<int, Real> >, DistanceComparison > DistanceQueue;
 	int seed_sample_point_index[2];
 
 

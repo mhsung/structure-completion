@@ -6,6 +6,7 @@
 
 #include <Eigen/Core>
 #include <Eigen/Eigenvalues>
+#include <Eigen/SparseCore>
 #include <MRFEnergy.h>
 #include <EigenQP.h>
 
@@ -13,6 +14,7 @@
 #include <QFile>
 #include <QProcess>
 
+#include <cstdint>
 #include <omp.h>
 
 
@@ -21,9 +23,10 @@ const Real k_max_potential = MeshCuboidPredictor::k_max_potential;
 bool write_eigen_matrix_binary(const char* filename, const Eigen::MatrixXd& _matrix){
 	std::ofstream out(filename, std::ios::out | std::ios::binary | std::ios::trunc);
 	if (!out.good()) return false;
-	Eigen::MatrixXd::Index rows = _matrix.rows(), cols = _matrix.cols();
-	out.write((char*)(&rows), sizeof(Eigen::MatrixXd::Index));
-	out.write((char*)(&cols), sizeof(Eigen::MatrixXd::Index));
+	int16_t rows = static_cast<int16_t>(_matrix.rows());
+	int16_t cols = static_cast<int16_t>(_matrix.cols());
+	out.write((char*)(&rows), sizeof(int16_t));
+	out.write((char*)(&cols), sizeof(int16_t));
 	out.write((char*)_matrix.data(), rows*cols*sizeof(Eigen::MatrixXd::Scalar));
 	out.close();
 	return true;
@@ -32,9 +35,9 @@ bool write_eigen_matrix_binary(const char* filename, const Eigen::MatrixXd& _mat
 bool read_eigen_matrix_binary(const char* filename, Eigen::MatrixXd& matrix){
 	std::ifstream in(filename, std::ios::in | std::ios::binary);
 	if (!in.good()) return false;
-	Eigen::MatrixXd::Index rows = 0, cols = 0;
-	in.read((char*)(&rows), sizeof(Eigen::MatrixXd::Index));
-	in.read((char*)(&cols), sizeof(Eigen::MatrixXd::Index));
+	int16_t rows = 0, cols = 0;
+	in.read((char*)(&rows), sizeof(int16_t));
+	in.read((char*)(&cols), sizeof(int16_t));
 	matrix.resize(rows, cols);
 	in.read((char *)matrix.data(), rows*cols*sizeof(Eigen::MatrixXd::Scalar));
 	in.close();
@@ -44,9 +47,10 @@ bool read_eigen_matrix_binary(const char* filename, Eigen::MatrixXd& matrix){
 bool write_eigen_vector_binary(const char* filename, const Eigen::VectorXd& _vector){
 	std::ofstream out(filename, std::ios::out | std::ios::binary | std::ios::trunc);
 	if (!out.good()) return false;
-	Eigen::VectorXd::Index rows = _vector.rows(), cols = _vector.cols();
-	out.write((char*)(&rows), sizeof(Eigen::VectorXd::Index));
-	assert(cols == 1);
+	int16_t rows = static_cast<int16_t>(_vector.rows());
+	int16_t cols = static_cast<int16_t>(_vector.cols());
+	out.write((char*)(&rows), sizeof(int16_t));
+	out.write((char*)(&cols), sizeof(int16_t));
 	out.write((char*)_vector.data(), rows*cols*sizeof(Eigen::VectorXd::Scalar));
 	out.close();
 	return true;
@@ -55,15 +59,16 @@ bool write_eigen_vector_binary(const char* filename, const Eigen::VectorXd& _vec
 bool read_eigen_vector_binary(const char* filename, Eigen::VectorXd& matrix){
 	std::ifstream in(filename, std::ios::in | std::ios::binary);
 	if (!in.good()) return false;
-	Eigen::VectorXd::Index rows = 0, cols = 1;
-	in.read((char*)(&rows), sizeof(Eigen::VectorXd::Index));
+	int16_t rows = 0, cols = 0;
+	in.read((char*)(&rows), sizeof(int16_t));
+	in.read((char*)(&cols), sizeof(int16_t));
 	matrix.resize(rows, cols);
 	in.read((char *)matrix.data(), rows*cols*sizeof(Eigen::VectorXd::Scalar));
 	in.close();
 	return true;
 }
 
-std::vector<int> solve_mrf_using_trws(const unsigned int _num_nodes, const unsigned int _num_labels,
+std::vector<int> solve_markov_random_field(const unsigned int _num_nodes, const unsigned int _num_labels,
 	const Eigen::MatrixXd& _energy_mat)
 {
 	assert(_energy_mat.rows() == _num_nodes * _num_labels);
@@ -79,7 +84,7 @@ std::vector<int> solve_mrf_using_trws(const unsigned int _num_nodes, const unsig
 	nodes = new MRFEnergy<TypeGeneral>::NodeId[_num_nodes];
 
 
-	// Data Term
+	// Data term.
 	for (unsigned int node_index = 0; node_index < _num_nodes; ++node_index)
 	{
 		TypeGeneral::REAL *single_energy = new TypeGeneral::REAL[_num_labels];
@@ -97,7 +102,7 @@ std::vector<int> solve_mrf_using_trws(const unsigned int _num_nodes, const unsig
 	}
 
 
-	// Smoothness Term
+	// Smoothness term.
 	for (unsigned int node_index_1 = 0; node_index_1 < _num_nodes - 1; ++node_index_1)
 	{
 		for (unsigned int node_index_2 = node_index_1 + 1; node_index_2 < _num_nodes; ++node_index_2)
@@ -172,7 +177,8 @@ std::vector<int> solve_mrf_using_trws(const unsigned int _num_nodes, const unsig
 	return output_labels;
 }
 
-std::vector<int> solve_mrf_using_eig(const unsigned int _num_nodes, const unsigned int _num_labels,
+/*
+std::vector<int> solve_markov_random_field(const unsigned int _num_nodes, const unsigned int _num_labels,
 	const Eigen::MatrixXd& _energy_mat)
 {
 	const unsigned int mat_size = _num_nodes * _num_labels;
@@ -241,8 +247,9 @@ std::vector<int> solve_mrf_using_eig(const unsigned int _num_nodes, const unsign
 
 	return output_labels;
 }
+*/
 
-Eigen::VectorXd solve_quad_prog(
+Eigen::VectorXd solve_quadratic_programming(
 	const Eigen::MatrixXd& _quadratic_term,
 	const Eigen::VectorXd& _linear_term,
 	const double _constant_term,
@@ -255,44 +262,6 @@ Eigen::VectorXd solve_quad_prog(
 	assert(_linear_term.rows() == dimension);
 
 	Eigen::VectorXd x = Eigen::VectorXd::Zero(dimension);
-
-	// Use an external application.
-	//Eigen::IOFormat csv_format(Eigen::StreamPrecision, 0, ",");
-	//std::ofstream quadratic_file("quadratic_mat.csv");
-	//quadratic_file << _quadratic_term.format(csv_format) << std::endl;
-	//quadratic_file.close();
-
-	//std::ofstream linear_file("linear_vec.csv");
-	//linear_file << _linear_term.format(csv_format) << std::endl;
-	//linear_file.close();
-
-	//write_eigen_matrix_binary("quadratic_term.dat", _quadratic_term);
-	//write_eigen_vector_binary("linear_term.dat", _linear_term);
-	//if (_init_values_vec) write_eigen_vector_binary("init_values_vec.dat", *_init_values_vec);
-
-	//std::cout << "Waiting for the result from quadprog_solver... " << std::endl;
-
-	////QProcess process;
-	////process.setStandardOutputFile("log_quadprog_solver.txt");
-	////process.start("quadprog_solver.exe");
-	////process.waitForFinished();
-	////qDebug() << process.readAllStandardOutput();
-	////process.close();
-	//do {
-	//	std::cout << '\n' << "Press the Enter key to continue.";
-	//} while (std::cin.get() != '\n');
-
-	//while (!read_eigen_vector_binary("quadprog_solver.dat", x));
-	//assert(x.rows() == dimension);
-
-	//QFile::remove("quadratic_term.dat");
-	//QFile::remove("linear_term.dat");
-	//QFile::remove("init_values_vec.dat");
-	//QFile::remove("quadprog_solver.dat");
-	//std::cout << "Done." << std::endl;
-
-	//std::cout << x.transpose().format(csv_format) << std::endl;
-
 
 	Eigen::MatrixXd G = _quadratic_term;
 	Eigen::VectorXd g0 = _linear_term;
@@ -331,13 +300,12 @@ Eigen::VectorXd solve_quad_prog(
 	// Make the quadratic term symmetric.
 	G = 0.5 * (G + G.transpose());
 
+	// Regularizer using initial values.
 	//G = G + 1.0E-12 * Eigen::MatrixXd::Identity(dimension, dimension);
 	//g0 = g0 - 1.0E-12 * (*_init_values_vec);
 
-
 	// Direct solution.
 	//x = -G.inverse() * g0;
-
 
 	// Use QuadProg++.
 	Eigen::MatrixXd CE(dimension, 0);
@@ -348,16 +316,86 @@ Eigen::VectorXd solve_quad_prog(
 	double energy = QP::solve_quadprog(G, g0, CE, ce0, CI, ci0, x);
 	//std::cout << "QuadProg++ Error = " << energy << std::endl;
 
+	double final_error = 0;
+	final_error = x.transpose() * _quadratic_term * x;
+	final_error += 2 * _linear_term.transpose() * x;
+	final_error += _constant_term;
+
+	std::cout << "final = " << final_error << ")" << std::endl;
+
+	return x;
+}
+
+/*
+Eigen::VectorXd solve_quadratic_programming(
+	const Eigen::MatrixXd& _quadratic_term,
+	const Eigen::VectorXd& _linear_term,
+	const double _constant_term,
+	Eigen::VectorXd* _init_values_vec = NULL,
+	Eigen::MatrixXd* _init_values_mask = NULL,
+	double _quadprog_ratio = 1.0)
+{
+	const unsigned int dimension = _quadratic_term.cols();
+	assert(_quadratic_term.rows() == dimension);
+	assert(_linear_term.rows() == dimension);
+
+	Eigen::VectorXd x = Eigen::VectorXd::Zero(dimension);
+
+	// Use an external application.
+	bool ret;
+	ret = write_eigen_matrix_binary("quadratic_term.dat", _quadratic_term);
+	assert(ret);
+
+	ret = write_eigen_vector_binary("linear_term.dat", _linear_term);
+	assert(ret);
+
+	if (_init_values_vec)
+	{
+		ret = write_eigen_vector_binary("init_values_vec.dat", *_init_values_vec);
+		assert(ret);
+	}
+
+	std::cout << "Waiting for the result from quadprog_solver... " << std::endl;
+
+	QProcess process;
+	process.setStandardOutputFile("log_quadprog_solver.txt");
+	process.start("quadprog_solver.exe");
+	process.waitForFinished();
+	qDebug() << process.readAllStandardOutput();
+	process.close();
+
+	while (!read_eigen_vector_binary("quadprog_solver.dat", x));
+	assert(x.rows() == dimension);
+
+	QFile::remove("quadratic_term.dat");
+	QFile::remove("linear_term.dat");
+	QFile::remove("init_values_vec.dat");
+	QFile::remove("quadprog_solver.dat");
+	std::cout << "Done." << std::endl;
+
+	std::cout << "Error: (";
+
+	// Optional.
+	if (_init_values_vec)
+	{
+		double init_error = 0;
+		Eigen::VectorXd x0 = (*_init_values_vec);
+		init_error += x0.transpose() * _quadratic_term * x0;
+		init_error += 2 * _linear_term.transpose() * x0;
+		init_error += _constant_term;
+		std::cout << "initial = " << init_error << ", ";
+	}
 
 	double final_error = 0;
 	final_error = x.transpose() * _quadratic_term * x;
 	final_error += 2 * _linear_term.transpose() * x;
 	final_error += _constant_term;
 
-	std::cout << "fianl = " << final_error << ")" << std::endl;
+	std::cout << "final = " << final_error << ")" << std::endl;
 
 	return x;
 }
+*/
 
 void update_cuboid_surface_points(
 	MeshCuboidStructure &_cuboid_structure,
@@ -377,41 +415,256 @@ void update_cuboid_surface_points(
 	}
 }
 
-void reassign_sample_point_membership(
+void segment_sample_points(
 	MeshCuboidStructure &_cuboid_structure)
 {
-	unsigned int num_all_sample_points = _cuboid_structure.num_sample_points();
+	// Parameter.
+	const double null_cuboid_probability = 0.1;
+	
+	assert(_cuboid_structure.mesh_);
+	double neighbor_distance = param_neighbor_distance *
+		_cuboid_structure.mesh_->get_object_diameter();
+	double lambda = -(neighbor_distance * neighbor_distance)
+		/ std::log(null_cuboid_probability);
+	double min_probability = 1 / k_max_potential;
 
-	Eigen::MatrixXd all_sample_points(3, num_all_sample_points);
+	unsigned int num_sample_points = _cuboid_structure.num_sample_points();
+	const int num_neighbors = std::min(param_num_neighbors,
+		static_cast<int>(num_sample_points));
 
-	for (unsigned int point_index = 0; point_index < num_all_sample_points; ++point_index)
+	std::vector<MeshCuboid *> all_cuboids = _cuboid_structure.get_all_cuboids();
+	unsigned int num_cuboids = all_cuboids.size();
+
+
+
+	//
+	std::vector<ANNpointArray> cuboid_ann_points(num_cuboids);
+	std::vector<ANNkd_tree*> cuboid_ann_kd_tree(num_cuboids);
+
+	for (unsigned int cuboid_index = 0; cuboid_index < num_cuboids; ++cuboid_index)
+	{
+		MeshCuboid *cuboid = all_cuboids[cuboid_index];
+
+		unsigned int num_cuboid_surface_points = cuboid->num_cuboid_surface_points();
+		Eigen::MatrixXd cuboid_surface_points(3, num_cuboid_surface_points);
+
+		for (unsigned int point_index = 0; point_index < num_cuboid_surface_points; ++point_index)
+		{
+			for (unsigned int i = 0; i < 3; ++i)
+				cuboid_surface_points.col(point_index)(i) =
+				cuboid->get_cuboid_surface_point(point_index)->point_[i];
+		}
+
+		cuboid_ann_kd_tree[cuboid_index] = ICP::create_kd_tree(cuboid_surface_points,
+			cuboid_ann_points[cuboid_index]);
+		assert(cuboid_ann_points[cuboid_index]);
+		assert(cuboid_ann_kd_tree[cuboid_index]);
+	}
+
+	ANNpoint q = annAllocPt(3);
+	ANNidxArray nn_idx = new ANNidx[1];
+	ANNdistArray dd = new ANNdist[1];
+	//
+
+
+
+	// Single potential.
+	// NOTE: The last column is for the null cuboid.
+	Eigen::MatrixXd single_potentials(num_sample_points, num_cuboids + 1);
+
+	for (unsigned int point_index = 0; point_index < num_sample_points; ++point_index)
 	{
 		MeshSamplePoint *sample_point = _cuboid_structure.sample_points_[point_index];
 		for (unsigned int i = 0; i < 3; ++i)
-			all_sample_points.col(point_index)(i) = sample_point->point_[i];
-	}
+			q[i] = sample_point->point_[i];
 
-	std::vector<MeshCuboid *> all_cuboids = _cuboid_structure.get_all_cuboids();
-	for (std::vector<MeshCuboid *>::iterator it = all_cuboids.begin(); it != all_cuboids.end(); ++it)
-	{
-		MeshCuboid *cuboid = (*it);
-
-		Eigen::Matrix<bool, 1, Eigen::Dynamic> is_point_included
-			= cuboid->is_point_included(all_sample_points);
-		assert(is_point_included.cols() == num_all_sample_points);
-
-		std::vector<MeshSamplePoint *> sample_points;
-		sample_points.reserve(num_all_sample_points);
-
-		for (unsigned int point_index = 0; point_index < num_all_sample_points; ++point_index)
+		for (unsigned int cuboid_index = 0; cuboid_index < num_cuboids; ++cuboid_index)
 		{
-			MeshSamplePoint *sample_point = _cuboid_structure.sample_points_[point_index];
-			if (is_point_included.col(point_index)(0))
-				sample_points.push_back(sample_point);
+			MeshCuboid *cuboid = all_cuboids[cuboid_index];
+			unsigned int label_index = cuboid->get_label_index();
+
+			assert(cuboid_ann_kd_tree[cuboid_index]);
+			cuboid_ann_kd_tree[cuboid_index]->annkSearch(q, 1, nn_idx, dd);
+			double distance = dd[0];
+			assert(distance >= 0);
+
+			double label_probability = sample_point->label_index_confidence_[label_index];
+			double energy = distance * distance - lambda * std::log(label_probability);
+
+			single_potentials(point_index, cuboid_index) = energy;
 		}
 
+		// For null cuboid.
+		double energy = k_max_potential;
+		single_potentials(point_index, num_cuboids) = energy;
+	}
+
+	// Deallocate ANN.
+	annDeallocPt(q);
+	delete[] nn_idx;
+	delete[] dd;
+
+	for (unsigned int cuboid_index = 0; cuboid_index < num_cuboids; ++cuboid_index)
+	{
+		annDeallocPts(cuboid_ann_points[cuboid_index]);
+		delete cuboid_ann_kd_tree[cuboid_index];
+	}
+
+
+	// Construct a KD-tree.
+	Eigen::MatrixXd sample_points(3, num_sample_points);
+	for (unsigned int point_index = 0; point_index < num_sample_points; ++point_index)
+	{
+		for (unsigned int i = 0; i < 3; ++i)
+			sample_points.col(point_index)(i) =
+			_cuboid_structure.sample_points_[point_index]->point_[i];
+	}
+
+	const int dim = 3;
+	ANNpointArray sample_ann_points = annAllocPts(num_sample_points, dim);	// allocate data points
+
+	for (SamplePointIndex point_index = 0; point_index < num_sample_points;
+		++point_index)
+	{
+		for (int i = 0; i < dim; i++)
+			sample_ann_points[point_index][i] = sample_points.col(point_index)[i];
+	}
+
+	ANNkd_tree *sample_kd_tree = new ANNkd_tree(sample_ann_points, num_sample_points, dim);
+	q = annAllocPt(dim);
+	nn_idx = new ANNidx[num_neighbors];
+	dd = new ANNdist[num_neighbors];
+
+
+	// Pair potentials.
+	std::vector< Eigen::Triplet<double> > pair_potentials;
+	pair_potentials.reserve(num_sample_points * num_neighbors);
+
+	for (unsigned int point_index = 0; point_index < num_sample_points; ++point_index)
+	{
+		for (unsigned int i = 0; i < 3; ++i)
+			q[i] = sample_points.col(point_index)[i];
+
+		int num_searched_neighbors = sample_kd_tree->annkFRSearch(q,
+			neighbor_distance, num_neighbors, nn_idx, dd);
+
+		for (int i = 0; i < std::min(num_neighbors, num_searched_neighbors); i++)
+		{
+			unsigned int n_point_index = (int)nn_idx[i];
+
+			// NOTE: Avoid symmetric pairs.
+			if (n_point_index <= point_index)
+				continue;
+
+			//
+			double distance = (neighbor_distance - dd[i]);
+			assert(distance >= 0);
+			//
+
+			double energy = distance * distance;
+			pair_potentials.push_back(Eigen::Triplet<double>(point_index, n_point_index, energy));
+		}
+	}
+
+	delete[] nn_idx;
+	delete[] dd;
+	annDeallocPt(q);
+	annDeallocPts(sample_ann_points);
+	delete sample_kd_tree;
+	annClose();
+
+
+	// MRF.
+	MRFEnergy<TypePotts>* mrf;
+	MRFEnergy<TypePotts>::NodeId* nodes;
+	MRFEnergy<TypePotts>::Options options;
+	TypePotts::REAL energy, lower_bound;
+
+	const int num_nodes = single_potentials.rows();
+	const int num_labels = single_potentials.cols();
+
+	std::list<TypeGeneral::REAL *> energy_term_list;
+	mrf = new MRFEnergy<TypePotts>(TypePotts::GlobalSize(num_labels));
+	nodes = new MRFEnergy<TypePotts>::NodeId[num_nodes];
+
+	// Data term.
+	for (unsigned int node_index = 0; node_index < num_nodes; ++node_index)
+	{
+		TypeGeneral::REAL *D = new TypeGeneral::REAL[num_labels];
+		energy_term_list.push_back(D);
+
+		for (unsigned int label_index = 0; label_index < num_labels; ++label_index)
+			D[label_index] = static_cast<TypeGeneral::REAL>(
+				single_potentials(node_index, label_index));
+		nodes[node_index] = mrf->AddNode(TypePotts::LocalSize(), TypePotts::NodeData(D));
+	}
+
+	// Smoothness term.
+	for (std::vector< Eigen::Triplet<double> >::iterator it = pair_potentials.begin();
+		it != pair_potentials.end(); ++it)
+	{
+		unsigned int node_index_i = (*it).row();
+		assert(node_index_i < num_nodes);
+		unsigned int node_index_j = (*it).col();
+		assert(node_index_j < num_nodes);
+		double potential = (*it).value();
+		mrf->AddEdge(nodes[node_index_i], nodes[node_index_j], TypePotts::EdgeData(potential));
+	}
+
+
+	// Function below is optional - it may help if, for example, nodes are added in a random order
+	//mrf->SetAutomaticOrdering();
+	options.m_iterMax = 100; // maximum number of iterations
+	options.m_printIter = 10;
+	options.m_printMinIter = 0;
+
+	//////////////////////// BP algorithm ////////////////////////
+	//mrf->ZeroMessages();
+	//mrf->AddRandomMessages(0, 0.0, 1.0);
+	//mrf->Minimize_BP(options, energy);
+	//std::cout << "Energy = " << energy << std::endl;
+
+	/////////////////////// TRW-S algorithm //////////////////////
+	mrf->ZeroMessages();
+	mrf->AddRandomMessages(0, 0.0, 1.0);
+	mrf->Minimize_TRW_S(options, lower_bound, energy);
+	std::cout << "Energy = " << energy << std::endl;
+
+
+	std::vector<int> output_labels(num_nodes);
+	for (unsigned int node_index = 0; node_index < num_nodes; ++node_index)
+		output_labels[node_index] = mrf->GetSolution(nodes[node_index]);
+
+	for (std::list<TypeGeneral::REAL *>::iterator it = energy_term_list.end();
+		it != energy_term_list.end(); ++it)
+		delete[](*it);
+	delete[] nodes;
+	delete mrf;
+
+
+	// Reassign sample points to cuboids.
+	for (unsigned int cuboid_index = 0; cuboid_index < num_cuboids; ++cuboid_index)
+	{
+		MeshCuboid *cuboid = all_cuboids[cuboid_index];
 		cuboid->clear_sample_points();
-		cuboid->add_sample_points(sample_points);
+	}
+
+	for (unsigned int point_index = 0; point_index < num_sample_points; ++point_index)
+	{
+		MeshSamplePoint *sample_point = _cuboid_structure.sample_points_[point_index];
+		int cuboid_index = output_labels[point_index];
+		//int cuboid_index;
+		//single_potentials.row(point_index).minCoeff(&cuboid_index);
+
+		if (cuboid_index < num_cuboids)
+			all_cuboids[cuboid_index]->add_sample_point(sample_point);
+	}
+
+	for (unsigned int cuboid_index = 0; cuboid_index < num_cuboids; ++cuboid_index)
+	{
+		MeshCuboid *cuboid = all_cuboids[cuboid_index];
+		std::cout << "[" << cuboid_index << "]: " << cuboid->num_sample_points() << std::endl;
+		cuboid->update_point_correspondences();
 	}
 }
 
@@ -436,9 +689,9 @@ void compute_labels_and_axes_configuration_potentials(
 
 
 	// Cuboid with various labels and axes configurations.
-	std::vector<std::vector<MeshCuboid *>> cuboids_with_label_and_axes(num_cuboids);
-	std::vector<std::vector<MeshCuboidAttributes>> attributes_with_label_and_axes(num_cuboids);
-	std::vector<std::vector<MeshCuboidTransformation>> transformations_with_label_and_axes(num_cuboids);
+	std::vector< std::vector<MeshCuboid *> > cuboids_with_label_and_axes(num_cuboids);
+	std::vector< std::vector<MeshCuboidAttributes> > attributes_with_label_and_axes(num_cuboids);
+	std::vector< std::vector<MeshCuboidTransformation> > transformations_with_label_and_axes(num_cuboids);
 
 	for (unsigned int cuboid_index = 0; cuboid_index < num_cuboids; ++cuboid_index)
 	{
@@ -563,7 +816,7 @@ void compute_labels_and_axes_configuration_potentials(
 	}
 
 	// Deallocate.
-	for (std::vector<std::vector<MeshCuboid *>>::iterator it = cuboids_with_label_and_axes.begin();
+	for (std::vector< std::vector<MeshCuboid *> >::iterator it = cuboids_with_label_and_axes.begin();
 		it != cuboids_with_label_and_axes.end(); ++it)
 	{
 		for (std::vector<MeshCuboid *>::iterator jt = (*it).begin(); jt != (*it).end(); ++jt)
@@ -602,7 +855,7 @@ void recognize_labels_and_axes_configurations(
 
 
 	// Solve MRF.
-	std::vector<int> output = solve_mrf_using_trws(num_cuboids, num_cases, potential_mat);
+	std::vector<int> output = solve_markov_random_field(num_cuboids, num_cases, potential_mat);
 	//std::vector<int> output = solve_mrf_using_eig(num_cuboids, num_cases, potential_mat);
 	assert(output.size() == num_cuboids);
 
@@ -957,7 +1210,7 @@ void optimize_attributes_once(
 
 
 	// Solve quadratic programming.
-	Eigen::VectorXd new_values = solve_quad_prog(quadratic_term, linear_term, constant_term,
+	Eigen::VectorXd new_values = solve_quadratic_programming(quadratic_term, linear_term, constant_term,
 		&init_values, NULL, _quadprog_ratio);
 
 	assert(new_values.rows() == mat_size);
@@ -1018,6 +1271,21 @@ void optimize_attributes(
 
 	std::ofstream log_file(_log_filename);
 	assert(log_file);
+
+	//
+	// Add missing cuboids.
+	unsigned int num_labels = _cuboid_structure.num_labels();
+	for (LabelIndex label_index = 0; label_index < num_labels; ++label_index)
+	{
+		if (_cuboid_structure.label_cuboids_[label_index].empty())
+		{
+			// FIXME:
+			// Assume that the local axes of missing cuboids are the same with global axes.
+			MeshCuboid *missing_cuboid = new MeshCuboid(label_index);
+			_cuboid_structure.label_cuboids_[label_index].push_back(missing_cuboid);
+		}
+	}
+	//
 
 	std::vector<MeshCuboid *> all_cuboids = _cuboid_structure.get_all_cuboids();
 	unsigned int num_cuboids = all_cuboids.size();
@@ -1177,7 +1445,6 @@ bool add_missing_cuboids(
 	bool is_cuboid_added = false;
 
 	std::vector<unsigned int> count_label_cuboids(num_labels, 0);
-
 	for (std::vector<MeshCuboid *>::iterator it = all_cuboids.begin(); it != all_cuboids.end(); ++it)
 		++count_label_cuboids[(*it)->get_label_index()];
 
@@ -1240,7 +1507,7 @@ bool add_missing_cuboids(
 
 
 	// Solve quadratic programming.
-	Eigen::VectorXd new_values = solve_quad_prog(quadratic_term, linear_term, constant_term);
+	Eigen::VectorXd new_values = solve_quadratic_programming(quadratic_term, linear_term, constant_term);
 
 	assert(new_values.rows() == mat_size);
 
@@ -1296,7 +1563,7 @@ bool add_missing_cuboids(
 MeshCuboid *test_joint_normal_training(
 	const MeshCuboid *_cuboid_1, const MeshCuboid *_cuboid_2,
 	const LabelIndex _label_index_1, const LabelIndex _label_index_2,
-	const std::vector<std::vector<MeshCuboidJointNormalRelations>>& _relations)
+	const std::vector< std::vector<MeshCuboidJointNormalRelations> >& _relations)
 {
 	MeshCuboid *cuboid_2_copy = new MeshCuboid(*_cuboid_2);
 

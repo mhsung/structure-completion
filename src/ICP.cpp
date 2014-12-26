@@ -6,83 +6,70 @@
 #include <Eigen/SVD>
 
 namespace ICP {
-	ANNkd_tree* create_kd_tree(const Eigen::MatrixXd &_points, ANNpointArray &_ann_points)
+	ANNkd_tree* create_kd_tree(
+		const Eigen::MatrixXd &_points,
+		ANNpointArray &_ann_points)
 	{
 		assert(_points.rows() == 3);
 		assert(_points.cols() > 0);
 
-		int dim = 3;
-		int num_points = _points.cols();
+		int dimension = 3;
+		int num_points = static_cast<int>(_points.cols());
 		ANNkd_tree* ann_kd_tree;
 
-		_ann_points = annAllocPts(num_points, dim);	// allocate data points
+		_ann_points = annAllocPts(num_points, dimension);	// allocate data points
 
 		// read data points
 		for (int point_index = 0; point_index < num_points; point_index++)
 		{
-			for (int i = 0; i < dim; i++)
+			for (int i = 0; i < dimension; i++)
 				_ann_points[point_index][i] = _points.col(point_index)[i];
 		}
 
 		ann_kd_tree = new ANNkd_tree(		// build search structure
 			_ann_points,					// the data points
 			num_points,						// number of points
-			dim);						// dimension of space
+			dimension);						// dimension of space
 
 		return ann_kd_tree;
 	}
 
-	void get_closest_points(const Eigen::MatrixXd &_X_points, const Eigen::MatrixXd &_Y_values,
-		Eigen::MatrixXd  &_closest_Y_values, ANNkd_tree *_Y_ann_kd_tree)
+	template<typename T>
+	void get_closest_points(
+		ANNkd_tree *_data_ann_kd_tree,
+		const Eigen::MatrixXd &_query_points,
+		const Eigen::MatrixBase<T> &_data_values,
+		Eigen::MatrixBase<T> &_closest_data_values)
 	{
-		assert(_X_points.rows() == 3);
-		assert(_X_points.cols() > 0);
-		assert(_Y_values.cols() > 0);
+		assert(_query_points.rows() == 3);
+		assert(_query_points.cols() > 0);
+		assert(_data_values.cols() > 0);
 
-		_closest_Y_values = Eigen::MatrixXd::Zero(_Y_values.rows(), _X_points.cols());
+		int num_data = static_cast<int>(_data_values.rows());
+		int dimension = static_cast<int>(_query_points.cols());
 
-		// Allocate ANN.
-		ANNpointArray Y_ann_points = NULL;
-		ANNkd_tree *Y_ann_kd_tree = NULL;
-
-		if (!_Y_ann_kd_tree)
-		{
-			// NOTE:
-			// Consider Y values as Y points.
-			assert(_Y_values.rows() == 3);
-			Y_ann_kd_tree = create_kd_tree(_Y_values, Y_ann_points);
-		}
-		else
-		{
-			// If a KD-tree is given for Y, use it.
-			assert(_Y_ann_kd_tree->nPoints() == _Y_values.cols());
-			Y_ann_kd_tree = _Y_ann_kd_tree;
-		}
+		_closest_data_values = Eigen::MatrixBase<T>::Zero(num_data, dimension);
+		assert(_data_ann_kd_tree->nPoints() == _data_values.cols());
 
 		ANNpoint q = annAllocPt(3);
 		ANNidxArray nn_idx = new ANNidx[1];
 		ANNdistArray dd = new ANNdist[1];
 
-		for (int point_index = 0; point_index < _X_points.cols(); point_index++)
+		for (int point_index = 0; point_index < _query_points.cols(); point_index++)
 		{
 			for (unsigned int i = 0; i < 3; ++i)
-				q[i] = _X_points.col(point_index)(i);
+				q[i] = _query_points.col(point_index)(i);
 
-			Y_ann_kd_tree->annkSearch(q, 1, nn_idx, dd);
+			_data_ann_kd_tree->annkSearch(q, 1, nn_idx, dd);
 			int closest_Y_point_index = nn_idx[0];
 
-			_closest_Y_values.col(point_index) = _Y_values.col(closest_Y_point_index);
+			_closest_data_values.col(point_index) = _data_values.col(closest_Y_point_index);
 		}
 
 		// Deallocate ANN.
 		annDeallocPt(q);
 		delete[] nn_idx;
 		delete[] dd;
-
-		if (Y_ann_points) annDeallocPts(Y_ann_points);
-
-		if (!_Y_ann_kd_tree)
-			delete Y_ann_kd_tree;
 	}
 
 	double compute_rigid_transformation(const Eigen::MatrixXd &_X, const Eigen::MatrixXd &_Y,
@@ -94,19 +81,28 @@ namespace ICP {
 		assert(_Y.rows() == 3);
 		assert(_Y.cols() > 0);
 
-		int X_num_points = _X.cols();
-		int Y_num_points = _Y.cols();
+		Eigen::MatrixXd::Index X_num_points = _X.cols();
+		Eigen::MatrixXd::Index Y_num_points = _Y.cols();
 
+		ANNpointArray X_ann_points;
+		ANNkd_tree* X_ann_kd_tree = create_kd_tree(_X, X_ann_points);
+
+		ANNpointArray Y_ann_points;
+		ANNkd_tree* Y_ann_kd_tree = create_kd_tree(_Y, Y_ann_points);
+		
 		Eigen::MatrixXd closest_X; 
 		Eigen::MatrixXd closest_Y;
 
-		get_closest_points(_Y, _X, closest_X);
-		get_closest_points(_X, _Y, closest_Y);
+		get_closest_points(X_ann_kd_tree, _Y, _X, closest_X);
+		get_closest_points(Y_ann_kd_tree, _X, _Y, closest_Y);
+
+		annDeallocPts(X_ann_points); delete X_ann_kd_tree;
+		annDeallocPts(Y_ann_points); delete Y_ann_kd_tree;
 
 		assert(closest_X.cols() == Y_num_points);
 		assert(closest_Y.cols() == X_num_points);
 
-		int n = X_num_points + Y_num_points;
+		Eigen::MatrixXd::Index n = X_num_points + Y_num_points;
 		Eigen::MatrixXd all_X(3, n);
 		Eigen::MatrixXd all_Y(3, n);
 

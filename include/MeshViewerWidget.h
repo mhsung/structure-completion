@@ -112,14 +112,14 @@ private:
 	bool draw_cuboid_axes_;
 
 	QGLOcculsionTestWidget *occlusion_test_widget_;
-	std::vector<std::pair<MyMesh::Point, Real>> occlusion_test_points_;
+	std::vector< std::pair<MyMesh::Point, Real> > occlusion_test_points_;
 	bool draw_occlusion_test_points_;
 
 	MyMesh::Point view_point_;
 	MyMesh::Normal view_direction_;
 
 	// TEST
-	std::vector<std::vector<MeshCuboidJointNormalRelations>> joint_normal_relations_;
+	std::vector< std::vector<MeshCuboidJointNormalRelations> > joint_normal_relations_;
 	MeshCuboidJointNormalRelationPredictor *test_joint_normal_predictor_;
 	double test_occlusion_modelview_matrix_[16];
 	std::vector<MeshCuboid *> all_cuboids_;

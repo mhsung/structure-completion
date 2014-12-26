@@ -15,7 +15,7 @@
 DEFINE_string(mesh_dir, "D:/data/shape2pose/data/1_input/coseg_chairs/off/", "");
 DEFINE_string(sample_dir, "D:/data/shape2pose/data/2_analysis/coseg_chairs/points/even1000/", "");
 DEFINE_string(mesh_label_dir, "D:/data/coseg/chairs_400/comp/", "");
-DEFINE_string(sample_label_dir, "D:/data/shape2pose/data/4_experiments/exp1_coseg_four_legs/1_prediction/", "");
+DEFINE_string(sample_label_dir, "D:/data/shape2pose/data/4_experiments/exp3_coseg_four_legs/1_prediction/", "");
 DEFINE_string(snapshot_dir, "output", "");
 
 DEFINE_string(point_cuboid_label_map_filename, "point_cuboid_label_map.txt", "");
@@ -115,7 +115,7 @@ void MeshViewerWidget::run_occlusion_test()
 }
 
 ANNkd_tree* create_occlusion_test_points_kd_tree(
-	const std::vector<std::pair<MyMesh::Point, Real>> &_occlusion_test_points,
+	const std::vector< std::pair<MyMesh::Point, Real> > &_occlusion_test_points,
 	const MeshCuboidStructure &_cuboid_structure,
 	Eigen::VectorXd &_values,
 	ANNpointArray &_ann_points)
@@ -263,11 +263,11 @@ void MeshViewerWidget::run_training()
 	std::ofstream object_list_file(FLAGS_object_list_filename);
 	assert(object_list_file);
 
-	//std::vector<std::list<MeshCuboidAttributes *>> attributes_list(num_all_cuboid_labels);
-	std::vector<std::list<MeshCuboidFeatures *>> feature_list(num_all_cuboid_labels);
-	std::vector<std::list<MeshCuboidTransformation *>> transformation_list(num_all_cuboid_labels);
-	//std::vector<std::list<MeshCuboidManualFeatures *>> manual_single_feature_list(num_all_cuboid_labels);
-	//std::vector<std::vector<std::list<MeshCuboidManualFeatures *>>> manual_pair_feature_list(num_all_cuboid_labels);
+	//std::vector< std::list<MeshCuboidAttributes *> > attributes_list(num_all_cuboid_labels);
+	std::vector< std::list<MeshCuboidFeatures *> > feature_list(num_all_cuboid_labels);
+	std::vector< std::list<MeshCuboidTransformation *> > transformation_list(num_all_cuboid_labels);
+	//std::vector< std::list<MeshCuboidManualFeatures *> > manual_single_feature_list(num_all_cuboid_labels);
+	//std::vector< std::vector< std::list<MeshCuboidManualFeatures *> > > manual_pair_feature_list(num_all_cuboid_labels);
 
 	//for (LabelIndex all_label_index = 0; all_label_index < num_all_cuboid_labels; ++all_label_index)
 	//	manual_pair_feature_list[all_label_index].resize(num_all_cuboid_labels);
@@ -506,7 +506,7 @@ void MeshViewerWidget::run_prediction()
 		return;
 	}
 
-	std::vector<std::vector<MeshCuboidJointNormalRelations>> joint_normal_relations(num_all_cuboid_labels);
+	std::vector< std::vector<MeshCuboidJointNormalRelations> > joint_normal_relations(num_all_cuboid_labels);
 	for (LabelIndex label_index_1 = 0; label_index_1 < num_all_cuboid_labels; ++label_index_1)
 	{
 		joint_normal_relations[label_index_1].resize(num_all_cuboid_labels);
@@ -529,28 +529,28 @@ void MeshViewerWidget::run_prediction()
 		}
 	}
 
-	std::vector<std::vector<MeshCuboidCondNormalRelations>> cond_normal_relations(num_all_cuboid_labels);
-	for (LabelIndex label_index_1 = 0; label_index_1 < num_all_cuboid_labels; ++label_index_1)
-	{
-		cond_normal_relations[label_index_1].resize(num_all_cuboid_labels);
-		for (LabelIndex label_index_2 = 0; label_index_2 < num_all_cuboid_labels; ++label_index_2)
-		{
-			if (label_index_1 == label_index_2)
-				continue;
+	//std::vector< std::vector<MeshCuboidCondNormalRelations> > cond_normal_relations(num_all_cuboid_labels);
+	//for (LabelIndex label_index_1 = 0; label_index_1 < num_all_cuboid_labels; ++label_index_1)
+	//{
+	//	cond_normal_relations[label_index_1].resize(num_all_cuboid_labels);
+	//	for (LabelIndex label_index_2 = 0; label_index_2 < num_all_cuboid_labels; ++label_index_2)
+	//	{
+	//		if (label_index_1 == label_index_2)
+	//			continue;
 
-			std::string relation_filename = "conditional_normal_"
-				+ std::to_string(label_index_1) + std::string("_")
-				+ std::to_string(label_index_2) + std::string(".dat");
-			bool ret = cond_normal_relations[label_index_1][label_index_2].load_cond_normal_dat(
-				relation_filename.c_str());
-			if (!ret)
-			{
-				do {
-					std::cout << '\n' << "Press the Enter key to continue.";
-				} while (std::cin.get() != '\n');
-			}
-		}
-	}
+	//		std::string relation_filename = "conditional_normal_"
+	//			+ std::to_string(label_index_1) + std::string("_")
+	//			+ std::to_string(label_index_2) + std::string(".dat");
+	//		bool ret = cond_normal_relations[label_index_1][label_index_2].load_cond_normal_dat(
+	//			relation_filename.c_str());
+	//		if (!ret)
+	//		{
+	//			do {
+	//				std::cout << '\n' << "Press the Enter key to continue.";
+	//			} while (std::cin.get() != '\n');
+	//		}
+	//	}
+	//}
 
 
 	slotDrawMode(findAction(CUSTOM_VIEW));
@@ -622,7 +622,8 @@ void MeshViewerWidget::run_prediction()
 
 			draw_occlusion_test_points_ = true;
 			updateGL();
-			slotSnapshot((snapshot_filename_prefix + std::to_string(snapshot_index++)).c_str());
+			slotSnapshot((snapshot_filename_prefix + std::to_string(snapshot_index)).c_str());
+			++snapshot_index;
 			draw_occlusion_test_points_ = false;
 
 
@@ -635,15 +636,12 @@ void MeshViewerWidget::run_prediction()
 
 			mesh_.clear_colors();
 
-			// NOTE:
-			// Reassign sample point memberships to cuboids.
-			reassign_sample_point_membership(cuboid_structure_);
-
 			update_cuboid_surface_points(cuboid_structure_, occlusion_modelview_matrix);
 
 			draw_cuboid_axes_ = false;
 			updateGL();
-			slotSnapshot((snapshot_filename_prefix + std::to_string(snapshot_index++)).c_str());
+			slotSnapshot((snapshot_filename_prefix + std::to_string(snapshot_index)).c_str());
+			++snapshot_index;
 			draw_cuboid_axes_ = true;
 
 
@@ -661,31 +659,46 @@ void MeshViewerWidget::run_prediction()
 
 			draw_cuboid_axes_ = true;
 			updateGL();
-			slotSnapshot((snapshot_filename_prefix + std::to_string(snapshot_index++)).c_str());
+			slotSnapshot((snapshot_filename_prefix + std::to_string(snapshot_index)).c_str());
+			++snapshot_index;
 
 
-			// 4. Optimize cuboid attributes.
+			// 4. Segment sample points.
+			segment_sample_points(cuboid_structure_);
+
+			for (cuboid_structure_.query_label_index_ = 0;
+				cuboid_structure_.query_label_index_ <= cuboid_structure_.label_cuboids_.size();
+				++cuboid_structure_.query_label_index_)
+			{
+				updateGL();
+				slotSnapshot((snapshot_filename_prefix + std::to_string(snapshot_index)
+					+ std::string("_") + std::to_string(cuboid_structure_.query_label_index_)).c_str());
+			}
+			++snapshot_index;
+
+
+			// 5. Optimize cuboid attributes.
 			// Collect all parts.
 			const double quadprog_ratio = 1E4;
-			const unsigned int max_num_iterations = 30;
+			const unsigned int max_num_iterations = 10;
 
 			optimize_attributes( cuboid_structure_, occlusion_modelview_matrix,
 				joint_normal_predictor, quadprog_ratio,
 				log_filename.c_str(), max_num_iterations, this);
 
 			updateGL();
-			slotSnapshot((snapshot_filename_prefix + std::to_string(snapshot_index++)).c_str());
+			slotSnapshot((snapshot_filename_prefix + std::to_string(snapshot_index)).c_str());
+			++snapshot_index;
 
-
-			// 5. Add missing cuboids.
+			/*
+			// 6. Add missing cuboids.
 			MeshCuboidCondNormalRelationPredictor cond_normal_predictor(cond_normal_relations);
 			add_missing_cuboids(cuboid_structure_, cond_normal_predictor);
 
 			updateGL();
-			slotSnapshot((snapshot_filename_prefix + std::to_string(snapshot_index++)).c_str());
+			slotSnapshot((snapshot_filename_prefix + std::to_string(snapshot_index)).c_str());
+			++snapshot_index;
 
-
-			/*
 			// TEST
 			std::vector<MeshCuboid *> copied_cuboids;
 
@@ -817,7 +830,7 @@ void MeshViewerWidget::run_test_joint_normal_training()
 	const unsigned int num_all_cuboid_labels = all_cuboid_labels.size();
 
 
-	std::vector<std::vector<MeshCuboidJointNormalRelations>> joint_normal_relations(num_all_cuboid_labels);
+	std::vector< std::vector<MeshCuboidJointNormalRelations> > joint_normal_relations(num_all_cuboid_labels);
 	for (LabelIndex label_index_1 = 0; label_index_1 < num_all_cuboid_labels; ++label_index_1)
 	{
 		joint_normal_relations[label_index_1].resize(num_all_cuboid_labels);
@@ -954,7 +967,7 @@ void MeshViewerWidget::run_test_joint_normal_training()
 			}
 
 			std::vector<MeshCuboid *> cuboids;
-			for (std::vector<std::vector<MeshCuboid *>>::iterator it = cuboid_structure_.label_cuboids_.begin();
+			for (std::vector< std::vector<MeshCuboid *> >::iterator it = cuboid_structure_.label_cuboids_.begin();
 				it != cuboid_structure_.label_cuboids_.end(); ++it)
 				cuboids.insert(cuboids.end(), (*it).begin(), (*it).end());
 
@@ -983,7 +996,7 @@ void MeshViewerWidget::run_test_manual_relations()
 
 
 	std::vector<MeshCuboidStats> single_stats(num_all_cuboid_labels);
-	std::vector<std::vector<MeshCuboidStats>> pair_stats(num_all_cuboid_labels);
+	std::vector< std::vector<MeshCuboidStats> > pair_stats(num_all_cuboid_labels);
 
 	for (LabelIndex all_label_index_1 = 0; all_label_index_1 < num_all_cuboid_labels; ++all_label_index_1)
 	{
@@ -1066,7 +1079,7 @@ void MeshViewerWidget::run_test_manual_relations()
 
 			// Collect all parts.
 			std::vector<MeshCuboid *> cuboids;
-			for (std::vector<std::vector<MeshCuboid *>>::iterator it = cuboid_structure_.label_cuboids_.begin();
+			for (std::vector< std::vector<MeshCuboid *> >::iterator it = cuboid_structure_.label_cuboids_.begin();
 				it != cuboid_structure_.label_cuboids_.end(); ++it)
 				cuboids.insert(cuboids.end(), (*it).begin(), (*it).end());
 
@@ -1120,7 +1133,7 @@ void MeshViewerWidget::run_test_cca_relations()
 		return;
 	}
 
-	std::vector<std::vector<std::vector<MeshCuboidCCARelations>>> relations(num_all_cuboid_labels);
+	std::vector< std::vector< std::vector<MeshCuboidCCARelations> > > relations(num_all_cuboid_labels);
 	for (LabelIndex label_index_1 = 0; label_index_1 < num_all_cuboid_labels; ++label_index_1)
 	{
 		relations[label_index_1].resize(num_all_cuboid_labels);
@@ -1205,7 +1218,7 @@ void MeshViewerWidget::run_test_cca_relations()
 
 			// Collect all parts.
 			std::vector<MeshCuboid *> cuboids;
-			for (std::vector<std::vector<MeshCuboid *>>::iterator it = cuboid_structure_.label_cuboids_.begin();
+			for (std::vector< std::vector<MeshCuboid *> >::iterator it = cuboid_structure_.label_cuboids_.begin();
 				it != cuboid_structure_.label_cuboids_.end(); ++it)
 				cuboids.insert(cuboids.end(), (*it).begin(), (*it).end());
 

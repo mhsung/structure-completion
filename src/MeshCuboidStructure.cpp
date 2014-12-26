@@ -34,7 +34,7 @@ void MeshCuboidStructure::clear_labels()
 {
 	labels_.clear();
 
-	for (std::vector<std::vector<MeshCuboid *>>::iterator it = label_cuboids_.begin();
+	for (std::vector< std::vector<MeshCuboid *> >::iterator it = label_cuboids_.begin();
 		it != label_cuboids_.end(); ++it)
 	{
 		for (std::vector<MeshCuboid *>::iterator jt = (*it).begin(); jt != (*it).end(); ++jt)
@@ -399,7 +399,7 @@ std::vector<MeshCuboid *> MeshCuboidStructure::get_all_cuboids() const
 {
 	std::vector<MeshCuboid *> all_cuboids;
 
-	for (std::vector<std::vector<MeshCuboid *>>::const_iterator it = label_cuboids_.begin();
+	for (std::vector< std::vector<MeshCuboid *> >::const_iterator it = label_cuboids_.begin();
 		it != label_cuboids_.end(); ++it)
 		all_cuboids.insert(all_cuboids.end(), (*it).begin(), (*it).end());
 
@@ -489,7 +489,7 @@ bool MeshCuboidStructure::apply_point_cuboid_label_map(
 	if (query_label_index_ == old_labels.size())
 		query_label_index_ = num_labels();
 
-	std::vector<std::vector<MeshCuboid *>> new_label_cuboids(num_labels());
+	std::vector< std::vector<MeshCuboid *> > new_label_cuboids(num_labels());
 	for (LabelIndex point_label_index = 0; point_label_index < label_cuboids_.size(); ++point_label_index)
 	{
 		std::vector<MeshCuboid *>& label_cuboids = label_cuboids_[point_label_index];
@@ -548,13 +548,13 @@ void MeshCuboidStructure::apply_mesh_face_labels_to_sample_points()
 	assert(mesh_);
 	labels_.clear();
 
-	std::list<std::vector<FaceIndex>> all_label_faces;
+	std::list< std::vector<FaceIndex> > all_label_faces;
 	mesh_->get_all_label_faces(all_label_faces);
 
 	if (all_label_faces.empty())
 		return;
 
-	for (std::list<std::vector<FaceIndex>>::iterator l_it = all_label_faces.begin();
+	for (std::list< std::vector<FaceIndex> >::iterator l_it = all_label_faces.begin();
 		l_it != all_label_faces.end(); ++l_it)
 	{
 		std::vector<FaceIndex> &label_faces = (*l_it);
@@ -598,7 +598,7 @@ void MeshCuboidStructure::apply_mesh_face_labels_to_cuboids()
 
 	std::list<MeshCuboid *> part_list;
 
-	for (std::vector<std::vector<MeshCuboid *>>::iterator it = label_cuboids_.begin();
+	for (std::vector< std::vector<MeshCuboid *> >::iterator it = label_cuboids_.begin();
 		it != label_cuboids_.end(); ++it)
 	{
 		for (std::vector<MeshCuboid *>::iterator jt = (*it).begin(); jt != (*it).end(); ++jt)
@@ -636,7 +636,7 @@ void MeshCuboidStructure::get_mesh_face_label_cuboids()
 void MeshCuboidStructure::compute_label_cuboids()
 {
 	// Initialize.
-	for (std::vector<std::vector<MeshCuboid *>>::iterator it = label_cuboids_.begin();
+	for (std::vector< std::vector<MeshCuboid *> >::iterator it = label_cuboids_.begin();
 		it != label_cuboids_.end(); ++it)
 	{
 		for (std::vector<MeshCuboid *>::iterator jt = (*it).begin(); jt != (*it).end(); ++jt)
@@ -761,7 +761,7 @@ bool MeshCuboidStructure::set_new_label_indices(const std::vector<Label>& _label
 	}
 
 	// Update label cuboids.
-	std::vector<std::vector<MeshCuboid *>> new_label_cuboids(num_labels());
+	std::vector< std::vector<MeshCuboid *> > new_label_cuboids(num_labels());
 	for (LabelIndex old_label_index = 0; old_label_index < label_cuboids_.size(); ++old_label_index)
 	{
 		std::vector<MeshCuboid *>& label_cuboids = label_cuboids_[old_label_index];
