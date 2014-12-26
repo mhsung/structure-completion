@@ -207,7 +207,7 @@ private:
 template<typename T> bool print_vector(const std::string &_filename, std::vector<T> &_ar)
 {
 	std::ofstream file(_filename.c_str());
-	if(!file)
+	if(!file.is_open())
 	{
 		std::cerr << "Can't open loading file: \"" << _filename << "\"" << std::endl;
 		return false;

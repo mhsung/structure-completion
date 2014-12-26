@@ -4,6 +4,7 @@
 
 if(UNIX)
 set (LIBRARY_ROOT_PATH "~/lib" CACHE PATH "The directory where the all library files can be found.")
+set (CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++0x")
 
 include_directories (
   ${CMAKE_CURRENT_SOURCE_DIR}/src
