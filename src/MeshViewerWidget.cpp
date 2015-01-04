@@ -18,7 +18,7 @@ void MeshViewerWidget::open_sample_point_label_file(QString filename)
 
 void MeshViewerWidget::open_face_label_file(QString filename)
 {
-	bool ret = mesh_.load_face_label(filename.toLocal8Bit());
+	bool ret = mesh_.load_face_label_simple(filename.toLocal8Bit());
 	if (ret) cuboid_structure_.get_mesh_face_label_cuboids();
 	//cuboid_structure_.create_cuboid_surface_points();
 	updateGL();
@@ -26,7 +26,7 @@ void MeshViewerWidget::open_face_label_file(QString filename)
 
 void MeshViewerWidget::open_face_label_file_but_preserve_cuboids(QString filename)
 {
-	bool ret = mesh_.load_face_label(filename.toLocal8Bit());
+	bool ret = mesh_.load_face_label_simple(filename.toLocal8Bit());
 	if (ret) cuboid_structure_.apply_mesh_face_labels_to_cuboids();
 	updateGL();
 }
@@ -309,7 +309,6 @@ void MeshViewerWidget::keyPressEvent( QKeyEvent* _event)
 	//	mesh_.show_picked_vertices_info();
 	//	break;
 
-	/*
 	case Key_Left:
 		if (cuboid_structure_.query_label_index_ - 1 < 0
 			&& cuboid_structure_.num_labels() > 0)
@@ -337,8 +336,8 @@ void MeshViewerWidget::keyPressEvent( QKeyEvent* _event)
 		std::cout << " - Label: " << cuboid_structure_.query_label_index_ << std::endl;
 		updateGL();
 		break;
-	*/
 
+	/*
 	// TEST
 	case Key_Left:
 		if (_event->modifiers() & ControlModifier)
@@ -374,6 +373,7 @@ void MeshViewerWidget::keyPressEvent( QKeyEvent* _event)
 			run_test_translate(MyMesh::Normal(0.0, -1.0, 0.0));
 		break;
 	//
+	*/
 
 	case Key_F1:
 		std::cout << "Picking: [Seed]" << std::endl;
@@ -592,8 +592,7 @@ void MeshViewerWidget::draw_openmesh(const std::string& _drawmode)
 		}
 		*/
 
-		bool draw_all_labels = (cuboid_structure_.query_label_index_ ==
-			cuboid_structure_.label_cuboids_.size());
+		bool draw_all_labels = (cuboid_structure_.query_label_index_ == cuboid_structure_.num_labels());
 
 		// Draw sample points (Black).
 		if (draw_all_labels)

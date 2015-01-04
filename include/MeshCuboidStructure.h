@@ -75,6 +75,8 @@ public:
 		const std::vector<PointCuboidLabelMap>& _point_cuboid_label_maps,
 		const std::vector<Label>& _all_cuboid_labels);
 
+	void apply_test();
+
 	// Apple mesh face labels to sample points,
 	// and re-create parts based on sample point labels.
 	void get_mesh_face_label_cuboids();

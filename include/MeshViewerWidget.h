@@ -119,7 +119,7 @@ private:
 	MyMesh::Normal view_direction_;
 
 	// TEST
-	std::vector< std::vector<MeshCuboidJointNormalRelations> > joint_normal_relations_;
+	std::vector< std::vector<MeshCuboidJointNormalRelations *> > joint_normal_relations_;
 	MeshCuboidJointNormalRelationPredictor *test_joint_normal_predictor_;
 	double test_occlusion_modelview_matrix_[16];
 	std::vector<MeshCuboid *> all_cuboids_;
@@ -154,6 +154,10 @@ public:
 		delete occlusion_test_widget_;
 
 		// TEST
+		for (LabelIndex label_index_1 = 0; label_index_1 < joint_normal_relations_.size(); ++label_index_1)
+			for (LabelIndex label_index_2 = 0; label_index_2 < joint_normal_relations_[label_index_1].size(); ++label_index_2)
+				delete joint_normal_relations_[label_index_1][label_index_2];
+
 		delete test_joint_normal_predictor_;
 		//
 	}
@@ -240,8 +244,7 @@ public slots:
 		QString fileName = QFileDialog::getOpenFileName(this,
 			tr("Open a mesh face label file"),
 			tr(""),
-			tr("Labels (*.comp);;"
-			"Labels (*.class);;"
+			tr("Labels (*.seg);;"
 			"All Files (*)"));
 		if (!fileName.isEmpty())
 			open_face_label_file(fileName);
@@ -252,8 +255,7 @@ public slots:
 		QString fileName = QFileDialog::getOpenFileName(this,
 			tr("Open a mesh face label file"),
 			tr(""),
-			tr("Labels (*.comp);;"
-			"Labels (*.class);;"
+			tr("Labels (*.seg);;"
 			"All Files (*)"));
 		if (!fileName.isEmpty())
 			open_face_label_file_but_preserve_cuboids(fileName);
@@ -311,6 +313,7 @@ public slots:
 	// Nov. 2012, Minhyuk Sung
 	void run_print_mesh_info();
 	void run_training();
+	void run_training_from_files();
 	void run_prediction();
 	void run_rendering_point_clusters();
 	void run_occlusion_test();

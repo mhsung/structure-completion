@@ -59,6 +59,7 @@ void optimize_attributes(
 	const unsigned int _max_num_iterations = 30,
 	QGLWidget *_viewer = NULL);
 
+/*
 bool add_missing_cuboids(
 	MeshCuboidStructure &_cuboid_structure,
 	// NOTE:
@@ -69,5 +70,6 @@ MeshCuboid *test_joint_normal_training(
 	const MeshCuboid *_cuboid_1, const MeshCuboid *_cuboid_2,
 	const LabelIndex _label_index_1, const LabelIndex _label_index_2,
 	const std::vector< std::vector<MeshCuboidJointNormalRelations> >& _relations);
+*/
 
 #endif	// _MESH_CUBOID_SOLVER_H_

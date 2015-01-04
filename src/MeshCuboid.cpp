@@ -1513,16 +1513,23 @@ void MeshCuboid::remove_small_sub_cuboids(std::vector<MeshCuboid *> &_sub_cuboid
 MeshCuboid *MeshCuboid::merge_cuboids(const LabelIndex _label_index,
 	const std::vector<MeshCuboid *> _cuboids)
 {
-	if (_cuboids.empty())
-		return NULL;
+	MeshCuboid *merged_cuboid = NULL;
 
-	MeshCuboid *merged_cuboid = new MeshCuboid(_label_index);
+	if (_cuboids.size() == 1)
+	{
+		merged_cuboid = new MeshCuboid(*(_cuboids.front()));
+		merged_cuboid->label_index_ = _label_index;
+	}
+	else if (_cuboids.size() > 1)
+	{
+		merged_cuboid = new MeshCuboid(_label_index);
 
-	for (std::vector<MeshCuboid *>::const_iterator it = _cuboids.begin();
-		it != _cuboids.end(); ++it)
-		merged_cuboid->add_sample_points((*it)->sample_points_);
+		for (std::vector<MeshCuboid *>::const_iterator it = _cuboids.begin();
+			it != _cuboids.end(); ++it)
+			merged_cuboid->add_sample_points((*it)->sample_points_);
 
-	merged_cuboid->compute_bbox();
+		merged_cuboid->compute_bbox();
+	}
 
 	return merged_cuboid;
 }

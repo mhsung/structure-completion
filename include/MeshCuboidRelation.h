@@ -41,10 +41,12 @@ public:
 
 	const Eigen::VectorXd get_attributes()const { return attributes_; }
 
-	static void get_attributes(const std::list<MeshCuboidAttributes *>& _stats,
+	bool has_nan()const { return attributes_.hasNaN(); }
+
+	static void get_attribute_collection_matrix(const std::list<MeshCuboidAttributes *>& _stats,
 		Eigen::MatrixXd& _values);
 
-	static bool save_attributes(const std::list<MeshCuboidAttributes *>& _stats,
+	static bool save_attribute_collection(const std::list<MeshCuboidAttributes *>& _stats,
 		const char* _filename);
 
 private:
@@ -77,11 +79,16 @@ public:
 
 	const Eigen::VectorXd get_features()const { return features_; }
 
-	static void get_features(const std::list<MeshCuboidFeatures *>& _stats,
+	bool has_nan()const { return features_.hasNaN(); }
+
+	static void get_feature_collection_matrix(const std::list<MeshCuboidFeatures *>& _stats,
 		Eigen::MatrixXd& _values);
 
-	static bool save_features(const std::list<MeshCuboidFeatures *>& _stats,
-		const char* _filename);
+	static bool load_feature_collection(const char* _filename,
+		std::list<MeshCuboidFeatures *>& _stats);
+
+	static bool save_feature_collection(const char* _filename,
+		const std::list<MeshCuboidFeatures *>& _stats);
 
 private:
 	std::string object_name_;
@@ -97,7 +104,9 @@ public:
 	void initialize();
 
 	void compute_transformation(const MeshCuboid *_cuboid);
+	Eigen::VectorXd get_transformed_features(const MeshCuboidFeatures& _other_features)const;
 	Eigen::VectorXd get_transformed_features(const MeshCuboid *_other_cuboid)const;
+	Eigen::VectorXd get_inverse_transformed_features(const MeshCuboidFeatures& _other_features)const;
 	Eigen::VectorXd get_inverse_transformed_features(const MeshCuboid *_other_cuboid)const;
 
 	void get_transformation(Eigen::Matrix3d &_rotation, Eigen::Vector3d &_translation) const;
@@ -105,42 +114,17 @@ public:
 
 	void get_linear_map_transformation(Eigen::MatrixXd &_rotation, Eigen::MatrixXd &_translation)const;
 	void get_linear_map_inverse_transformation(Eigen::MatrixXd &_rotation, Eigen::MatrixXd &_translation)const;
+	
+	static bool load_transformation_collection(const char* _filename,
+		std::list<MeshCuboidTransformation *>& _stats);
 
-	static bool save_transformations(
-		const std::list<MeshCuboidTransformation *>& _stats, const char* _filename);
+	static bool save_transformation_collection(const char* _filename,
+		const std::list<MeshCuboidTransformation *>& _stats);
 
 private:
 	std::string object_name_;
 	Eigen::Vector3d first_translation_;
 	Eigen::Matrix3d second_rotation_;
-};
-
-class MeshCuboidCondNormalRelations {
-public:
-	MeshCuboidCondNormalRelations();
-	~MeshCuboidCondNormalRelations();
-
-	bool load_cond_normal_csv(const char* _filename);
-	bool save_cond_normal_csv(const char* _filename);
-
-	bool load_cond_normal_dat(const char* _filename);
-
-	double compute_error(
-		const MeshCuboidAttributes *_attributes_1,
-		const MeshCuboidAttributes *_attributes_2)const;
-
-	double compute_error(
-		const Eigen::VectorXd &_features_vec_1,
-		const Eigen::VectorXd &_features_vec_2)const;
-
-	const Eigen::MatrixXd get_mean_A()const { return mean_A_; }
-	const Eigen::VectorXd get_mean_b()const { return mean_b_; }
-	const Eigen::MatrixXd get_inv_cov()const { return inv_cov_; }
-
-private:
-	Eigen::MatrixXd mean_A_;
-	Eigen::VectorXd mean_b_;
-	Eigen::MatrixXd inv_cov_;
 };
 
 class MeshCuboidJointNormalRelations {
@@ -151,20 +135,19 @@ public:
 	static const unsigned int k_mat_size = 2 * MeshCuboidFeatures::k_num_features;
 
 	bool load_joint_normal_csv(const char* _filename);
-	bool save_joint_normal_csv(const char* _filename);
+	bool save_joint_normal_csv(const char* _filename)const;
 
 	bool load_joint_normal_dat(const char* _filename);
-
-	double compute_error(
-		const MeshCuboidAttributes *_attributes_1,
-		const MeshCuboidAttributes *_attributes_2)const;
 
 	double compute_error(
 		const Eigen::VectorXd &_features_vec_1,
 		const Eigen::VectorXd &_features_vec_2)const;
 
-	const Eigen::VectorXd get_mean()const { return mean_; }
-	const Eigen::MatrixXd get_inv_cov()const { return inv_cov_; }
+	const Eigen::VectorXd &get_mean()const { return mean_; }
+	const Eigen::MatrixXd &get_inv_cov()const { return inv_cov_; }
+
+	void set_mean(const Eigen::VectorXd &_mean) { mean_ = _mean; }
+	void set_inv_cov(const Eigen::MatrixXd &_inv_cov_) { inv_cov_ = _inv_cov_; }
 
 private:
 	Eigen::VectorXd mean_;
@@ -172,6 +155,30 @@ private:
 };
 
 /*
+class MeshCuboidCondNormalRelations {
+public:
+	MeshCuboidCondNormalRelations();
+	~MeshCuboidCondNormalRelations();
+
+	bool load_cond_normal_csv(const char* _filename);
+	bool save_cond_normal_csv(const char* _filename)const;
+
+	bool load_cond_normal_dat(const char* _filename);
+
+	double compute_error(
+		const Eigen::VectorXd &_features_vec_1,
+		const Eigen::VectorXd &_features_vec_2)const;
+
+	const Eigen::MatrixXd &get_mean_A()const { return mean_A_; }
+	const Eigen::VectorXd &get_mean_b()const { return mean_b_; }
+	const Eigen::MatrixXd &get_inv_cov()const { return inv_cov_; }
+
+private:
+	Eigen::MatrixXd mean_A_;
+	Eigen::VectorXd mean_b_;
+	Eigen::MatrixXd inv_cov_;
+};
+
 class MeshCuboidPCARelations {
 public:
 	MeshCuboidPCARelations();
@@ -180,18 +187,14 @@ public:
 	static const unsigned int k_mat_size = 2 * (MeshCuboidFeatures::k_num_features);
 
 	bool load_pca_csv(const char* _filename);
-	bool save_pca_csv(const char* _filename);
-
-	double compute_error(
-		const MeshCuboidAttributes *_attributes_1,
-		const MeshCuboidAttributes *_attributes_2)const;
+	bool save_pca_csv(const char* _filename)const;
 
 	double compute_error(
 		const Eigen::VectorXd &_features_vec_1,
 		const Eigen::VectorXd &_features_vec_2)const;
 
-	const Eigen::VectorXd get_mean()const { return mean_; }
-	const Eigen::MatrixXd get_pca_bases()const { return pca_bases_; }
+	const Eigen::VectorXd &get_mean()const { return mean_; }
+	const Eigen::MatrixXd &get_pca_bases()const { return pca_bases_; }
 
 private:
 	Eigen::VectorXd mean_;
@@ -204,7 +207,7 @@ public:
 	~MeshCuboidCCARelations();
 
 	bool load_cca_bases(const char* _filename);
-	bool save_cca_bases(const char* _filename);
+	bool save_cca_bases(const char* _filename)const;
 
 	double compute_error(
 		const Eigen::VectorXd &_features_vec_1,

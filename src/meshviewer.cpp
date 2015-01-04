@@ -239,11 +239,15 @@ void create_menu(QMainWindow &w)
 
 
 	/* ------------------------	*/
-	/* Test Menu				*/
+	/* Experiment Menu			*/
 	/* ------------------------	*/
 
 	runAct = new QAction(w.tr("Training"), &w);
 	QObject::connect(runAct, SIGNAL(triggered()), w.centralWidget(), SLOT(run_training()));
+	w.menuBar()->addAction(runAct);
+
+	runAct = new QAction(w.tr("Training (From files)"), &w);
+	QObject::connect(runAct, SIGNAL(triggered()), w.centralWidget(), SLOT(run_training_from_files()));
 	w.menuBar()->addAction(runAct);
 
 	runAct = new QAction(w.tr("Prediction"), &w);

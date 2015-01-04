@@ -72,13 +72,13 @@ void MeshCuboidAttributes::compute_attributes(const MeshCuboid *_cuboid)
 	}
 }
 
-void MeshCuboidAttributes::get_attributes(const std::list<MeshCuboidAttributes *>& _stats,
+void MeshCuboidAttributes::get_attribute_collection_matrix(const std::list<MeshCuboidAttributes *>& _stats,
 	Eigen::MatrixXd& _values)
 {
 	unsigned int num_objects = _stats.size();
 
 	const int num_attributes = static_cast<int>(k_num_attributes);
-	_values = Eigen::MatrixXd(num_attributes, num_objects);
+	_values = Eigen::MatrixXd(num_objects, num_attributes);
 
 	unsigned int object_index = 0;
 	for (std::list<MeshCuboidAttributes *>::const_iterator stat_it = _stats.begin(); stat_it != _stats.end();
@@ -87,11 +87,11 @@ void MeshCuboidAttributes::get_attributes(const std::list<MeshCuboidAttributes *
 		assert(*stat_it);
 
 		for (int attribute_index = 0; attribute_index < num_attributes; ++attribute_index)
-			_values(attribute_index, object_index) = (*stat_it)->attributes_[attribute_index];
+			_values(object_index, attribute_index) = (*stat_it)->attributes_[attribute_index];
 	}
 }
 
-bool MeshCuboidAttributes::save_attributes(const std::list<MeshCuboidAttributes *>& _stats,
+bool MeshCuboidAttributes::save_attribute_collection(const std::list<MeshCuboidAttributes *>& _stats,
 	const char* _filename)
 {
 	const int num_attributes = static_cast<int>(k_num_attributes);
@@ -278,12 +278,13 @@ void MeshCuboidFeatures::compute_features(const MeshCuboid *_cuboid,
 		(*_attributes_to_features_map) = attributes_to_features_map;
 }
 
-void MeshCuboidFeatures::get_features(const std::list<MeshCuboidFeatures *>& _stats,
+void MeshCuboidFeatures::get_feature_collection_matrix(const std::list<MeshCuboidFeatures *>& _stats,
 	Eigen::MatrixXd& _values)
 {
 	unsigned int num_objects = _stats.size();
 
-	_values = Eigen::MatrixXd(MeshCuboidFeatures::k_num_features, num_objects);
+	const int num_features = static_cast<int>(k_num_features);
+	_values = Eigen::MatrixXd(num_objects, num_features);
 
 	unsigned int object_index = 0;
 	for (std::list<MeshCuboidFeatures *>::const_iterator stat_it = _stats.begin(); stat_it != _stats.end();
@@ -291,13 +292,81 @@ void MeshCuboidFeatures::get_features(const std::list<MeshCuboidFeatures *>& _st
 	{
 		assert(*stat_it);
 
-		for (int attribute_index = 0; attribute_index < MeshCuboidFeatures::k_num_features; ++attribute_index)
-			_values(attribute_index, object_index) = (*stat_it)->features_[attribute_index];
+		for (int feature_index = 0; feature_index < num_features; ++feature_index)
+			_values(object_index, feature_index) = (*stat_it)->features_[feature_index];
 	}
 }
 
-bool MeshCuboidFeatures::save_features(const std::list<MeshCuboidFeatures *>& _stats,
-	const char* _filename)
+bool MeshCuboidFeatures::load_feature_collection(const char* _filename,
+	std::list<MeshCuboidFeatures *>& _stats)
+{
+	for (std::list<MeshCuboidFeatures *>::iterator it = _stats.begin(); it != _stats.end(); ++it)
+		delete (*it);
+	_stats.clear();
+
+	std::ifstream file(_filename);
+	if (!file)
+	{
+		std::cerr << "Can't load file: \"" << _filename << "\"" << std::endl;
+		return false;
+	}
+
+	std::string buffer;
+	std::stringstream strstr;
+	std::string token;
+	bool succeded = true;
+
+	while (!file.eof())
+	{
+		std::getline(file, buffer);
+		if (buffer == "") break;
+
+		strstr.str(std::string());
+		strstr.clear();
+		strstr.str(buffer);
+
+		MeshCuboidFeatures *new_features = new MeshCuboidFeatures();
+		assert(new_features);
+
+		for (int feature_index = 0; feature_index < MeshCuboidFeatures::k_num_features; ++feature_index)
+		{
+			std::getline(strstr, token, ',');
+			if (strstr.eof())
+			{
+				std::cerr << "Wrong file format: \"" << _filename << "\"" << std::endl;
+				succeded = false;
+				break;
+			}
+
+			if (token == "NaN")
+			{
+				// Note:
+				// Undefined attributes are recorded as NaN.
+				new_features->features_[feature_index] = std::numeric_limits<Real>::quiet_NaN();
+			}
+			else
+			{
+				new_features->features_[feature_index] = atof(token.c_str());;
+			}
+		}
+
+		if (!succeded) break;
+		_stats.push_back(new_features);
+	}
+
+	if (!succeded)
+	{
+		for (std::list<MeshCuboidFeatures *>::iterator it = _stats.begin(); it != _stats.end(); ++it)
+			delete (*it);
+		_stats.clear();
+		return false;
+	}
+
+	return true;
+}
+
+bool MeshCuboidFeatures::save_feature_collection(const char* _filename,
+	const std::list<MeshCuboidFeatures *>& _stats)
 {
 	std::ofstream file(_filename);
 	if (!file)
@@ -317,9 +386,9 @@ bool MeshCuboidFeatures::save_features(const std::list<MeshCuboidFeatures *>& _s
 	{
 		assert(*stat_it);
 
-		for (int attribute_index = 0; attribute_index < MeshCuboidFeatures::k_num_features; ++attribute_index)
+		for (int feature_index = 0; feature_index < MeshCuboidFeatures::k_num_features; ++feature_index)
 		{
-			Real value = (*stat_it)->features_[attribute_index];
+			Real value = (*stat_it)->features_[feature_index];
 			if (std::isnan(value))
 			{
 				// Note:
@@ -375,13 +444,10 @@ void MeshCuboidTransformation::compute_transformation(const MeshCuboid *_cuboid)
 }
 
 Eigen::VectorXd
-MeshCuboidTransformation::get_transformed_features(const MeshCuboid *_other_cuboid)const
+MeshCuboidTransformation::get_transformed_features(
+const MeshCuboidFeatures& _other_features)const
 {
-	assert(_other_cuboid);
-
-	MeshCuboidFeatures features;
-	features.compute_features(_other_cuboid);
-	Eigen::VectorXd transformed_features = features.get_features();
+	Eigen::VectorXd transformed_features = _other_features.get_features();
 
 	for (unsigned int i = 0; i < MeshCuboidFeatures::k_num_local_points; ++i)
 	{
@@ -391,19 +457,59 @@ MeshCuboidTransformation::get_transformed_features(const MeshCuboid *_other_cubo
 		transformed_features.block(3 * i, 0, 3, 1) = sub_values;
 	}
 
+//#ifdef DEBUG_TEST
+//	Eigen::MatrixXd rotation;
+//	Eigen::MatrixXd translation;
+//	get_linear_map_transformation(rotation, translation);
+//	Eigen::VectorXd same_transformed_features = rotation * (translation * _other_features.get_features());
+//
+//	assert(same_transformed_features.rows() == MeshCuboidFeatures::k_num_features);
+//	Real error = (same_transformed_features - transformed_features).array().abs().sum();
+//
+//	CHECK_NUMERICAL_ERROR(__FUNCTION__, error);
+//#endif
+
 	return transformed_features;
+}
 
-#ifdef DEBUG_TEST
-	Eigen::MatrixXd rotation;
-	Eigen::MatrixXd translation;
-	get_linear_map_transformation(rotation, translation);
-	Eigen::VectorXd same_transformed_features = rotation * (translation * features.get_features());
+Eigen::VectorXd
+MeshCuboidTransformation::get_transformed_features(const MeshCuboid *_other_cuboid)const
+{
+	assert(_other_cuboid);
 
-	assert(same_transformed_features.rows() == MeshCuboidFeatures::k_num_features);
-	Real error = (same_transformed_features - transformed_features).array().abs().sum();
+	MeshCuboidFeatures other_features;
+	other_features.compute_features(_other_cuboid);
 
-	CHECK_NUMERICAL_ERROR(__FUNCTION__, error);
-#endif
+	return get_transformed_features(other_features);
+}
+
+Eigen::VectorXd
+MeshCuboidTransformation::get_inverse_transformed_features(
+	const MeshCuboidFeatures& _other_features)const
+{
+	Eigen::VectorXd inverse_transformed_features = _other_features.get_features();
+
+	for (unsigned int i = 0; i < MeshCuboidFeatures::k_num_local_points; ++i)
+	{
+		Eigen::VectorXd sub_values = inverse_transformed_features.block(3 * i, 0, 3, 1);
+		sub_values = second_rotation_.transpose() * sub_values;
+		sub_values = -first_translation_ + sub_values;
+		inverse_transformed_features.block(3 * i, 0, 3, 1) = sub_values;
+	}
+
+//#ifdef DEBUG_TEST
+//	Eigen::MatrixXd rotation;
+//	Eigen::MatrixXd translation;
+//	get_linear_map_inverse_transformation(rotation, translation);
+//	Eigen::VectorXd same_transformed_features = rotation * (translation * _other_features.get_features());
+//
+//	assert(same_transformed_features.rows() == MeshCuboidFeatures::k_num_features);
+//	Real error = (same_transformed_features - inverse_transformed_features).array().abs().sum();
+//
+//	CHECK_NUMERICAL_ERROR(__FUNCTION__, error);
+//#endif
+
+	return inverse_transformed_features;
 }
 
 Eigen::VectorXd
@@ -411,31 +517,10 @@ MeshCuboidTransformation::get_inverse_transformed_features(const MeshCuboid *_ot
 {
 	assert(_other_cuboid);
 
-	MeshCuboidFeatures features;
-	features.compute_features(_other_cuboid);
-	Eigen::VectorXd transformed_features = features.get_features();
+	MeshCuboidFeatures other_features;
+	other_features.compute_features(_other_cuboid);
 
-	for (unsigned int i = 0; i < MeshCuboidFeatures::k_num_local_points; ++i)
-	{
-		Eigen::VectorXd sub_values = transformed_features.block(3 * i, 0, 3, 1);
-		sub_values = second_rotation_.transpose() * sub_values;
-		sub_values = -first_translation_ + sub_values;
-		transformed_features.block(3 * i, 0, 3, 1) = sub_values;
-	}
-
-	return transformed_features;
-
-#ifdef DEBUG_TEST
-	Eigen::MatrixXd rotation;
-	Eigen::MatrixXd translation;
-	get_linear_map_inverse_transformation(rotation, translation);
-	Eigen::VectorXd same_transformed_features = rotation * (translation * features.get_features());
-
-	assert(same_transformed_features.rows() == MeshCuboidFeatures::k_num_features);
-	Real error = (same_transformed_features - transformed_features).array().abs().sum();
-
-	CHECK_NUMERICAL_ERROR(__FUNCTION__, error);
-#endif
+	return get_inverse_transformed_features(other_features);
 }
 
 void MeshCuboidTransformation::get_transformation(
@@ -501,8 +586,84 @@ void MeshCuboidTransformation::get_linear_map_inverse_transformation(
 	}
 }
 
-bool MeshCuboidTransformation::save_transformations(
-	const std::list<MeshCuboidTransformation *>& _stats, const char* _filename)
+bool MeshCuboidTransformation::load_transformation_collection(const char* _filename,
+	std::list<MeshCuboidTransformation *>& _stats)
+{
+	for (std::list<MeshCuboidTransformation *>::iterator it = _stats.begin(); it != _stats.end(); ++it)
+		delete (*it);
+	_stats.clear();
+
+	std::ifstream file(_filename);
+	if (!file)
+	{
+		std::cerr << "Can't load file: \"" << _filename << "\"" << std::endl;
+		return false;
+	}
+
+	std::string buffer;
+	std::stringstream strstr;
+	std::string token;
+	bool succeded = true;
+
+	while (!file.eof())
+	{
+		std::getline(file, buffer);
+		if (buffer == "") break;
+
+		strstr.str(std::string());
+		strstr.clear();
+		strstr.str(buffer);
+
+		MeshCuboidTransformation *new_transformation = new MeshCuboidTransformation();
+		assert(new_transformation);
+
+		for (unsigned int axis_index = 0; axis_index < 3; ++axis_index)
+		{
+			for (unsigned int i = 0; i < 3; ++i)
+			{
+				std::getline(strstr, token, ',');
+				if (strstr.eof())
+				{
+					std::cerr << "Wrong file format: \"" << _filename << "\"" << std::endl;
+					succeded = false;
+					break;
+				}
+
+				if (!succeded) break;
+				new_transformation->second_rotation_.col(axis_index)(i) = atof(token.c_str());
+			}
+		}
+
+		for (unsigned int axis_index = 0; axis_index < 3; ++axis_index)
+		{
+			std::getline(strstr, token, ',');
+			if (strstr.eof())
+			{
+				std::cerr << "Wrong file format: \"" << _filename << "\"" << std::endl;
+				succeded = false;
+				break;
+			}
+
+			new_transformation->first_translation_(axis_index) = atof(token.c_str());
+		}
+
+		if (!succeded) break;
+		_stats.push_back(new_transformation);
+	}
+
+	if (!succeded)
+	{
+		for (std::list<MeshCuboidTransformation *>::iterator it = _stats.begin(); it != _stats.end(); ++it)
+			delete (*it);
+		_stats.clear();
+		return false;
+	}
+
+	return true;
+}
+
+bool MeshCuboidTransformation::save_transformation_collection(const char* _filename,
+	const std::list<MeshCuboidTransformation *>& _stats)
 {
 	std::ofstream file(_filename);
 	if (!file)
@@ -536,6 +697,216 @@ bool MeshCuboidTransformation::save_transformations(
 	return true;
 }
 
+MeshCuboidJointNormalRelations::MeshCuboidJointNormalRelations()
+{
+	mean_ = Eigen::VectorXd::Zero(k_mat_size);
+	inv_cov_ = Eigen::MatrixXd::Zero(k_mat_size, k_mat_size);
+}
+
+MeshCuboidJointNormalRelations::~MeshCuboidJointNormalRelations()
+{
+
+}
+
+bool MeshCuboidJointNormalRelations::load_joint_normal_csv(const char* _filename)
+{
+	Eigen::IOFormat csv_format(Eigen::StreamPrecision, 0, ", ", "", "", "", "", "");
+
+	std::ifstream file(_filename);
+	if (!file)
+	{
+		std::cerr << "Can't open file: \"" << _filename << "\"" << std::endl;
+		return false;
+	}
+
+	std::string buffer;
+	std::stringstream strstr;
+	std::string token;
+
+	std::getline(file, buffer);
+	strstr.str(std::string());
+	strstr.clear();
+	strstr.str(buffer);
+
+	for (int j = 0; j < k_mat_size; ++j)
+	{
+		if (strstr.eof())
+		{
+			std::cerr << "Wrong file format: \"" << _filename << "\"" << std::endl;
+			return false;
+		}
+
+		std::getline(strstr, token, ',');
+
+		// Transposed.
+		mean_(j) = atof(token.c_str());
+	}
+
+	for (int i = 0; i < k_mat_size; ++i)
+	{
+		if (file.eof())
+		{
+			std::cerr << "Wrong file format: \"" << _filename << "\"" << std::endl;
+			return false;
+		}
+
+		std::getline(file, buffer);
+		strstr.str(std::string());
+		strstr.clear();
+		strstr.str(buffer);
+
+		for (int j = 0; j < k_mat_size; ++j)
+		{
+			if (strstr.eof())
+			{
+				std::cerr << "Wrong file format: \"" << _filename << "\"" << std::endl;
+				return false;
+			}
+
+			std::getline(strstr, token, ',');
+			inv_cov_(i, j) = atof(token.c_str());
+		}
+	}
+
+	file.close();
+
+	Eigen::SelfAdjointEigenSolver<Eigen::MatrixXd> es(inv_cov_);
+	Real min_eigenvalue = es.eigenvalues().minCoeff();
+	if (min_eigenvalue < -1.0E-6)
+	{
+		std::cerr << "Error: The inverse covariance matrix is not positive-semidefinite: ("
+			<< _filename << " = " << min_eigenvalue << ")" << std::endl;
+		do {
+			std::cout << '\n' << "Press the Enter key to continue.";
+		} while (std::cin.get() != '\n');
+	}
+
+	Real symmetry_diff = (inv_cov_ - inv_cov_.transpose()).array().abs().sum();
+	if (symmetry_diff > 1.0E-6)
+	{
+		std::cerr << "Error: The inverse covariance matrix is not symmetric: ("
+			<< _filename << " = " << symmetry_diff << ")" << std::endl;
+		do {
+			std::cout << '\n' << "Press the Enter key to continue.";
+		} while (std::cin.get() != '\n');
+	}
+
+	return true;
+}
+
+bool MeshCuboidJointNormalRelations::save_joint_normal_csv(const char* _filename)const
+{
+	Eigen::IOFormat csv_format(Eigen::StreamPrecision, 0, ",");
+
+	std::ofstream file(_filename);
+	if (!file)
+	{
+		std::cerr << "Can't save file: \"" << _filename << "\"" << std::endl;
+		return false;
+	}
+	std::setprecision(std::numeric_limits<long double>::digits10 + 1);
+	std::cout << std::scientific;
+
+	file << mean_.transpose().format(csv_format) << std::endl;
+	file << inv_cov_.format(csv_format) << std::endl;
+
+	file.close();
+	return true;
+}
+
+bool MeshCuboidJointNormalRelations::load_joint_normal_dat(const char* _filename)
+{
+	std::ifstream file(_filename, std::ios::in | std::ios::binary);
+	if (!file.good())
+	{
+		std::cerr << "Can't open file: \"" << _filename << "\"" << std::endl;
+		return false;
+	}
+
+	int16_t rows, cols;
+
+	rows = 0, cols = 0;
+	file.read((char*)(&rows), sizeof(int16_t));
+	file.read((char*)(&cols), sizeof(int16_t));
+	assert(static_cast<int>(rows) == k_mat_size);
+	assert(static_cast<int>(cols) == 1);
+	mean_.resize(rows);
+	file.read((char *)mean_.data(), rows*cols*sizeof(Eigen::MatrixXd::Scalar));
+	
+	rows = 0, cols = 0;
+	file.read((char*)(&rows), sizeof(int16_t));
+	file.read((char*)(&cols), sizeof(int16_t));
+	assert(static_cast<int>(rows) == k_mat_size);
+	assert(static_cast<int>(cols) == k_mat_size);
+	inv_cov_.resize(rows, cols);
+	file.read((char *)inv_cov_.data(), rows*cols*sizeof(Eigen::MatrixXd::Scalar));
+
+	file.close();
+
+	Eigen::SelfAdjointEigenSolver<Eigen::MatrixXd> es(inv_cov_);
+	Real min_eigenvalue = es.eigenvalues().minCoeff();
+	if (min_eigenvalue < -1.0E-6)
+	{
+		std::cerr << "Error: The inverse covariance matrix is not positive-semidefinite: ("
+			<< _filename << " = " << min_eigenvalue << ")" << std::endl;
+		do {
+			std::cout << '\n' << "Press the Enter key to continue.";
+		} while (std::cin.get() != '\n');
+	}
+
+	Real symmetry_diff = (inv_cov_ - inv_cov_.transpose()).array().abs().sum();
+	if (symmetry_diff > 1.0E-6)
+	{
+		std::cerr << "Error: The inverse covariance matrix is not symmetric: ("
+			<< _filename << " = " << symmetry_diff << ")" << std::endl;
+		do {
+			std::cout << '\n' << "Press the Enter key to continue.";
+		} while (std::cin.get() != '\n');
+	}
+
+	return true;
+}
+
+double MeshCuboidJointNormalRelations::compute_error(
+	const Eigen::VectorXd &_features_vec_1, const Eigen::VectorXd &_features_vec_2) const
+{
+	assert(_features_vec_1.rows() == MeshCuboidFeatures::k_num_features);
+	assert(_features_vec_2.rows() == MeshCuboidFeatures::k_num_features);
+	
+	Eigen::VectorXd concat_features(2 * MeshCuboidFeatures::k_num_features);
+	concat_features << _features_vec_1, _features_vec_2;
+	assert(mean_.rows() == concat_features.rows());
+	assert(inv_cov_.rows() == concat_features.rows());
+	assert(inv_cov_.cols() == concat_features.rows());
+
+	Eigen::VectorXd diff = concat_features - mean_;
+
+	// Mahalanobis norm.
+	double error = diff.transpose() * inv_cov_ * diff;
+	assert(error >= 0);
+	
+	//std::cerr << "Negative error value (error = " << error << ")" << std::endl;
+	//Eigen::IOFormat csv_format(Eigen::StreamPrecision, 0, ",");
+
+	//Real inv_cov_det = inv_cov_.determinant();
+	//std::cout << "inv_cov_det = " << inv_cov_det << std::endl;
+
+	//Real symmetry_diff = (inv_cov_ - inv_cov_.transpose()).array().abs().sum();
+	//std::cerr << "symmetry_diff = " << symmetry_diff << std::endl;
+
+	//std::cout << "Norm(diff) = " << diff.transpose() * diff << std::endl;
+
+	//std::cout << "diff = " << std::endl;
+	//std::cout << diff.format(csv_format) << std::endl;
+
+	//do {
+	//	std::cout << '\n' << "Press the Enter key to continue.";
+	//} while (std::cin.get() != '\n');
+
+	return error;
+}
+
+/*
 MeshCuboidCondNormalRelations::MeshCuboidCondNormalRelations()
 {
 	assert(MeshCuboidFeatures::k_num_global_feature_values > 0);
@@ -664,7 +1035,7 @@ bool MeshCuboidCondNormalRelations::load_cond_normal_csv(const char* _filename)
 	return true;
 }
 
-bool MeshCuboidCondNormalRelations::save_cond_normal_csv(const char* _filename)
+bool MeshCuboidCondNormalRelations::save_cond_normal_csv(const char* _filename)const
 {
 	Eigen::IOFormat csv_format(Eigen::StreamPrecision, 0, ",");
 
@@ -788,216 +1159,6 @@ double MeshCuboidCondNormalRelations::compute_error(
 	return error;
 }
 
-MeshCuboidJointNormalRelations::MeshCuboidJointNormalRelations()
-{
-	mean_ = Eigen::VectorXd::Zero(k_mat_size);
-	inv_cov_ = Eigen::MatrixXd::Zero(k_mat_size, k_mat_size);
-}
-
-MeshCuboidJointNormalRelations::~MeshCuboidJointNormalRelations()
-{
-
-}
-
-bool MeshCuboidJointNormalRelations::load_joint_normal_csv(const char* _filename)
-{
-	Eigen::IOFormat csv_format(Eigen::StreamPrecision, 0, ", ", "", "", "", "", "");
-
-	std::ifstream file(_filename);
-	if (!file)
-	{
-		std::cerr << "Can't open file: \"" << _filename << "\"" << std::endl;
-		return false;
-	}
-
-	std::string buffer;
-	std::stringstream strstr;
-	std::string token;
-
-	std::getline(file, buffer);
-	strstr.str(std::string());
-	strstr.clear();
-	strstr.str(buffer);
-
-	for (int j = 0; j < k_mat_size; ++j)
-	{
-		if (strstr.eof())
-		{
-			std::cerr << "Wrong file format: \"" << _filename << "\"" << std::endl;
-			return false;
-		}
-
-		std::getline(strstr, token, ',');
-
-		// Transposed.
-		mean_(j) = atof(token.c_str());
-	}
-
-	for (int i = 0; i < k_mat_size; ++i)
-	{
-		if (file.eof())
-		{
-			std::cerr << "Wrong file format: \"" << _filename << "\"" << std::endl;
-			return false;
-		}
-
-		std::getline(file, buffer);
-		strstr.str(std::string());
-		strstr.clear();
-		strstr.str(buffer);
-
-		for (int j = 0; j < k_mat_size; ++j)
-		{
-			if (strstr.eof())
-			{
-				std::cerr << "Wrong file format: \"" << _filename << "\"" << std::endl;
-				return false;
-			}
-
-			std::getline(strstr, token, ',');
-			inv_cov_(i, j) = atof(token.c_str());
-		}
-	}
-
-	file.close();
-
-	Eigen::SelfAdjointEigenSolver<Eigen::MatrixXd> es(inv_cov_);
-	Real min_eigenvalue = es.eigenvalues().minCoeff();
-	if (min_eigenvalue < -1.0E-6)
-	{
-		std::cerr << "Error: The inverse covariance matrix is not positive-semidefinite: ("
-			<< _filename << " = " << min_eigenvalue << ")" << std::endl;
-		do {
-			std::cout << '\n' << "Press the Enter key to continue.";
-		} while (std::cin.get() != '\n');
-	}
-
-	Real symmetry_diff = (inv_cov_ - inv_cov_.transpose()).array().abs().sum();
-	if (symmetry_diff > 1.0E-6)
-	{
-		std::cerr << "Error: The inverse covariance matrix is not symmetric: ("
-			<< _filename << " = " << symmetry_diff << ")" << std::endl;
-		do {
-			std::cout << '\n' << "Press the Enter key to continue.";
-		} while (std::cin.get() != '\n');
-	}
-
-	return true;
-}
-
-bool MeshCuboidJointNormalRelations::save_joint_normal_csv(const char* _filename)
-{
-	Eigen::IOFormat csv_format(Eigen::StreamPrecision, 0, ",");
-
-	std::ofstream file(_filename);
-	if (!file)
-	{
-		std::cerr << "Can't save file: \"" << _filename << "\"" << std::endl;
-		return false;
-	}
-	std::setprecision(std::numeric_limits<long double>::digits10 + 1);
-	std::cout << std::scientific;
-
-	file << mean_.transpose().format(csv_format) << std::endl;
-	file << inv_cov_.format(csv_format) << std::endl;
-
-	file.close();
-	return true;
-}
-
-bool MeshCuboidJointNormalRelations::load_joint_normal_dat(const char* _filename)
-{
-	std::ifstream file(_filename, std::ios::in | std::ios::binary);
-	if (!file.good())
-	{
-		std::cerr << "Can't open file: \"" << _filename << "\"" << std::endl;
-		return false;
-	}
-
-	int16_t rows, cols;
-
-	rows = 0, cols = 0;
-	file.read((char*)(&rows), sizeof(int16_t));
-	file.read((char*)(&cols), sizeof(int16_t));
-	assert(static_cast<int>(rows) == k_mat_size);
-	assert(static_cast<int>(cols) == 1);
-	mean_.resize(rows);
-	file.read((char *)mean_.data(), rows*cols*sizeof(Eigen::MatrixXd::Scalar));
-	
-	rows = 0, cols = 0;
-	file.read((char*)(&rows), sizeof(int16_t));
-	file.read((char*)(&cols), sizeof(int16_t));
-	assert(static_cast<int>(rows) == k_mat_size);
-	assert(static_cast<int>(cols) == k_mat_size);
-	inv_cov_.resize(rows, cols);
-	file.read((char *)inv_cov_.data(), rows*cols*sizeof(Eigen::MatrixXd::Scalar));
-
-	file.close();
-
-	Eigen::SelfAdjointEigenSolver<Eigen::MatrixXd> es(inv_cov_);
-	Real min_eigenvalue = es.eigenvalues().minCoeff();
-	if (min_eigenvalue < -1.0E-6)
-	{
-		std::cerr << "Error: The inverse covariance matrix is not positive-semidefinite: ("
-			<< _filename << " = " << min_eigenvalue << ")" << std::endl;
-		do {
-			std::cout << '\n' << "Press the Enter key to continue.";
-		} while (std::cin.get() != '\n');
-	}
-
-	Real symmetry_diff = (inv_cov_ - inv_cov_.transpose()).array().abs().sum();
-	if (symmetry_diff > 1.0E-6)
-	{
-		std::cerr << "Error: The inverse covariance matrix is not symmetric: ("
-			<< _filename << " = " << symmetry_diff << ")" << std::endl;
-		do {
-			std::cout << '\n' << "Press the Enter key to continue.";
-		} while (std::cin.get() != '\n');
-	}
-
-	return true;
-}
-
-double MeshCuboidJointNormalRelations::compute_error(
-	const Eigen::VectorXd &_features_vec_1, const Eigen::VectorXd &_features_vec_2) const
-{
-	assert(_features_vec_1.rows() == MeshCuboidFeatures::k_num_features);
-	assert(_features_vec_2.rows() == MeshCuboidFeatures::k_num_features);
-	
-	Eigen::VectorXd concat_features(2 * MeshCuboidFeatures::k_num_features);
-	concat_features << _features_vec_1, _features_vec_2;
-	assert(mean_.rows() == concat_features.rows());
-	assert(inv_cov_.rows() == concat_features.rows());
-	assert(inv_cov_.cols() == concat_features.rows());
-
-	Eigen::VectorXd diff = concat_features - mean_;
-
-	// Mahalanobis norm.
-	double error = diff.transpose() * inv_cov_ * diff;
-	assert(error >= 0);
-	
-	//std::cerr << "Negative error value (error = " << error << ")" << std::endl;
-	//Eigen::IOFormat csv_format(Eigen::StreamPrecision, 0, ",");
-
-	//Real inv_cov_det = inv_cov_.determinant();
-	//std::cout << "inv_cov_det = " << inv_cov_det << std::endl;
-
-	//Real symmetry_diff = (inv_cov_ - inv_cov_.transpose()).array().abs().sum();
-	//std::cerr << "symmetry_diff = " << symmetry_diff << std::endl;
-
-	//std::cout << "Norm(diff) = " << diff.transpose() * diff << std::endl;
-
-	//std::cout << "diff = " << std::endl;
-	//std::cout << diff.format(csv_format) << std::endl;
-
-	//do {
-	//	std::cout << '\n' << "Press the Enter key to continue.";
-	//} while (std::cin.get() != '\n');
-
-	return error;
-}
-
-/*
 MeshCuboidPCARelations::MeshCuboidPCARelations()
 {
 	mean_ = Eigen::VectorXd::Zero(k_mat_size);
@@ -1072,7 +1233,7 @@ bool MeshCuboidPCARelations::load_pca_csv(const char* _filename)
 	return true;
 }
 
-bool MeshCuboidPCARelations::save_pca_csv(const char* _filename)
+bool MeshCuboidPCARelations::save_pca_csv(const char* _filename)const
 {
 	Eigen::IOFormat csv_format(Eigen::StreamPrecision, 0, ",");
 
@@ -1247,7 +1408,7 @@ bool MeshCuboidCCARelations::load_cca_bases(const char* _filename)
 	return true;
 }
 
-bool MeshCuboidCCARelations::save_cca_bases(const char* _filename)
+bool MeshCuboidCCARelations::save_cca_bases(const char* _filename)const
 {
 	Eigen::IOFormat csv_format(Eigen::StreamPrecision, 0, ",");
 

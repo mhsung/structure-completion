@@ -266,7 +266,7 @@ Eigen::VectorXd solve_quadratic_programming(
 	Eigen::MatrixXd G = _quadratic_term;
 	Eigen::VectorXd g0 = _linear_term;
 
-	std::cout << "Error: (";
+	std::cout << "Energy: (";
 
 	// Optional.
 	if (_init_values_vec)
@@ -373,7 +373,7 @@ Eigen::VectorXd solve_quadratic_programming(
 	QFile::remove("quadprog_solver.dat");
 	std::cout << "Done." << std::endl;
 
-	std::cout << "Error: (";
+	std::cout << "Energy: (";
 
 	// Optional.
 	if (_init_values_vec)
@@ -1272,20 +1272,31 @@ void optimize_attributes(
 	std::ofstream log_file(_log_filename);
 	assert(log_file);
 
+	unsigned int num_labels = _cuboid_structure.num_labels();
+
+
 	//
 	// Add missing cuboids.
-	unsigned int num_labels = _cuboid_structure.num_labels();
+	std::list<LabelIndex> given_label_indices;
 	for (LabelIndex label_index = 0; label_index < num_labels; ++label_index)
+		if (!_cuboid_structure.label_cuboids_[label_index].empty())
+			given_label_indices.push_back(label_index);
+
+	std::list<LabelIndex> missing_label_indices;
+	_predictor.get_missing_label_indices(given_label_indices, missing_label_indices);
+
+	for (std::list<LabelIndex>::const_iterator it = missing_label_indices.begin();
+		it != missing_label_indices.end(); ++it)
 	{
-		if (_cuboid_structure.label_cuboids_[label_index].empty())
-		{
-			// FIXME:
-			// Assume that the local axes of missing cuboids are the same with global axes.
-			MeshCuboid *missing_cuboid = new MeshCuboid(label_index);
-			_cuboid_structure.label_cuboids_[label_index].push_back(missing_cuboid);
-		}
+		LabelIndex label_index = (*it);
+
+		// FIXME:
+		// Assume that the local axes of missing cuboids are the same with global axes.
+		MeshCuboid *missing_cuboid = new MeshCuboid(label_index);
+		_cuboid_structure.label_cuboids_[label_index].push_back(missing_cuboid);
 	}
 	//
+
 
 	std::vector<MeshCuboid *> all_cuboids = _cuboid_structure.get_all_cuboids();
 	unsigned int num_cuboids = all_cuboids.size();
@@ -1311,7 +1322,7 @@ void optimize_attributes(
 		single_total_energy, pair_total_energy);
 	total_energy = pair_total_energy + _quadprog_ratio * single_total_energy;
 	sstr.str(std::string());
-	sstr << "Error: (pair = " << pair_total_energy
+	sstr << "Energy: (pair = " << pair_total_energy
 		<< ", single = " << _quadprog_ratio * single_total_energy
 		<< ", total = " << total_energy << ")" << std::endl;
 	std::cout << sstr.str(); log_file << sstr.str();
@@ -1336,7 +1347,7 @@ void optimize_attributes(
 		total_energy = pair_total_energy + _quadprog_ratio * single_total_energy;
 		sstr.str(std::string());
 		sstr << " - After optimization" << std::endl;
-		sstr << "Error: (pair = " << pair_total_energy
+		sstr << "Energy: (pair = " << pair_total_energy
 			<< ", single = " << _quadprog_ratio * single_total_energy
 			<< ", total = " << total_energy << ")" << std::endl;
 		std::cout << sstr.str(); log_file << sstr.str();
@@ -1356,7 +1367,7 @@ void optimize_attributes(
 		total_energy = pair_total_energy + _quadprog_ratio * single_total_energy;
 		sstr.str(std::string());
 		sstr << " - After cuboidization" << std::endl;
-		sstr << "Error: (pair = " << pair_total_energy
+		sstr << "Energy: (pair = " << pair_total_energy
 			<< ", single = " << _quadprog_ratio * single_total_energy
 			<< ", total = " << total_energy << ")";
 		if (total_energy < final_total_energy)
@@ -1422,7 +1433,7 @@ void optimize_attributes(
 		single_total_energy, pair_total_energy);
 	total_energy = pair_total_energy + _quadprog_ratio * single_total_energy;
 	sstr.str(std::string());
-	sstr << "Error: (pair = " << pair_total_energy
+	sstr << "Energy: (pair = " << pair_total_energy
 		<< ", single = " << _quadprog_ratio * single_total_energy
 		<< ", total = " << total_energy << ")" << std::endl;
 	std::cout << sstr.str(); log_file << sstr.str();
@@ -1431,6 +1442,7 @@ void optimize_attributes(
 	log_file.close();
 }
 
+/*
 bool add_missing_cuboids(
 	MeshCuboidStructure &_cuboid_structure,
 	// NOTE:
@@ -1559,7 +1571,6 @@ bool add_missing_cuboids(
 	return true;
 }
 
-/*
 MeshCuboid *test_joint_normal_training(
 	const MeshCuboid *_cuboid_1, const MeshCuboid *_cuboid_2,
 	const LabelIndex _label_index_1, const LabelIndex _label_index_2,

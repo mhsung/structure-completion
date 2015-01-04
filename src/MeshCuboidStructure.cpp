@@ -543,6 +543,29 @@ bool MeshCuboidStructure::apply_point_cuboid_label_map(
 	return true;
 }
 
+void MeshCuboidStructure::apply_test()
+{
+	std::list<Label> duplicated_labels;
+
+	//
+	duplicated_labels.push_back(3);
+	duplicated_labels.push_back(4);
+	duplicated_labels.push_back(5);
+	//
+
+	for (std::list<Label>::iterator label_it = duplicated_labels.begin(); label_it != duplicated_labels.end(); ++label_it)
+	{
+		Label label = (*label_it);
+		LabelIndex label_index = get_label_index(label);
+		assert(label_index < label_cuboids_.size());
+
+		for (std::vector<MeshCuboid *>::iterator cuboid_it = label_cuboids_[label_index].begin();
+			cuboid_it != label_cuboids_[label_index].end(); ++cuboid_it)
+			delete (*cuboid_it);
+		label_cuboids_[label_index].clear();
+	}
+}
+
 void MeshCuboidStructure::apply_mesh_face_labels_to_sample_points()
 {
 	assert(mesh_);

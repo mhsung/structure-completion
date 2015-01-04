@@ -13,11 +13,16 @@ void MeshViewerWidget::run_test_initialize()
 
 	unsigned int num_all_cuboid_labels = 2;
 
+
+	for (LabelIndex label_index_1 = 0; label_index_1 < joint_normal_relations_.size(); ++label_index_1)
+		for (LabelIndex label_index_2 = 0; label_index_2 < joint_normal_relations_[label_index_1].size(); ++label_index_2)
+			delete joint_normal_relations_[label_index_1][label_index_2];
+
 	joint_normal_relations_.clear();
 	joint_normal_relations_.resize(num_all_cuboid_labels);
 	for (LabelIndex label_index_1 = 0; label_index_1 < num_all_cuboid_labels; ++label_index_1)
 	{
-		joint_normal_relations_[label_index_1].resize(num_all_cuboid_labels);
+		joint_normal_relations_[label_index_1].resize(num_all_cuboid_labels, NULL);
 		for (LabelIndex label_index_2 = 0; label_index_2 < num_all_cuboid_labels; ++label_index_2)
 		{
 			if (label_index_1 == label_index_2)
@@ -26,7 +31,12 @@ void MeshViewerWidget::run_test_initialize()
 			std::string relation_filename = "joint_normal_"
 				+ std::to_string(label_index_1) + std::string("_")
 				+ std::to_string(label_index_2) + std::string(".dat");
-			bool ret = joint_normal_relations_[label_index_1][label_index_2].load_joint_normal_dat(
+
+			QFileInfo relation_file(relation_filename.c_str());
+			if (!relation_file.exists()) continue;
+
+			joint_normal_relations_[label_index_1][label_index_2] = new MeshCuboidJointNormalRelations();
+			bool ret = joint_normal_relations_[label_index_1][label_index_2]->load_joint_normal_dat(
 				relation_filename.c_str());
 			if (!ret)
 			{
@@ -67,7 +77,7 @@ void MeshViewerWidget::run_test_translate(const MyMesh::Normal _translation)
 	
 	double single_total_energy = 0, pair_total_energy = 0;
 	get_optimization_error(all_cuboids_, *test_joint_normal_predictor_, single_total_energy, pair_total_energy);
-	std::cout << "Error: (pair = " << pair_total_energy
+	std::cout << "Energy: (pair = " << pair_total_energy
 		<< ", single = " << single_total_energy << ")" << std::endl;
 
 	updateGL();
@@ -93,7 +103,7 @@ void MeshViewerWidget::run_test_rotate(const Real _angle)
 
 	double single_total_energy = 0, pair_total_energy = 0;
 	get_optimization_error(all_cuboids_, *test_joint_normal_predictor_, single_total_energy, pair_total_energy);
-	std::cout << "Error: (pair = " << pair_total_energy
+	std::cout << "Energy: (pair = " << pair_total_energy
 		<< ", single = " << single_total_energy << ")" << std::endl;
 
 	updateGL();
@@ -119,7 +129,7 @@ void MeshViewerWidget::run_test_scale(const Real _scale_x, const Real _scale_y)
 
 	double single_total_energy = 0, pair_total_energy = 0;
 	get_optimization_error(all_cuboids_, *test_joint_normal_predictor_, single_total_energy, pair_total_energy);
-	std::cout << "Error: (pair = " << pair_total_energy
+	std::cout << "Energy: (pair = " << pair_total_energy
 		<< ", single = " << single_total_energy << ")" << std::endl;
 
 	updateGL();
