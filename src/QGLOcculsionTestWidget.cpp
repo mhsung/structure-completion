@@ -170,7 +170,7 @@ bool QGLOcculsionTestWidget::load_sample_points(const char *_filename, bool _ver
 void QGLOcculsionTestWidget::get_bounding_box()
 {
 	Eigen::Vector3f bbox_min_ = Eigen::Vector3f::Constant(std::numeric_limits<float>::max());
-	Eigen::Vector3f bbox_max_ = Eigen::Vector3f::Constant(std::numeric_limits<float>::lowest());
+	Eigen::Vector3f bbox_max_ = -Eigen::Vector3f::Constant(std::numeric_limits<float>::max());
 
 	for (int point_index = 0; point_index < num_sample_points_; ++point_index)
 	{
