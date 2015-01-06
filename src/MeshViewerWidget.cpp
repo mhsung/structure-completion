@@ -300,7 +300,7 @@ void MeshViewerWidget::mousePressEvent( QMouseEvent* _event )
 
 void MeshViewerWidget::keyPressEvent( QKeyEvent* _event)
 {
-	this->MeshViewerWidgetT::keyPressEvent( _event );
+	this->MeshViewerWidgetT<MyMesh>::keyPressEvent( _event );
 
 	switch( _event->key() )
 	{
@@ -494,7 +494,7 @@ void draw_arrow(MyMesh::Point _p1, MyMesh::Point _p2, GLdouble _arrow_size)
 
 void MeshViewerWidget::draw_openmesh(const std::string& _drawmode)
 {
-	MeshViewerWidgetT::draw_openmesh(_drawmode);
+	MeshViewerWidgetT<MyMesh>::draw_openmesh(_drawmode);
 
 	if (_drawmode == CUSTOM_VIEW) // -------------------------------------------
 	{

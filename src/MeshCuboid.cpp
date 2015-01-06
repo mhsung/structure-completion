@@ -726,8 +726,7 @@ void MeshCuboid::create_random_points_on_cuboid_surface(
 	assert(all_faces_area > 0);
 
 	// Sample points on each face.
-	std::default_random_engine generator;
-	std::uniform_real_distribution<Real> distribution(0.0, 1.0);
+	srand (time(NULL));
 
 	for (unsigned int face_index = 0; face_index < k_num_faces; ++face_index)
 	{
@@ -746,8 +745,8 @@ void MeshCuboid::create_random_points_on_cuboid_surface(
 		for (int point_index = 0; point_index < num_face_points
 			&& cuboid_surface_points_.size() < _num_cuboid_surface_points; ++point_index)
 		{
-			Real w1 = distribution(generator);
-			Real w2 = distribution(generator);
+			Real w1 = static_cast<Real>(rand())/RAND_MAX;
+			Real w2 = static_cast<Real>(rand())/RAND_MAX;
 
 			MyMesh::Point p1 = w1 * (corner_point[1] - corner_point[0]) + corner_point[0];
 			MyMesh::Point p2 = w1 * (corner_point[2] - corner_point[3]) + corner_point[3];
