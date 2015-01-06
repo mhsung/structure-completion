@@ -14,6 +14,7 @@
 #include <limits>
 #include <random>
 #include <queue>
+#include <time.h>
 #include <vector>
 
 
@@ -27,8 +28,7 @@
 // [6]: + + -
 // [7]: + + +
 
-const std::vector < std::array<unsigned int, MeshCuboid::k_num_face_corners> >
-MeshCuboid::k_face_corner_indices = {
+const unsigned int MeshCuboid::k_face_corner_indices[k_num_faces][k_num_face_corners] = {
 		{ 1u, 3u, 7u, 5u }, // POSITIVE_X_AXIS.
 		{ 0u, 4u, 6u, 2u }, // NEGATIVE_X_AXIS.
 		{ 2u, 6u, 7u, 3u }, // POSITIVE_Y_AXIS.
@@ -427,7 +427,7 @@ Real MeshCuboid::get_bbox_face_area(const unsigned int _face_index) const
 {
 	// http://mathworld.wolfram.com/Quadrilateral.html.
 
-	const std::array<unsigned int, k_num_face_corners> corner_indices = k_face_corner_indices[_face_index];
+	const unsigned int *corner_indices = k_face_corner_indices[_face_index];
 	std::array<MyMesh::Point, k_num_face_corners> corner_point;
 	for (unsigned int i = 0; i < k_num_face_corners; ++i)
 		corner_point[i] = bbox_corners_[corner_indices[i]];
@@ -730,7 +730,7 @@ void MeshCuboid::create_random_points_on_cuboid_surface(
 
 	for (unsigned int face_index = 0; face_index < k_num_faces; ++face_index)
 	{
-		const std::array<unsigned int, k_num_face_corners> corner_indices = k_face_corner_indices[face_index];
+		const unsigned int *corner_indices = k_face_corner_indices[face_index];
 		std::array<MyMesh::Point, k_num_face_corners> corner_point;
 		for (unsigned int i = 0; i < k_num_face_corners; ++i)
 			corner_point[i] = bbox_corners_[corner_indices[i]];
@@ -803,7 +803,7 @@ void MeshCuboid::create_grid_points_on_cuboid_surface(
 	// The number of points may not be exactly the same with the given '_num_cuboid_surface_points'.
 	for (unsigned int face_index = 0; face_index < k_num_faces; ++face_index)
 	{
-		const std::array<unsigned int, k_num_face_corners> corner_indices = k_face_corner_indices[face_index];
+		const unsigned int *corner_indices = k_face_corner_indices[face_index];
 		std::array<MyMesh::Point, k_num_face_corners> corner_point;
 		for (unsigned int i = 0; i < k_num_face_corners; ++i)
 			corner_point[i] = bbox_corners_[corner_indices[i]];

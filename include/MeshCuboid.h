@@ -79,7 +79,7 @@ public:
 	static const unsigned int k_num_corners = 8;
 	static const unsigned int k_num_faces = 6;
 	static const unsigned int k_num_face_corners = 4;
-	static const std::vector < std::array<unsigned int, k_num_face_corners> > k_face_corner_indices;
+	static const unsigned int k_face_corner_indices[k_num_faces][k_num_face_corners];
 
 	typedef enum {
 		POSITIVE_X_AXIS,
