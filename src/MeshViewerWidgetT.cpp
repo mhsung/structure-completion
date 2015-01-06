@@ -132,11 +132,11 @@ MeshViewerWidgetT<M>::open_mesh(const char* _filename, IO::Options _opt)
 	// Change scale so that the object diameter becomes 1.
 	std::cout << "Object diameter: " << mesh_.get_object_diameter() << std::endl;
 	std::cout << "Now scaled to become 1..." << std::endl;
-	Real scale = 1 / mesh_.get_object_diameter();
+	double scale = 1 / mesh_.get_object_diameter();
 	mesh_.scale(scale);
 
 	// Move mesh so that the object stands on the z = 0 plane.
-	MyMesh::Normal translation = -mesh_.get_bbox_center();
+	Vec3d translation = -mesh_.get_bbox_center();
 	translation[2] += 0.5 * mesh_.get_bbox_size()[2];
 	mesh_.translate(translation);
 

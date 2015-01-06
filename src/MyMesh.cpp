@@ -1048,6 +1048,13 @@ void MyMesh::extract_zero_value_feature_vertices(const RealArray &_values,
 	}
 }
 
+typedef enum {
+	SUBSET_A = 0,
+	SUBSET_B = 1,
+	VERIFIED = 2,
+	NOT_VISITED = 3,
+} FaceTraversal;
+
 void MyMesh::make_face_normal_consistent()
 {
 	request_face_normals();
@@ -1158,13 +1165,6 @@ void MyMesh::make_face_normal_consistent()
 
 
 	// Step #2: Gather non-inverted adjacent faces and invert face normals of minority.
-	typedef enum {
-		SUBSET_A = 0,
-		SUBSET_B = 1,
-		VERIFIED = 2,
-		NOT_VISITED = 3,
-	} FaceTraversal;
-
 	std::vector<FaceTraversal> face_subsets(num_faces, NOT_VISITED);
 	unsigned int num_inverted_faces = 0;
 

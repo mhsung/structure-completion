@@ -353,7 +353,7 @@ protected:
 	/// draw the mesh
 	virtual void draw_scene(const std::string& _draw_mode)
 	{
-		MeshViewerWidgetT::draw_scene(_draw_mode);
+		MeshViewerWidgetT<MyMesh>::draw_scene(_draw_mode);
 		if ( _draw_mode == CUSTOM_VIEW )
 		{
 			glDisable(GL_LIGHTING);

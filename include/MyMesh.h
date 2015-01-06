@@ -204,6 +204,7 @@ private:
 	Real scale_;
 };
 
+/*
 template<typename T> bool print_vector(const std::string &_filename, std::vector<T> &_ar)
 {
 	std::ofstream file(_filename.c_str());
@@ -221,5 +222,6 @@ template<typename T> bool print_vector(const std::string &_filename, std::vector
 	std::cout << "Done." << std::endl;
 	return true;
 }
+*/
 
 #endif	// _MY_MESH_H_
