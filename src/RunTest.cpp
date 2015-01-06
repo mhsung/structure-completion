@@ -4,6 +4,8 @@
 
 #include <Eigen/Geometry>
 
+#include <sstream>
+
 void MeshViewerWidget::run_test_initialize()
 {
 	slotDrawMode(findAction(CUSTOM_VIEW));
@@ -28,16 +30,17 @@ void MeshViewerWidget::run_test_initialize()
 			if (label_index_1 == label_index_2)
 				continue;
 
-			std::string relation_filename = "joint_normal_"
-				+ std::to_string(label_index_1) + std::string("_")
-				+ std::to_string(label_index_2) + std::string(".dat");
+			std::stringstream relation_filename_sstr;
+			relation_filename_sstr << std::string("joint_normal_")
+				<< label_index_1 << std::string("_")
+				<< label_index_2 << std::string(".dat");
 
-			QFileInfo relation_file(relation_filename.c_str());
+			QFileInfo relation_file(relation_filename_sstr.str().c_str());
 			if (!relation_file.exists()) continue;
 
 			joint_normal_relations_[label_index_1][label_index_2] = new MeshCuboidJointNormalRelations();
 			bool ret = joint_normal_relations_[label_index_1][label_index_2]->load_joint_normal_dat(
-				relation_filename.c_str());
+				relation_filename_sstr.str().c_str());
 			if (!ret)
 			{
 				do {

@@ -75,7 +75,7 @@ bool MeshCuboidTrainer::load_features(const std::string &_filename_prefix)
 	for (unsigned int cuboid_index = 0; true; ++cuboid_index)
 	{
 		std::stringstream sstr;
-		sstr << _filename_prefix << std::to_string(cuboid_index) << std::string(".csv");
+		sstr << _filename_prefix << cuboid_index << std::string(".csv");
 		std::string attributes_filename = sstr.str();
 
 		QFileInfo attributes_file(attributes_filename.c_str());
@@ -109,19 +109,18 @@ bool MeshCuboidTrainer::load_transformations(const std::string &_filename_prefix
 
 	for (unsigned int cuboid_index = 0; true; ++cuboid_index)
 	{
-		std::stringstream  sstr;
-		sstr << _filename_prefix << std::to_string(cuboid_index) << std::string(".csv");
-		std::string transformation_filename = sstr.str();
+		std::stringstream  transformation_filename_sstr;
+		transformation_filename_sstr << _filename_prefix << cuboid_index << std::string(".csv");
 
-		QFileInfo transformation_file(transformation_filename.c_str());
+		QFileInfo transformation_file(transformation_filename_sstr.str().c_str());
 		if (!transformation_file.exists())
 			break;
 
-		std::cout << "Loading '" << transformation_filename << "'..." << std::endl;
+		std::cout << "Loading '" << transformation_filename_sstr.str() << "'..." << std::endl;
 
 		std::list<MeshCuboidTransformation *> stats;
 		MeshCuboidTransformation::load_transformation_collection(
-			transformation_filename.c_str(), stats);
+			transformation_filename_sstr.str().c_str(), stats);
 
 		transformation_list_.push_back(stats);
 	}

@@ -513,7 +513,7 @@ void segment_sample_points(
 
 	// Construct a KD-tree.
 	Eigen::MatrixXd sample_points(3, num_sample_points);
-	for (unsigned int point_index = 0; point_index < num_sample_points; ++point_index)
+	for (SamplePointIndex point_index = 0; point_index < num_sample_points; ++point_index)
 	{
 		for (unsigned int i = 0; i < 3; ++i)
 			sample_points.col(point_index)(i) =
@@ -523,8 +523,7 @@ void segment_sample_points(
 	const int dim = 3;
 	ANNpointArray sample_ann_points = annAllocPts(num_sample_points, dim);	// allocate data points
 
-	for (SamplePointIndex point_index = 0; point_index < num_sample_points;
-		++point_index)
+	for (SamplePointIndex point_index = 0; point_index < num_sample_points; ++point_index)
 	{
 		for (int i = 0; i < dim; i++)
 			sample_ann_points[point_index][i] = sample_points.col(point_index)[i];

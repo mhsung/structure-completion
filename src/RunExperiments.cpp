@@ -408,43 +408,49 @@ void MeshViewerWidget::run_training()
 	{
 		//for (LabelIndex all_label_index_2 = all_label_index_1; all_label_index_2 < num_all_cuboid_labels; ++all_label_index_2)
 		//{
-		//	std::string pair_features_filename = FLAGS_pair_feature_filename_prefix
-		//		+ std::to_string(all_label_index_1) + std::string("_")
-		//		+ std::to_string(all_label_index_2) + std::string(".csv");
+		//	std::stringstream pair_features_filename_sstr;
+		//	pair_features_filename_sstr << FLAGS_pair_feature_filename_prefix
+		//		<< all_label_index_1 << std::string("_")
+		//		<< all_label_index_2 << std::string(".csv");
 		//	MeshCuboidManualFeatures::save_keys_and_values(
 		//		manual_pair_feature_list[all_label_index_1][all_label_index_2],
-		//		pair_features_filename.c_str());
+		//		pair_features_filename_sstr.str().c_str());
 
-		//	std::string pair_stats_filename = FLAGS_pair_stats_filename_prefix
-		//		+ std::to_string(all_label_index_1) + std::string("_")
-		//		+ std::to_string(all_label_index_2) + std::string(".csv");
+		//	std::stringstream pair_stats_filename_sstr;
+		//	pair_stats_filename_sstr << FLAGS_pair_stats_filename_prefix
+		//		<< all_label_index_1 << std::string("_")
+		//		<< all_label_index_2 << std::string(".csv");
 		//	MeshCuboidManualFeatures::save_stats(
 		//		manual_pair_feature_list[all_label_index_1][all_label_index_2],
-		//		pair_stats_filename.c_str());
+		//		pair_stats_filename_sstr.str().c_str());
 		//}
 
-		std::string transformation_filename = FLAGS_transformation_filename_prefix
-			+ std::to_string(all_label_index_1) + std::string(".csv");
-		MeshCuboidTransformation::save_transformation_collection(transformation_filename.c_str(),
+		std::stringstream transformation_filename_sstr;
+		transformation_filename_sstr << FLAGS_transformation_filename_prefix
+			<< all_label_index_1 << std::string(".csv");
+		MeshCuboidTransformation::save_transformation_collection(transformation_filename_sstr.str().c_str(),
 			transformation_list[all_label_index_1]);
 
-		std::string feature_filename = FLAGS_feature_filename_prefix
-			+ std::to_string(all_label_index_1) + std::string(".csv");
-		MeshCuboidFeatures::save_feature_collection(feature_filename.c_str(),
+		std::stringstream feature_filename_sstr;
+		feature_filename_sstr << FLAGS_feature_filename_prefix
+			<< all_label_index_1 << std::string(".csv");
+		MeshCuboidFeatures::save_feature_collection(feature_filename_sstr.str().c_str(),
 			feature_list[all_label_index_1]);
 
 		//MeshCuboidAttributes::save_values(attributes_list[all_label_index_1],
 		//	attributes_filename.c_str());
 
-		//std::string single_features_filename = FLAGS_single_feature_filename_prefix
-		//	+ std::to_string(all_label_index_1) + std::string(".csv");
+		//std::stringstream single_features_filename_sstr;
+		//single_features_filename_sstr << FLAGS_single_feature_filename_prefix
+		//	<< all_label_index_1 << std::string(".csv");
 		//MeshCuboidManualFeatures::save_keys_and_values(manual_single_feature_list[all_label_index_1],
-		//	single_features_filename.c_str());
+		//	single_features_filename_sstr.str().c_str());
 
-		//std::string single_stats_filename = FLAGS_single_stats_filename_prefix
-		//	+ std::to_string(all_label_index_1) + std::string(".csv");
+		//std::stringstream single_stats_filename_sstr;
+		//single_stats_filename_sstr << FLAGS_single_stats_filename_prefix
+		//	<< all_label_index_1 << std::string(".csv");
 		//MeshCuboidManualFeatures::save_stats(manual_single_feature_list[all_label_index_1],
-		//	single_stats_filename.c_str());
+		//	single_stats_filename_sstr.str().c_str());
 	}
 
 
@@ -506,13 +512,12 @@ void MeshViewerWidget::run_training_from_files()
 			const MeshCuboidJointNormalRelations *relation_12 = joint_normal_relations[cuboid_index_1][cuboid_index_2];
 			if (!relation_12) continue;
 			
-			std::stringstream sstr;
-			sstr << FLAGS_relation_filename_prefix << std::to_string(cuboid_index_1)
-				<< "_" << std::to_string(cuboid_index_2) << ".csv";
-			std::string relation_filename = sstr.str();
+			std::stringstream relation_filename_sstr;
+			relation_filename_sstr << FLAGS_relation_filename_prefix << cuboid_index_1
+				<< "_" << cuboid_index_2 << ".csv";
 
-			std::cout << "Saving '" << relation_filename << "'..." << std::endl;
-			relation_12->save_joint_normal_csv(relation_filename.c_str());
+			std::cout << "Saving '" << relation_filename_sstr.str() << "'..." << std::endl;
+			relation_12->save_joint_normal_csv(relation_filename_sstr.str().c_str());
 		}
 	}
 }
@@ -557,16 +562,17 @@ void MeshViewerWidget::run_prediction()
 	//		if (label_index_1 == label_index_2)
 	//			continue;
 
-	//		std::string relation_filename = "joint_normal_"
-	//			+ std::to_string(label_index_1) + std::string("_")
-	//			+ std::to_string(label_index_2) + std::string(".dat");
+	//		std::stringstream relation_filename_sstr;
+	//		relation_filename_sstr << std::string("joint_normal_")
+	//			<< label_index_1 << std::string("_")
+	//			<< label_index_2 << std::string(".dat");
 
-	//		QFileInfo relation_file(relation_filename.c_str());
+	//		QFileInfo relation_file(relation_filename_sstr.str().c_str());
 	//		if (!relation_file.exists()) continue;
 
 	//		joint_normal_relations[label_index_1][label_index_2] = new MeshCuboidJointNormalRelations();
 	//		bool ret = joint_normal_relations[label_index_1][label_index_2]->load_joint_normal_dat(
-	//			relation_filename.c_str());
+	//			relation_filename_sstr.str().c_str());
 
 	//		if (!ret)
 	//		{
@@ -586,16 +592,17 @@ void MeshViewerWidget::run_prediction()
 	//		if (label_index_1 == label_index_2)
 	//			continue;
 
-	//		std::string relation_filename = "conditional_normal_"
-	//			+ std::to_string(label_index_1) + std::string("_")
-	//			+ std::to_string(label_index_2) + std::string(".dat");
+	//		std::stringstream relation_filename_sstr;
+	//		relation_filename_sstr << std::string("conditional_normal_")
+	//			<< label_index_1 << std::string("_")
+	//			<< label_index_2 << std::string(".dat");
 
-	//		QFileInfo relation_file(relation_filename.c_str());
+	//		QFileInfo relation_file(relation_filename_sstr.str().c_str());
 	//		if (!relation_file.exists()) continue;
 
 	//		cond_normal_relations[label_index_1][label_index_2] = new MeshCuboidCondNormalRelations();
 	//		bool ret = cond_normal_relations[label_index_1][label_index_2]->load_cond_normal_dat(
-	//			relation_filename.c_str());
+	//			relation_filename_sstr.str().c_str());
 	//		if (!ret)
 	//		{
 	//			do {
@@ -613,6 +620,8 @@ void MeshViewerWidget::run_prediction()
 	assert(dir.exists());
 	dir.setFilter(QDir::Files | QDir::Hidden | QDir::NoSymLinks);
 	dir.setSorting(QDir::Name);
+
+	std::stringstream snapshot_filename_sstr;
 
 
 	QFileInfoList dir_list = dir.entryInfoList();
@@ -683,9 +692,12 @@ void MeshViewerWidget::run_prediction()
 
 			open_modelview_matrix_file(FLAGS_pose_filename.c_str());
 
+
 			draw_occlusion_test_points_ = true;
 			updateGL();
-			slotSnapshot((snapshot_filename_prefix + std::to_string(snapshot_index)).c_str());
+			snapshot_filename_sstr.clear(); snapshot_filename_sstr.str("");
+			snapshot_filename_sstr << snapshot_filename_prefix << snapshot_index;
+			slotSnapshot(snapshot_filename_sstr.str().c_str());
 			++snapshot_index;
 			draw_occlusion_test_points_ = false;
 
@@ -706,7 +718,9 @@ void MeshViewerWidget::run_prediction()
 
 			draw_cuboid_axes_ = false;
 			updateGL();
-			slotSnapshot((snapshot_filename_prefix + std::to_string(snapshot_index)).c_str());
+			snapshot_filename_sstr.clear(); snapshot_filename_sstr.str("");
+			snapshot_filename_sstr << snapshot_filename_prefix << snapshot_index;
+			slotSnapshot(snapshot_filename_sstr.str().c_str());
 			++snapshot_index;
 			draw_cuboid_axes_ = true;
 
@@ -725,7 +739,9 @@ void MeshViewerWidget::run_prediction()
 
 			draw_cuboid_axes_ = true;
 			updateGL();
-			slotSnapshot((snapshot_filename_prefix + std::to_string(snapshot_index)).c_str());
+			snapshot_filename_sstr.clear(); snapshot_filename_sstr.str("");
+			snapshot_filename_sstr << snapshot_filename_prefix << snapshot_index;
+			slotSnapshot(snapshot_filename_sstr.str().c_str());
 			++snapshot_index;
 
 
@@ -737,8 +753,10 @@ void MeshViewerWidget::run_prediction()
 				++cuboid_structure_.query_label_index_)
 			{
 				updateGL();
-				slotSnapshot((snapshot_filename_prefix + std::to_string(snapshot_index)
-					+ std::string("_") + std::to_string(cuboid_structure_.query_label_index_)).c_str());
+				snapshot_filename_sstr.clear(); snapshot_filename_sstr.str("");
+				snapshot_filename_sstr << snapshot_filename_prefix << snapshot_index << std::string("_")
+					<< cuboid_structure_.query_label_index_;
+				slotSnapshot(snapshot_filename_sstr.str().c_str());
 			}
 			++snapshot_index;
 
@@ -753,7 +771,9 @@ void MeshViewerWidget::run_prediction()
 				log_filename.c_str(), max_num_iterations, this);
 
 			updateGL();
-			slotSnapshot((snapshot_filename_prefix + std::to_string(snapshot_index)).c_str());
+			snapshot_filename_sstr.clear(); snapshot_filename_sstr.str("");
+			snapshot_filename_sstr << snapshot_filename_prefix << snapshot_index;
+			slotSnapshot(snapshot_filename_sstr.str().c_str());
 			++snapshot_index;
 
 			/*
@@ -762,7 +782,9 @@ void MeshViewerWidget::run_prediction()
 			add_missing_cuboids(cuboid_structure_, cond_normal_predictor);
 
 			updateGL();
-			slotSnapshot((snapshot_filename_prefix + std::to_string(snapshot_index)).c_str());
+			snapshot_filename_sstr.clear(); snapshot_filename_sstr.str("");
+			snapshot_filename_sstr << snapshot_filename_prefix << snapshot_index;
+			slotSnapshot(snapshot_filename_sstr.str().c_str());
 			++snapshot_index;
 
 			// TEST
@@ -926,11 +948,12 @@ void MeshViewerWidget::run_test_joint_normal_training()
 			if (label_index_1 == label_index_2)
 				continue;
 
-			std::string relation_filename = "joint_normal_"
-				+ std::to_string(label_index_1) + std::string("_")
-				+ std::to_string(label_index_2) + std::string(".dat");
+			std::stringstream relation_filename_sstr;
+			relation_filename_sstr << std::string("joint_normal_")
+				<< label_index_1 << std::string("_")
+				<< label_index_2 << std::string(".dat");
 			bool ret = joint_normal_relations[label_index_1][label_index_2].load_joint_normal_dat(
-				relation_filename.c_str());
+				relation_filename_sstr.str().c_str());
 			if (!ret)
 			{
 				do {

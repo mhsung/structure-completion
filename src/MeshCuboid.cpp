@@ -445,7 +445,7 @@ MeshCuboid::get_sample_to_cuboid_surface_correspondences() const
 	return sample_to_cuboid_surface_correspondence_;
 }
 
-const int MeshCuboid::get_sample_to_cuboid_surface_correspondences(
+int MeshCuboid::get_sample_to_cuboid_surface_correspondences(
 	const unsigned int _point_index) const
 {
 	if (num_cuboid_surface_points() == 0)
@@ -461,7 +461,7 @@ MeshCuboid::get_cuboid_surface_to_sample_correspondence() const
 	return cuboid_surface_to_sample_corresopndence_;
 }
 
-const int MeshCuboid::get_cuboid_surface_to_sample_correspondence(
+int MeshCuboid::get_cuboid_surface_to_sample_correspondence(
 	const unsigned int _point_index) const
 {
 	assert(_point_index < num_cuboid_surface_points());

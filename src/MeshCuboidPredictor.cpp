@@ -4,6 +4,7 @@
 
 #include <iostream>
 #include <fstream>
+#include <sstream>
 
 #include <ANN/ANN.h>
 #include <Eigen/Core>
@@ -437,20 +438,22 @@ Real MeshCuboidJointNormalRelationPredictor::get_pair_quadratic_form(
 	Eigen::VectorXd transformed_features_vec_2 = transformation_1.get_transformed_features(_cuboid_2);
 
 	//{
-	//	std::string filename = std::string("transformed_features_vec_")
-	//		+ std::to_string(_label_index_1) + std::string("_")
-	//		+ std::to_string(_label_index_2) + std::string(".csv");
-	//	std::ofstream csv_file(filename);
+	//	std::stringstream filename_sstr;
+	//	filename_sstr << std::string("transformed_features_vec_")
+	//		<< _label_index_1 << std::string("_")
+	//		<< _label_index_2 << std::string(".csv");
+	//	std::ofstream csv_file(filename_sstr.str());
 	//	Eigen::IOFormat csv_format(Eigen::StreamPrecision, 0, ",");
 	//	csv_file << transformed_features_vec_1.format(csv_format) << std::endl;
 	//	csv_file.close();
 	//}
 
 	//{
-	//	std::string filename = std::string("transformed_features_vec_")
-	//		+ std::to_string(_label_index_2) + std::string("_")
-	//		+ std::to_string(_label_index_1) + std::string(".csv");
-	//	std::ofstream csv_file(filename);
+	//	std::stringstream filename_sstr;
+	//	filename_sstr << std::string("transformed_features_vec_")
+	//		<< _label_index_2 << std::string("_")
+	//		<< _label_index_1 << std::string(".csv");
+	//	std::ofstream csv_file(filename_sstr.str());
 	//	Eigen::IOFormat csv_format(Eigen::StreamPrecision, 0, ",");
 	//	csv_file << transformed_features_vec_2.format(csv_format) << std::endl;
 	//	csv_file.close();
@@ -462,11 +465,12 @@ Real MeshCuboidJointNormalRelationPredictor::get_pair_quadratic_form(
 #endif
 
 	//Eigen::IOFormat csv_format(Eigen::StreamPrecision, 0, ",");
-	//std::string filename = std::string("quadratic_mat_")
-	//	+ std::to_string(_cuboid_index_1) + std::string("_")
-	//	+ std::to_string(_cuboid_index_2) + std::string(".csv");
+	//std::stringstream filename_sstr;
+	//filename_sstr << std::string("quadratic_mat_")
+	//	<< _cuboid_index_1 << std::string("_")
+	//	<< _cuboid_index_2 << std::string(".csv");
 
-	//std::ofstream csv_file(filename);
+	//std::ofstream csv_file(filename_sstr.str());
 	//Eigen::IOFormat csv_format(Eigen::StreamPrecision, 0, ",");
 	//csv_file << _quadratic_term.format(csv_format) << std::endl;
 	//csv_file.close();
@@ -629,15 +633,16 @@ Real MeshCuboidCondNormalRelationPredictor::get_pair_quadratic_form(
 
 	CHECK_NUMERICAL_ERROR(__FUNCTION__, potential, same_potential);
 #endif
-
-	//std::string filename = std::string("quadratic_mat_")
-	//	+ std::to_string(_cuboid_index_1) + std::string("_")
-	//	+ std::to_string(_cuboid_index_2) + std::string(".csv");
-	//std::ofstream csv_file(filename);
+	
+	//std::stringstream filename_sstr;
+	//filename_sstr << std::string("quadratic_mat_")
+	//	<< _cuboid_index_1 << std::string("_")
+	//	<< _cuboid_index_2 << std::string(".csv");
+	//std::ofstream csv_file(filename_sstr.str());
 	//Eigen::IOFormat csv_format(Eigen::StreamPrecision, 0, ",");
 	//csv_file << quadratic_form.format(csv_format) << std::endl;
 	//csv_file.close();
-
+	
 	return potential;
 }
 
@@ -739,11 +744,12 @@ void MeshCuboidCondNormalRelationPredictor::get_conditional_pair_quadratic_form(
 
 	CHECK_NUMERICAL_ERROR(__FUNCTION__, potential, same_potential);
 #endif
-
-	//std::string filename = std::string("quadratic_mat_")
-	//	+ std::to_string(_cuboid_index_1) + std::string("_")
-	//	+ std::to_string(_cuboid_index_2) + std::string(".csv");
-	//std::ofstream csv_file(filename);
+	
+	//std::stringstream filename_sstr;
+	//filename_sstr << std::string("quadratic_mat_")
+	//	<< _cuboid_index_1 << std::string("_")
+	//	<< _cuboid_index_2 << std::string(".csv");
+	//std::ofstream csv_file(filename_sstr.str());
 	//Eigen::IOFormat csv_format(Eigen::StreamPrecision, 0, ",");
 	//csv_file << quadratic_form.format(csv_format) << std::endl;
 	//csv_file.close();
@@ -935,12 +941,13 @@ Real MeshCuboidPCARelationPredictor::get_pair_quadratic_form(
 	}
 
 	CHECK_ERROR(__FUNCTION__, potential, same_potential);
-
+	
 	// DEBUG.
-	//std::string filename = std::string("quadratic_mat_")
-	//	+ std::to_string(_cuboid_index_1) + std::string("_")
-	//	+ std::to_string(_cuboid_index_2) + std::string(".csv");
-	//std::ofstream csv_file(filename);
+	//std::stringstream filename_sstr;
+	//filename_sstr << std::string("quadratic_mat_")
+	//	<< _cuboid_index_1 << std::string("_")
+	//	<< _cuboid_index_2 << std::string(".csv");
+	//std::ofstream csv_file(filename_sstr.str());
 	//Eigen::IOFormat csv_format(Eigen::StreamPrecision, 0, ",");
 	//csv_file << quadratic_form.format(csv_format) << std::endl;
 	//csv_file.close();

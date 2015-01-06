@@ -165,11 +165,11 @@ public:
 
 	const std::vector<int>& get_sample_to_cuboid_surface_correspondences() const;
 
-	const int get_sample_to_cuboid_surface_correspondences(const unsigned int _point_index) const;
+	int get_sample_to_cuboid_surface_correspondences(const unsigned int _point_index) const;
 
 	const std::vector<int>& get_cuboid_surface_to_sample_correspondence() const;
 
-	const int get_cuboid_surface_to_sample_correspondence(const unsigned int _point_index) const;
+	int get_cuboid_surface_to_sample_correspondence(const unsigned int _point_index) const;
 
 
 	void set_bbox_center(const MyMesh::Point &_bbox_center);
