@@ -17,6 +17,7 @@ if (WIN32)
   )
 endif ()
 
+
 include(CheckCXXCompilerFlag)
 CHECK_CXX_COMPILER_FLAG("-std=c++11" COMPILER_SUPPORTS_CXX11)
 CHECK_CXX_COMPILER_FLAG("-std=c++0x" COMPILER_SUPPORTS_CXX0X)
@@ -28,6 +29,7 @@ else()
   message(STATUS "The compiler ${CMAKE_CXX_COMPILER} has no C++11
 support. Please use a different C++ compiler.")
 endif()
+
 
 # ========================================================================
 # Add bundle targets here
@@ -130,6 +132,12 @@ else () # QT ,Opengl or glut not found
   
 endif ()
 
+find_package(OpenMP)
+if (OPENMP_FOUND)
+    set (CMAKE_C_FLAGS "${CMAKE_C_FLAGS} ${OpenMP_C_FLAGS}")
+    set (CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${OpenMP_CXX_FLAGS}")
+endif()
+
 
 set (targetName QtViewer)
 set (OPENMESH_INCLUDE_DIR "${OPENMESH_DIR}/src")
@@ -178,6 +186,21 @@ target_link_libraries (${targetName}
   ${GLUT_LIBRARIES}
 )
 
+if (UNIX)
+target_link_libraries (${targetName}
+  debug
+${OPENMESH_LIBRARY_DIR}/OpenMesh/libOpenMeshCore${CMAKE_DEBUG_POSTFIX}.a
+  debug
+${OPENMESH_LIBRARY_DIR}/OpenMesh/libOpenMeshTools${CMAKE_DEBUG_POSTFIX}.a
+)
+  
+target_link_libraries (${targetName}
+  optimized ${OPENMESH_LIBRARY_DIR}/OpenMesh/libOpenMeshCore.a
+  optimized ${OPENMESH_LIBRARY_DIR}/OpenMesh/libOpenMeshTools.a
+)
+endif()
+
+if (WIN32)
 target_link_libraries (${targetName}
   debug ${OPENMESH_LIBRARY_DIR}/OpenMeshCore${CMAKE_DEBUG_POSTFIX}.lib
   debug ${OPENMESH_LIBRARY_DIR}/OpenMeshTools${CMAKE_DEBUG_POSTFIX}.lib
@@ -187,5 +210,6 @@ target_link_libraries (${targetName}
   optimized ${OPENMESH_LIBRARY_DIR}/OpenMeshCore.lib
   optimized ${OPENMESH_LIBRARY_DIR}/OpenMeshTools.lib
 )
+endif()
 
 include(${CMAKE_CURRENT_SOURCE_DIR}/cmake/AddLibraries.cmake)

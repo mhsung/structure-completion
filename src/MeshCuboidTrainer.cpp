@@ -138,6 +138,8 @@ void MeshCuboidJointNormalRelationTrainer::compute_relations(
 	std::vector< std::vector<MeshCuboidJointNormalRelations *> > &_relations,
 	const std::list<std::string> *_ignored_object_list) const
 {
+	const unsigned int num_features = MeshCuboidFeatures::k_num_features;
+
 	unsigned int num_labels = feature_list_.size();
 	assert(transformation_list_.size() == num_labels);
 
@@ -230,8 +232,8 @@ void MeshCuboidJointNormalRelationTrainer::compute_relations(
 			assert(transformation_1.size() == num_objects);
 			assert(transformation_2.size() == num_objects);
 
-			Eigen::MatrixXd X_1(num_objects, MeshCuboidFeatures::k_num_features);
-			Eigen::MatrixXd X_2(num_objects, MeshCuboidFeatures::k_num_features);
+			Eigen::MatrixXd X_1(num_objects, num_features);
+			Eigen::MatrixXd X_2(num_objects, num_features);
 
 			for (int object_index = 0; object_index < num_objects; ++object_index)
 			{

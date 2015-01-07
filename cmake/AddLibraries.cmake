@@ -2,23 +2,23 @@
 #### Additional library files ####
 ##################################
 
-if(UNIX)
+if (UNIX)
 target_link_libraries (${targetName}
   ${LIBRARY_ROOT_PATH}/ann-1.1.2/lib/libANN.a
-  ${LIBRARY_ROOT_PATH}/glew-1.9.0/lib/libGLEW.a
+  ${LIBRARY_ROOT_PATH}/glew-1.11.0/lib/libGLEW.a
 )
 
 target_link_libraries (${targetName}
   ${LIBRARY_ROOT_PATH}/gflags-2.1.1/build/lib/libgflags.a
-  ${LIBRARY_ROOT_PATH}/glog-0.3.3/lib/libglog.a
+  ${LIBRARY_ROOT_PATH}/glog-0.3.3/build/lib/libglog.a
   ${LIBRARY_ROOT_PATH}/ceres-solver-1.10.0/build/lib/libceres.a
 )
 endif()
 
-if(WIN32)
+if (WIN32)
 target_link_libraries (${targetName}
   ${LIBRARY_ROOT_PATH}/ann-1.1.2/build/bin/ANN.lib
-  ${LIBRARY_ROOT_PATH}/glew-1.9.0/lib/x64/glew32.lib
+  ${LIBRARY_ROOT_PATH}/glew-1.11.0/lib/Release/x64/glew32.lib
 )
 
 target_link_libraries (${targetName}

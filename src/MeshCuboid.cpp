@@ -584,11 +584,13 @@ void MeshCuboid::cuboidize()
 	//}
 	//axes.colwise().normalize();
 
+	const unsigned int num_face_corners = MeshCuboid::k_num_face_corners;
+
 	Eigen::Matrix3d axes;
 
 	for (unsigned int axis_index = 0; axis_index < 3; ++axis_index)
 	{
-		Eigen::MatrixXd A(k_num_face_corners, 3);
+		Eigen::MatrixXd A(num_face_corners, 3);
 		double sum_length = 0.0;
 
 		for (unsigned int face_corner_index = 0; face_corner_index < k_num_face_corners; ++face_corner_index)

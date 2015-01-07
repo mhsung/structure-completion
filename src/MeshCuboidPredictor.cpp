@@ -80,6 +80,8 @@ void MeshCuboidPredictor::get_single_quadratic_form(
 	unsigned int num_sample_points = _cuboid->num_sample_points();
 	unsigned int num_cuboid_surface_points = _cuboid->num_cuboid_surface_points();
 	const unsigned int mat_size = _quadratic_term.cols();
+	const unsigned int num_corners = MeshCuboid::k_num_corners;
+	const unsigned int num_attributes = MeshCuboidAttributes::k_num_attributes;
 
 	// X: sample points, Y: cuboid surface points.
 	unsigned int num_X_points = num_sample_points;
@@ -101,7 +103,7 @@ void MeshCuboidPredictor::get_single_quadratic_form(
 
 	Eigen::MatrixXd all_X_points(3, num_X_points + num_Y_points);
 	Eigen::MatrixXd all_Y_points(3, num_X_points + num_Y_points);
-	Eigen::MatrixXd all_Y_coeffs(MeshCuboid::k_num_corners, num_X_points + num_Y_points);
+	Eigen::MatrixXd all_Y_coeffs(num_corners, num_X_points + num_Y_points);
 	Eigen::VectorXd all_weights(num_X_points + num_Y_points);
 
 	unsigned int pair_index = 0;
@@ -192,7 +194,7 @@ void MeshCuboidPredictor::get_single_quadratic_form(
 		assert(Y_coeff.size() == MeshCuboid::k_num_corners);
 		double weight = all_weights(point_index);
 
-		Eigen::MatrixXd A0(3, MeshCuboidAttributes::k_num_attributes);
+		Eigen::MatrixXd A0(3, num_attributes);
 		A0.setZero();
 
 		for (unsigned int corner_index = 0; corner_index < MeshCuboid::k_num_corners; ++corner_index)
