@@ -12,13 +12,12 @@
 #include <sstream>
 
 
-DEFINE_string(mesh_dir, "D:/data/shape2pose/data/1_input/coseg_chairs/off/", "");
-DEFINE_string(sample_dir, "D:/data/shape2pose/data/2_analysis/coseg_chairs/points/even1000/", "");
-DEFINE_string(mesh_label_dir, "D:/data/shape2pose/data/1_input/coseg_chairs/gt/", "");
-//DEFINE_string(mesh_label_dir, "D:/data/coseg/chairs_400/gt/four_legs/", "");
-//DEFINE_string(sample_label_dir, "D:/data/shape2pose/data/4_experiments/exp3_coseg_four_legs/1_prediction/", "");
-DEFINE_string(sample_label_dir, "D:/data/shape2pose/data/4_experiments/exp1_coseg_two_types/1_prediction/", "");
-DEFINE_string(snapshot_dir, "output", "");
+DEFINE_string(data_root_path, "D:/data/shape2pose/", "");
+DEFINE_string(mesh_path, "data/1_input/coseg_chairs/off/", "");
+DEFINE_string(sample_path, "data/2_analysis/coseg_chairs/points/even1000/", "");
+DEFINE_string(mesh_label_path, "data/1_input/coseg_chairs/gt/", "");
+DEFINE_string(sample_label_path, "data/4_experiments/exp1_coseg_two_types/1_prediction/", "");
+DEFINE_string(snapshot_path, "output", "");
 
 DEFINE_string(point_cuboid_label_map_filename, "point_cuboid_label_map.txt", "");
 DEFINE_string(pose_filename, "pose.txt", "");
@@ -246,10 +245,10 @@ bool load_point_cuboid_label_map(const char *_filename, bool _verbose = true)
 
 void MeshViewerWidget::run_training()
 {
-	std::cout << "mesh_dir = " << FLAGS_mesh_dir << std::endl;
-	std::cout << "sample_dir = " << FLAGS_sample_dir << std::endl;
-	std::cout << "sample_label_dir = " << FLAGS_sample_label_dir << std::endl;
-	std::cout << "mesh_label_dir = " << FLAGS_mesh_label_dir << std::endl;
+	std::cout << "mesh_dir = " << FLAGS_data_root_path + FLAGS_mesh_path << std::endl;
+	std::cout << "sample_dir = " << FLAGS_data_root_path + FLAGS_sample_path << std::endl;
+	std::cout << "sample_label_dir = " << FLAGS_data_root_path + FLAGS_sample_label_path << std::endl;
+	std::cout << "mesh_label_dir = " << FLAGS_data_root_path + FLAGS_mesh_label_path << std::endl;
 
 	bool ret;
 	ret = load_point_cuboid_label_map(FLAGS_point_cuboid_label_map_filename.c_str());
@@ -279,7 +278,7 @@ void MeshViewerWidget::run_training()
 	open_modelview_matrix_file(FLAGS_pose_filename.c_str());
 
 	// For every file in the base path.
-	QDir dir(FLAGS_mesh_dir.c_str());
+	QDir dir((FLAGS_data_root_path + FLAGS_mesh_path).c_str());
 	assert(dir.exists());
 	dir.setFilter(QDir::Files | QDir::Hidden | QDir::NoSymLinks);
 	dir.setSorting(QDir::Name);
@@ -295,10 +294,10 @@ void MeshViewerWidget::run_training()
 		{
 			std::string mesh_name = std::string(file_info.baseName().toLocal8Bit());
 			std::string mesh_filename = std::string(file_info.filePath().toLocal8Bit());
-			std::string sample_filename = FLAGS_sample_dir + std::string("/") + mesh_name + std::string(".pts");
-			std::string sample_label_filename = FLAGS_sample_label_dir + std::string("/") + mesh_name + std::string(".arff");
-			std::string mesh_label_filename = FLAGS_mesh_label_dir + std::string("/") + mesh_name + std::string(".seg");
-			std::string snapshot_filename = FLAGS_snapshot_dir + std::string("/") + mesh_name;
+			std::string sample_filename = FLAGS_data_root_path + FLAGS_sample_path + std::string("/") + mesh_name + std::string(".pts");
+			std::string sample_label_filename = FLAGS_data_root_path + FLAGS_sample_label_path + std::string("/") + mesh_name + std::string(".arff");
+			std::string mesh_label_filename = FLAGS_data_root_path + FLAGS_mesh_label_path + std::string("/") + mesh_name + std::string(".seg");
+			std::string snapshot_filename = FLAGS_snapshot_path + std::string("/") + mesh_name;
 
 			QFileInfo mesh_file(mesh_filename.c_str());
 			QFileInfo sample_file(sample_filename.c_str());
@@ -524,10 +523,10 @@ void MeshViewerWidget::run_training_from_files()
 
 void MeshViewerWidget::run_prediction()
 {
-	std::cout << "mesh_dir = " << FLAGS_mesh_dir << std::endl;
-	std::cout << "sample_dir = " << FLAGS_sample_dir << std::endl;
-	std::cout << "sample_label_dir = " << FLAGS_sample_label_dir << std::endl;
-	std::cout << "mesh_label_dir = " << FLAGS_mesh_label_dir << std::endl;
+	std::cout << "mesh_dir = " << FLAGS_data_root_path + FLAGS_mesh_path << std::endl;
+	std::cout << "sample_dir = " << FLAGS_data_root_path + FLAGS_sample_path << std::endl;
+	std::cout << "sample_label_dir = " << FLAGS_data_root_path + FLAGS_sample_label_path << std::endl;
+	std::cout << "mesh_label_dir = " << FLAGS_data_root_path + FLAGS_mesh_label_path << std::endl;
 
 	bool ret;
 	ret = load_point_cuboid_label_map(FLAGS_point_cuboid_label_map_filename.c_str());
@@ -616,7 +615,7 @@ void MeshViewerWidget::run_prediction()
 	slotDrawMode(findAction(CUSTOM_VIEW));
 
 	// For every file in the base path.
-	QDir dir(FLAGS_mesh_dir.c_str());
+	QDir dir((FLAGS_data_root_path + FLAGS_mesh_path).c_str());
 	assert(dir.exists());
 	dir.setFilter(QDir::Files | QDir::Hidden | QDir::NoSymLinks);
 	dir.setSorting(QDir::Name);
@@ -635,12 +634,12 @@ void MeshViewerWidget::run_prediction()
 			std::string mesh_name = std::string(file_info.baseName().toLocal8Bit());
 			std::string mesh_filename = std::string(file_info.filePath().toLocal8Bit());
 
-			std::string sample_filename = FLAGS_sample_dir + std::string("/") + mesh_name + std::string(".pts");
-			std::string sample_label_filename = FLAGS_sample_label_dir + std::string("/") + mesh_name + std::string(".arff");
-			std::string mesh_label_filename = FLAGS_mesh_label_dir + std::string("/") + mesh_name + std::string(".seg");
-			std::string log_filename = FLAGS_snapshot_dir + std::string("/") + mesh_name + std::string("_log.txt");
+			std::string sample_filename = FLAGS_data_root_path + FLAGS_sample_path + std::string("/") + mesh_name + std::string(".pts");
+			std::string sample_label_filename = FLAGS_data_root_path + FLAGS_sample_label_path + std::string("/") + mesh_name + std::string(".arff");
+			std::string mesh_label_filename = FLAGS_data_root_path + FLAGS_mesh_label_path + std::string("/") + mesh_name + std::string(".seg");
+			std::string log_filename = FLAGS_snapshot_path + std::string("/") + mesh_name + std::string("_log.txt");
 
-			std::string snapshot_filename_prefix = FLAGS_snapshot_dir + std::string("/") + mesh_name + std::string("_");
+			std::string snapshot_filename_prefix = FLAGS_snapshot_path + std::string("/") + mesh_name + std::string("_");
 			unsigned int snapshot_index = 0;
 
 			std::vector<MeshCuboid *> cuboids;
@@ -847,10 +846,10 @@ void MeshViewerWidget::run_prediction()
 
 void MeshViewerWidget::run_rendering_point_clusters()
 {
-	std::cout << "mesh_dir = " << FLAGS_mesh_dir << std::endl;
-	std::cout << "sample_dir = " << FLAGS_sample_dir << std::endl;
-	std::cout << "sample_label_dir = " << FLAGS_sample_label_dir << std::endl;
-	std::cout << "mesh_label_dir = " << FLAGS_mesh_label_dir << std::endl;
+	std::cout << "mesh_dir = " << FLAGS_data_root_path + FLAGS_mesh_path << std::endl;
+	std::cout << "sample_dir = " << FLAGS_data_root_path + FLAGS_sample_path << std::endl;
+	std::cout << "sample_label_dir = " << FLAGS_data_root_path + FLAGS_sample_label_path << std::endl;
+	std::cout << "mesh_label_dir = " << FLAGS_data_root_path + FLAGS_mesh_label_path << std::endl;
 
 	bool ret;
 	ret = load_point_cuboid_label_map(FLAGS_point_cuboid_label_map_filename.c_str());
@@ -867,7 +866,7 @@ void MeshViewerWidget::run_rendering_point_clusters()
 	open_modelview_matrix_file(FLAGS_pose_filename.c_str());
 
 	// For every file in the base path.
-	QDir dir(FLAGS_mesh_dir.c_str());
+	QDir dir((FLAGS_data_root_path + FLAGS_mesh_path).c_str());
 	assert(dir.exists());
 	dir.setFilter(QDir::Files | QDir::Hidden | QDir::NoSymLinks);
 	dir.setSorting(QDir::Name);
@@ -884,10 +883,10 @@ void MeshViewerWidget::run_rendering_point_clusters()
 			std::string mesh_name = std::string(file_info.baseName().toLocal8Bit());
 			std::string mesh_filename = std::string(file_info.filePath().toLocal8Bit());
 
-			std::string sample_filename = FLAGS_sample_dir + std::string("/") + mesh_name + std::string(".pts");
-			std::string sample_label_filename = FLAGS_sample_label_dir + std::string("/") + mesh_name + std::string(".arff");
-			std::string mesh_label_filename = FLAGS_mesh_label_dir + std::string("/") + mesh_name + std::string(".seg");
-			std::string snapshot_filename = FLAGS_snapshot_dir + std::string("/") + mesh_name + std::string("_in");
+			std::string sample_filename = FLAGS_data_root_path + FLAGS_sample_path + std::string("/") + mesh_name + std::string(".pts");
+			std::string sample_label_filename = FLAGS_data_root_path + FLAGS_sample_label_path + std::string("/") + mesh_name + std::string(".arff");
+			std::string mesh_label_filename = FLAGS_data_root_path + FLAGS_mesh_label_path + std::string("/") + mesh_name + std::string(".seg");
+			std::string snapshot_filename = FLAGS_snapshot_path + std::string("/") + mesh_name + std::string("_in");
 
 			QFileInfo mesh_file(mesh_filename.c_str());
 			QFileInfo sample_file(sample_filename.c_str());
@@ -967,7 +966,7 @@ void MeshViewerWidget::run_test_joint_normal_training()
 	slotDrawMode(findAction(CUSTOM_VIEW));
 
 	// For every file in the base path.
-	QDir dir(FLAGS_mesh_dir.c_str());
+	QDir dir(FLAGS_data_root_path + FLAGS_mesh_path.c_str());
 	assert(dir.exists());
 	dir.setFilter(QDir::Files | QDir::Hidden | QDir::NoSymLinks);
 	dir.setSorting(QDir::Name);
@@ -983,10 +982,10 @@ void MeshViewerWidget::run_test_joint_normal_training()
 		{
 			std::string mesh_name = std::string(file_info.baseName().toLocal8Bit());
 			std::string mesh_filename = std::string(file_info.filePath().toLocal8Bit());
-			std::string sample_filename = FLAGS_sample_dir + std::string("/") + mesh_name + std::string(".pts");
-			std::string sample_label_filename = FLAGS_sample_label_dir + std::string("/") + mesh_name + std::string(".arff");
-			std::string mesh_label_filename = FLAGS_mesh_label_dir + std::string("/") + mesh_name + std::string(".seg");
-			std::string snapshot_filename = FLAGS_snapshot_dir + std::string("/") + mesh_name;
+			std::string sample_filename = FLAGS_data_root_path + FLAGS_sample_path + std::string("/") + mesh_name + std::string(".pts");
+			std::string sample_label_filename = FLAGS_data_root_path + FLAGS_sample_label_path + std::string("/") + mesh_name + std::string(".arff");
+			std::string mesh_label_filename = FLAGS_data_root_path + FLAGS_mesh_label_path + std::string("/") + mesh_name + std::string(".seg");
+			std::string snapshot_filename = FLAGS_snapshot_path + std::string("/") + mesh_name;
 
 			QFileInfo mesh_file(mesh_filename.c_str());
 			QFileInfo sample_file(sample_filename.c_str());
@@ -1138,7 +1137,7 @@ void MeshViewerWidget::run_test_manual_relations()
 	open_modelview_matrix_file(FLAGS_pose_filename.c_str());
 
 	// For every file in the base path.
-	QDir dir(FLAGS_mesh_dir.c_str());
+	QDir dir(FLAGS_data_root_path + FLAGS_mesh_path.c_str());
 	assert(dir.exists());
 	dir.setFilter(QDir::Files | QDir::Hidden | QDir::NoSymLinks);
 	dir.setSorting(QDir::Name);
@@ -1154,13 +1153,13 @@ void MeshViewerWidget::run_test_manual_relations()
 		{
 			std::string mesh_name = std::string(file_info.baseName().toLocal8Bit());
 			std::string mesh_filename = std::string(file_info.filePath().toLocal8Bit());
-			std::string sample_filename = FLAGS_sample_dir + std::string("/") + mesh_name + std::string(".pts");
-			std::string sample_label_filename = FLAGS_sample_label_dir + std::string("/") + mesh_name + std::string(".arff");
-			std::string mesh_label_filename = FLAGS_mesh_label_dir + std::string("/") + mesh_name + std::string(".seg");
-			std::string snapshot_filename = FLAGS_snapshot_dir + std::string("/") + mesh_name + std::string("_in");
+			std::string sample_filename = FLAGS_data_root_path + FLAGS_sample_path + std::string("/") + mesh_name + std::string(".pts");
+			std::string sample_label_filename = FLAGS_data_root_path + FLAGS_sample_label_path + std::string("/") + mesh_name + std::string(".arff");
+			std::string mesh_label_filename = FLAGS_data_root_path + FLAGS_mesh_label_path + std::string("/") + mesh_name + std::string(".seg");
+			std::string snapshot_filename = FLAGS_snapshot_path + std::string("/") + mesh_name + std::string("_in");
 
-			std::string recognition_snapshot_filename = FLAGS_snapshot_dir + std::string("/") + mesh_name + std::string("_out");
-			std::string recognition_log_filename = FLAGS_snapshot_dir + std::string("/") + mesh_name + std::string(".txt");
+			std::string recognition_snapshot_filename = FLAGS_snapshot_path + std::string("/") + mesh_name + std::string("_out");
+			std::string recognition_log_filename = FLAGS_snapshot_path + std::string("/") + mesh_name + std::string(".txt");
 
 			QFileInfo mesh_file(mesh_filename.c_str());
 			QFileInfo sample_file(sample_filename.c_str());
@@ -1277,7 +1276,7 @@ void MeshViewerWidget::run_test_cca_relations()
 	open_modelview_matrix_file(FLAGS_pose_filename.c_str());
 
 	// For every file in the base path.
-	QDir dir(FLAGS_mesh_dir.c_str());
+	QDir dir(FLAGS_data_root_path + FLAGS_mesh_path.c_str());
 	assert(dir.exists());
 	dir.setFilter(QDir::Files | QDir::Hidden | QDir::NoSymLinks);
 	dir.setSorting(QDir::Name);
@@ -1293,13 +1292,13 @@ void MeshViewerWidget::run_test_cca_relations()
 		{
 			std::string mesh_name = std::string(file_info.baseName().toLocal8Bit());
 			std::string mesh_filename = std::string(file_info.filePath().toLocal8Bit());
-			std::string sample_filename = FLAGS_sample_dir + std::string("/") + mesh_name + std::string(".pts");
-			std::string sample_label_filename = FLAGS_sample_label_dir + std::string("/") + mesh_name + std::string(".arff");
-			std::string mesh_label_filename = FLAGS_mesh_label_dir + std::string("/") + mesh_name + std::string(".seg");
-			std::string snapshot_filename = FLAGS_snapshot_dir + std::string("/") + mesh_name + std::string("_in");
+			std::string sample_filename = FLAGS_data_root_path + FLAGS_sample_path + std::string("/") + mesh_name + std::string(".pts");
+			std::string sample_label_filename = FLAGS_data_root_path + FLAGS_sample_label_path + std::string("/") + mesh_name + std::string(".arff");
+			std::string mesh_label_filename = FLAGS_data_root_path + FLAGS_mesh_label_path + std::string("/") + mesh_name + std::string(".seg");
+			std::string snapshot_filename = FLAGS_snapshot_path + std::string("/") + mesh_name + std::string("_in");
 
-			std::string recognition_snapshot_filename = FLAGS_snapshot_dir + std::string("/") + mesh_name + std::string("_out");
-			std::string recognition_log_filename = FLAGS_snapshot_dir + std::string("/") + mesh_name + std::string(".txt");
+			std::string recognition_snapshot_filename = FLAGS_snapshot_path + std::string("/") + mesh_name + std::string("_out");
+			std::string recognition_log_filename = FLAGS_snapshot_path + std::string("/") + mesh_name + std::string(".txt");
 
 			QFileInfo mesh_file(mesh_filename.c_str());
 			QFileInfo sample_file(sample_filename.c_str());
