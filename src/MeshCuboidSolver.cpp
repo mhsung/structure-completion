@@ -18,7 +18,7 @@
 #include <omp.h>
 
 
-const Real k_max_potential = MeshCuboidPredictor::k_max_potential;
+const Real k_max_potential = param_max_potential;
 
 bool write_eigen_matrix_binary(const char* filename, const Eigen::MatrixXd& _matrix){
 	std::ofstream out(filename, std::ios::out | std::ios::binary | std::ios::trunc);
@@ -401,7 +401,7 @@ void update_cuboid_surface_points(
 	MeshCuboidStructure &_cuboid_structure,
 	const Real _modelview_matrix[16])
 {
-	Real radius = param_observed_point_radius * _cuboid_structure.mesh_->get_object_diameter();
+	const Real radius = param_observed_point_radius * _cuboid_structure.mesh_->get_object_diameter();
 
 	std::vector<MeshCuboid *> all_cuboids = _cuboid_structure.get_all_cuboids();
 	for (std::vector<MeshCuboid *>::iterator it = all_cuboids.begin(); it != all_cuboids.end(); ++it)
@@ -447,6 +447,7 @@ void segment_sample_points(
 
 		unsigned int num_cuboid_surface_points = cuboid->num_cuboid_surface_points();
 		Eigen::MatrixXd cuboid_surface_points(3, num_cuboid_surface_points);
+		assert(num_cuboid_surface_points > 0);
 
 		for (unsigned int point_index = 0; point_index < num_cuboid_surface_points; ++point_index)
 		{
@@ -671,7 +672,9 @@ void compute_labels_and_axes_configuration_potentials(
 	const std::vector<Label>& _labels,
 	const std::vector<MeshCuboid *>& _cuboids,
 	const MeshCuboidPredictor &_predictor,
-	Eigen::MatrixXd &_potential_mat)
+	Eigen::MatrixXd &_potential_mat,
+	const std::vector< std::list<LabelIndex> > *_label_symmetries,
+	bool _add_dummy_label)
 {
 	unsigned int num_labels = _labels.size();
 	unsigned int num_cuboids = _cuboids.size();
@@ -680,12 +683,19 @@ void compute_labels_and_axes_configuration_potentials(
 	if (num_labels == 0 || num_cuboids == 0) return;
 
 	unsigned int num_cases = num_labels * num_axis_configurations;
+	
+	if (_add_dummy_label)
+	{
+		num_cases = num_cases + 1;
+	}
+	
 	unsigned int mat_size = num_cuboids * num_cases;
-	// NOTE:
-	// This matrix should be symmetric.
 	_potential_mat = Eigen::MatrixXd(mat_size, mat_size);
 	_potential_mat.setZero();
 
+
+	// NOTE:
+	// The potential matrix should be symmetric.
 
 	// Cuboid with various labels and axes configurations.
 	std::vector< std::vector<MeshCuboid *> > cuboids_with_label_and_axes(num_cuboids);
@@ -700,6 +710,11 @@ void compute_labels_and_axes_configuration_potentials(
 
 		for (int case_index = 0; case_index < num_cases; ++case_index)
 		{
+			if (_add_dummy_label && case_index >= (num_cases - 1))
+			{
+				continue;
+			}
+
 			unsigned int label_index = (case_index / num_axis_configurations);
 			unsigned int axis_configuration_index =
 				(case_index % num_axis_configurations);
@@ -722,11 +737,13 @@ void compute_labels_and_axes_configuration_potentials(
 
 	for (unsigned int cuboid_index = 0; cuboid_index < num_cuboids; ++cuboid_index)
 	{
-		//std::cout << "Cuboid <" << cuboid_index << ">" << std::endl;
-
-		//#pragma omp parallel for
-		for (int case_index = 0; case_index < num_cases; ++case_index)
+		for (unsigned int case_index = 0; case_index < num_cases; ++case_index)
 		{
+			if (_add_dummy_label && case_index >= (num_cases - 1))
+			{
+				continue;
+			}
+
 			unsigned int mat_index = cuboid_index * num_cases + case_index;
 			unsigned int label_index = (case_index / num_axis_configurations);
 			unsigned int axis_configuration_index =
@@ -739,8 +756,28 @@ void compute_labels_and_axes_configuration_potentials(
 			MeshCuboidAttributes attributes = attributes_with_label_and_axes[cuboid_index][case_index];
 			MeshCuboidTransformation transformation = transformations_with_label_and_axes[cuboid_index][case_index];
 
-			Real potential = _predictor.get_single_potential(cuboid, &attributes, &transformation, label_index);
-			assert(potential >= 0.0);
+			//Real potential = _predictor.get_single_potential(cuboid, &attributes, &transformation, label_index);
+			//assert(potential >= 0.0);
+
+			Real potential = 0.0;
+			if (_cuboids[cuboid_index]->get_label_index() != label_index)
+				potential = param_max_potential;
+
+			// NOTE:
+			// If label symmetry information is given, symmetric labels have zero potential value.
+			if (_label_symmetries)
+			{
+				assert((*_label_symmetries).size() == num_labels);
+				const std::list<LabelIndex> &label_symmetry = (*_label_symmetries)[label_index];
+				for (std::list<LabelIndex>::const_iterator it = label_symmetry.begin(); it != label_symmetry.end(); ++it)
+				{
+					if (_cuboids[cuboid_index]->get_label_index() == (*it))
+					{
+						potential = 0.0;
+						break;
+					}
+				}
+			}
 
 			_potential_mat(mat_index, mat_index) = potential;
 		}
@@ -753,7 +790,10 @@ void compute_labels_and_axes_configuration_potentials(
 	{
 		for (unsigned int case_index_1 = 0; case_index_1 < num_cases; ++case_index_1)
 		{
-			//std::cout << "Cuboid, Case <" << cuboid_index_1 << ", " << case_index_1 << ">" << std::endl;
+			if (_add_dummy_label && case_index_1 >= (num_cases - 1))
+			{
+				continue;
+			}
 
 			unsigned int mat_index_1 = cuboid_index_1 * num_cases + case_index_1;
 			unsigned int label_index_1 = (case_index_1 / num_axis_configurations);
@@ -774,10 +814,15 @@ void compute_labels_and_axes_configuration_potentials(
 #pragma omp parallel for
 				for (int case_index_2 = 0; case_index_2 < num_cases; ++case_index_2)
 				{
+					if (_add_dummy_label && case_index_2 >= (num_cases - 1))
+					{
+						continue;
+					}
+
 					unsigned int mat_index_2 = cuboid_index_2 * num_cases + case_index_2;
 
-					// Symmetric matrix.
-					if (mat_index_1 > mat_index_2)
+					// Symmetric matrix. Diagonals are for single potentials.
+					if (mat_index_1 >= mat_index_2)
 						continue;
 
 					unsigned int label_index_2 = (case_index_2 / num_axis_configurations);
@@ -814,6 +859,33 @@ void compute_labels_and_axes_configuration_potentials(
 		}
 	}
 
+
+	// Set dummy label pair potentials.
+	if (_add_dummy_label)
+	{
+		const unsigned int dummy_case_index = num_cases - 1;
+		const Real dummy_potential = param_dummy_potential;
+
+		for (unsigned int cuboid_index = 0; cuboid_index < num_cuboids; ++cuboid_index)
+		{
+			for (unsigned int case_index = 0; case_index < num_cases; ++case_index)
+			{
+				unsigned int mat_index = cuboid_index * num_cases + case_index;
+
+				for (unsigned int dummy_cuboid_index = 0; dummy_cuboid_index < num_cuboids; ++dummy_cuboid_index)
+				{
+					if (cuboid_index == dummy_cuboid_index)
+						continue;
+
+					unsigned int dummy_mat_index = dummy_cuboid_index * num_cases + dummy_case_index;
+					_potential_mat(mat_index, dummy_mat_index) = dummy_potential;
+					_potential_mat(dummy_mat_index, mat_index) = dummy_potential;
+				}
+			}
+		}
+	}
+
+
 	// Deallocate.
 	for (std::vector< std::vector<MeshCuboid *> >::iterator it = cuboids_with_label_and_axes.begin();
 		it != cuboids_with_label_and_axes.end(); ++it)
@@ -828,15 +900,17 @@ void compute_labels_and_axes_configuration_potentials(
 void recognize_labels_and_axes_configurations(
 	MeshCuboidStructure &_cuboid_structure,
 	const MeshCuboidPredictor &_predictor,
-	const char* _log_filename)
+	const char* _log_filename,
+	bool _use_symmetry_info,
+	bool _add_dummy_label)
 {
 	assert(_log_filename);
 
-	std::ofstream log_file(_log_filename);
+	std::ofstream log_file(_log_filename, std::ofstream::out | std::ofstream::app);
 	assert(log_file);
 
 	const std::vector<Label>& labels = _cuboid_structure.labels_;
-	const std::vector<MeshCuboid *>& all_cuboids = _cuboid_structure.get_all_cuboids();
+	std::vector<MeshCuboid *>& all_cuboids = _cuboid_structure.get_all_cuboids();
 
 	unsigned int num_labels = labels.size();
 	unsigned int num_cuboids = all_cuboids.size();
@@ -846,30 +920,57 @@ void recognize_labels_and_axes_configurations(
 
 	unsigned int num_cases = num_labels * num_axis_configurations;
 
+	if (_add_dummy_label)
+	{
+		num_cases = num_cases + 1;
+	}
+
 	// NOTE:
 	// This matrix should be symmetric.
 	Eigen::MatrixXd potential_mat;
-	compute_labels_and_axes_configuration_potentials(
-		labels, all_cuboids, _predictor, potential_mat);
+
+	if (_use_symmetry_info)
+	{
+		compute_labels_and_axes_configuration_potentials(
+			labels, all_cuboids, _predictor, potential_mat, &_cuboid_structure.label_symmetries_, _add_dummy_label);
+	}
+	else
+	{
+		compute_labels_and_axes_configuration_potentials(
+			labels, all_cuboids, _predictor, potential_mat, NULL, _add_dummy_label);
+	}
 
 
 	// Solve MRF.
 	std::vector<int> output = solve_markov_random_field(num_cuboids, num_cases, potential_mat);
-	//std::vector<int> output = solve_mrf_using_eig(num_cuboids, num_cases, potential_mat);
 	assert(output.size() == num_cuboids);
 
 
 	// Print results.
 	Eigen::VectorXd part_case_pair_vec;
 
-
 	part_case_pair_vec = Eigen::VectorXd::Zero(num_cuboids * num_cases);
 	log_file << " -- Input -- " << std::endl;
+
+	// TEST.
+	bool *is_label_visited = new bool[num_labels];
+	memset(is_label_visited, false, num_labels*sizeof(bool));
 
 	for (unsigned int cuboid_index = 0; cuboid_index < num_cuboids; ++cuboid_index)
 	{
 		MeshCuboid *cuboid = all_cuboids[cuboid_index];
 		LabelIndex label_index = cuboid->get_label_index();
+
+		// TEST.
+		if (is_label_visited[label_index])
+		{
+			log_file << "[" << cuboid_index << "]: Dummy" << std::endl;
+			unsigned int mat_index = cuboid_index * num_cases + (num_cases - 1);
+			part_case_pair_vec(mat_index) = 1.0;
+			continue;
+		}
+		is_label_visited[label_index] = true;
+
 		Label label = labels[label_index];
 		unsigned int axis_configuration_index = 0;
 		unsigned int case_index = label_index * num_axis_configurations + axis_configuration_index;
@@ -879,18 +980,35 @@ void recognize_labels_and_axes_configurations(
 		log_file << "[" << cuboid_index << "]: " << label << ", " << axis_configuration_index << std::endl;
 	}
 
+	// TEST.
+	delete [] is_label_visited;
+
 	log_file << "Energy = " << part_case_pair_vec.transpose() * potential_mat * part_case_pair_vec;
 	log_file << std::endl;
 
 
 	part_case_pair_vec = Eigen::VectorXd::Zero(num_cuboids * num_cases);
 	log_file << " -- Output -- " << std::endl;
+
 	for (unsigned int cuboid_index = 0; cuboid_index < num_cuboids; ++cuboid_index)
 	{
 		MeshCuboid *cuboid = all_cuboids[cuboid_index];
 		assert(output[cuboid_index] >= 0);
-		assert(output[cuboid_index] < num_cases);
+
 		unsigned int case_index = static_cast<unsigned int>(output[cuboid_index]);
+
+		// Dummy label.
+		if (_add_dummy_label && case_index >= (num_cases - 1))
+		{
+			log_file << "[" << cuboid_index << "]: Dummy" << std::endl;
+			unsigned int mat_index = cuboid_index * num_cases + (num_cases - 1);
+			part_case_pair_vec(mat_index) = 1.0;
+
+			delete cuboid;
+			all_cuboids[cuboid_index] = NULL;
+			continue;
+		}
+
 		unsigned int mat_index = cuboid_index * num_cases + case_index;
 		part_case_pair_vec(mat_index) = 1.0;
 
@@ -898,14 +1016,6 @@ void recognize_labels_and_axes_configurations(
 		unsigned int axis_configuration_index =
 			(case_index % num_axis_configurations);
 		Label label = labels[label_index];
-
-		// NOTE:
-		// Wrong prediction.
-		//if (label_index != cuboid->get_label_index()
-		//	|| axis_configuration_index != 0)
-		//{
-		//	ret = false;
-		//}
 
 		cuboid->set_label_index(label_index);
 		cuboid->set_axis_configuration(axis_configuration_index);
@@ -917,18 +1027,24 @@ void recognize_labels_and_axes_configurations(
 
 	log_file.close();
 
+
 	// Put recognized cuboids.
 	_cuboid_structure.label_cuboids_.clear();
 	_cuboid_structure.label_cuboids_.resize(num_labels);
 	for (LabelIndex label_index = 0; label_index < num_labels; ++label_index)
-	{
 		_cuboid_structure.label_cuboids_[label_index].clear();
-		for (std::vector<MeshCuboid *>::const_iterator it = all_cuboids.begin();
-			it != all_cuboids.end(); ++it)
-		{
-			if ((*it)->get_label_index() == label_index)
-				_cuboid_structure.label_cuboids_[label_index].push_back(*it);
-		}
+
+	for (std::vector<MeshCuboid *>::const_iterator it = all_cuboids.begin();
+		it != all_cuboids.end(); ++it)
+	{
+		MeshCuboid *cuboid = (*it);
+
+		// Dummy label.
+		if (!cuboid) continue;
+
+		LabelIndex label_index = cuboid->get_label_index();
+		assert(label_index < _cuboid_structure.num_labels());
+		_cuboid_structure.label_cuboids_[label_index].push_back(*it);
 	}
 }
 
@@ -940,7 +1056,7 @@ void test_recognize_labels_and_axes_configurations(
 {
 	assert(_log_filename);
 
-	std::ofstream log_file(_log_filename);
+	std::ofstream log_file(_log_filename, std::ofstream::out | std::ofstream::app);
 	assert(log_file);
 
 	unsigned int num_labels = _labels.size();
@@ -1268,34 +1384,10 @@ void optimize_attributes(
 {
 	assert(_log_filename);
 
-	std::ofstream log_file(_log_filename);
+	std::ofstream log_file(_log_filename, std::ofstream::out | std::ofstream::app);
 	assert(log_file);
 
 	unsigned int num_labels = _cuboid_structure.num_labels();
-
-
-	//
-	// Add missing cuboids.
-	std::list<LabelIndex> given_label_indices;
-	for (LabelIndex label_index = 0; label_index < num_labels; ++label_index)
-		if (!_cuboid_structure.label_cuboids_[label_index].empty())
-			given_label_indices.push_back(label_index);
-
-	std::list<LabelIndex> missing_label_indices;
-	_predictor.get_missing_label_indices(given_label_indices, missing_label_indices);
-
-	for (std::list<LabelIndex>::const_iterator it = missing_label_indices.begin();
-		it != missing_label_indices.end(); ++it)
-	{
-		LabelIndex label_index = (*it);
-
-		// FIXME:
-		// Assume that the local axes of missing cuboids are the same with global axes.
-		MeshCuboid *missing_cuboid = new MeshCuboid(label_index);
-		_cuboid_structure.label_cuboids_[label_index].push_back(missing_cuboid);
-	}
-	//
-
 
 	std::vector<MeshCuboid *> all_cuboids = _cuboid_structure.get_all_cuboids();
 	unsigned int num_cuboids = all_cuboids.size();
@@ -1441,38 +1533,32 @@ void optimize_attributes(
 	log_file.close();
 }
 
-/*
-bool add_missing_cuboids(
-	MeshCuboidStructure &_cuboid_structure,
+void add_missing_cuboids_once(
+	const std::vector<MeshCuboid *>& _given_cuboids,
+	const std::list<LabelIndex> &_missing_label_indices,
 	// NOTE:
 	// 'MeshCuboidCondNormalRelationPredictor' Only.
-	const MeshCuboidCondNormalRelationPredictor &_predictor)
+	const MeshCuboidCondNormalRelationPredictor &_predictor,
+	std::vector<MeshCuboid *>& _new_cuboids)
 {
-	const std::vector<Label>& labels = _cuboid_structure.labels_;
-	std::vector<MeshCuboid *>& all_cuboids = _cuboid_structure.get_all_cuboids();
+	if (_given_cuboids.empty() || _missing_label_indices.empty())
+		return;
 
-	unsigned int num_given_cuboids = all_cuboids.size();
-	unsigned int num_labels = labels.size();
-	bool is_cuboid_added = false;
 
-	std::vector<unsigned int> count_label_cuboids(num_labels, 0);
-	for (std::vector<MeshCuboid *>::iterator it = all_cuboids.begin(); it != all_cuboids.end(); ++it)
-		++count_label_cuboids[(*it)->get_label_index()];
+	unsigned int num_given_cuboids = _given_cuboids.size();
+	std::vector<MeshCuboid *> all_cuboids;
+	all_cuboids.insert(all_cuboids.end(), _given_cuboids.begin(), _given_cuboids.end());
 
-	for (LabelIndex label_index = 0; label_index < num_labels; ++label_index)
+	for (std::list<LabelIndex>::const_iterator it = _missing_label_indices.begin();
+		it != _missing_label_indices.end(); ++it)
 	{
-		if (count_label_cuboids[label_index] == 0)
-		{
-			// FIXME:
-			// Assume that the local axes of missing cuboids are the same with global axes.
-			MeshCuboid *missing_cuboid = new MeshCuboid(label_index);
-			all_cuboids.push_back(missing_cuboid);
-
-			is_cuboid_added = true;
-		}
+		LabelIndex label_index = (*it);
+		// FIXME:
+		// Assume that the local axes of missing cuboids are the same with global axes.
+		MeshCuboid *missing_cuboid = new MeshCuboid(label_index);
+		all_cuboids.push_back(missing_cuboid);
 	}
 
-	if (!is_cuboid_added) return false;
 
 	unsigned int num_cuboids = all_cuboids.size();
 	unsigned int num_new_cuboids = num_cuboids - num_given_cuboids;
@@ -1523,6 +1609,8 @@ bool add_missing_cuboids(
 	assert(new_values.rows() == mat_size);
 
 
+	_new_cuboids.clear();
+
 	for (unsigned int new_cuboid_index = 0; new_cuboid_index < num_new_cuboids; ++new_cuboid_index)
 	{
 		unsigned int cuboid_index = num_given_cuboids + new_cuboid_index;
@@ -1554,22 +1642,55 @@ bool add_missing_cuboids(
 
 		// Cuboidize.
 		cuboid->cuboidize();
-	}
 
-	// Put reconstructed cuboids.
-	for (LabelIndex label_index = 0; label_index < _cuboid_structure.labels_.size(); ++label_index)
-	{
-		_cuboid_structure.label_cuboids_[label_index].clear();
-		for (std::vector<MeshCuboid *>::iterator it = all_cuboids.begin(); it != all_cuboids.end(); ++it)
-		{
-			if ((*it)->get_label_index() == label_index)
-				_cuboid_structure.label_cuboids_[label_index].push_back(*it);
-		}
+		_new_cuboids.push_back(cuboid);
 	}
-
-	return true;
 }
 
+void add_missing_cuboids(
+	MeshCuboidStructure &_cuboid_structure,
+	const Real _modelview_matrix[16],
+	const std::list<LabelIndex> &_missing_label_indices,
+	// NOTE:
+	// 'MeshCuboidCondNormalRelationPredictor' Only.
+	const MeshCuboidCondNormalRelationPredictor &_predictor)
+{
+	if (_missing_label_indices.empty())
+		return;
+
+	const Real radius = param_observed_point_radius * _cuboid_structure.mesh_->get_object_diameter();
+
+	// NOTE:
+	// Each existing cuboid creates candidates of missing cuboids.
+	// The best missing cuboid for the same label will be found in the next iteration.
+	const std::vector<MeshCuboid *>& all_cuboids = _cuboid_structure.get_all_cuboids();
+	unsigned int num_all_cuboids = all_cuboids.size();
+	for (unsigned int cuboid_index = 0; cuboid_index < num_all_cuboids; ++cuboid_index)
+	{
+		std::vector<MeshCuboid *> given_cuboids;
+		given_cuboids.push_back(all_cuboids[cuboid_index]);
+		std::vector<MeshCuboid *> new_cuboids;
+
+		add_missing_cuboids_once(given_cuboids, _missing_label_indices, _predictor, new_cuboids);
+
+		for (std::vector<MeshCuboid *>::iterator it = new_cuboids.begin(); it != new_cuboids.end(); ++it)
+		{
+			MeshCuboid *cuboid = (*it);
+			assert(cuboid);
+
+			cuboid->create_grid_points_on_cuboid_surface(
+				param_num_cuboid_surface_points);
+
+			cuboid->compute_cuboid_surface_point_visibility(
+				_modelview_matrix, radius, _cuboid_structure.sample_points_);
+
+			LabelIndex label_index = cuboid->get_label_index();
+			_cuboid_structure.label_cuboids_[label_index].push_back(cuboid);
+		}
+	}
+}
+
+/*
 MeshCuboid *test_joint_normal_training(
 	const MeshCuboid *_cuboid_1, const MeshCuboid *_cuboid_2,
 	const LabelIndex _label_index_1, const LabelIndex _label_index_2,

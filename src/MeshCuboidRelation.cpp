@@ -906,7 +906,6 @@ double MeshCuboidJointNormalRelations::compute_error(
 	return error;
 }
 
-/*
 MeshCuboidCondNormalRelations::MeshCuboidCondNormalRelations()
 {
 	assert(MeshCuboidFeatures::k_num_global_feature_values > 0);
@@ -1159,6 +1158,7 @@ double MeshCuboidCondNormalRelations::compute_error(
 	return error;
 }
 
+/*
 MeshCuboidPCARelations::MeshCuboidPCARelations()
 {
 	mean_ = Eigen::VectorXd::Zero(k_mat_size);

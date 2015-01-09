@@ -19,12 +19,16 @@ void compute_labels_and_axes_configuration_potentials(
 	const std::vector<Label>& _labels,
 	const std::vector<MeshCuboid *>& _cuboids,
 	const MeshCuboidPredictor &_predictor,
-	Eigen::MatrixXd &_potential_mat);
+	Eigen::MatrixXd &_potential_mat,
+	const std::vector< std::list<LabelIndex> > *_label_symmetries,
+	bool _add_dummy_label = false);
 
 void recognize_labels_and_axes_configurations(
 	MeshCuboidStructure &_cuboid_structure,
 	const MeshCuboidPredictor &_predictor,
-	const char* _log_filename);
+	const char* _log_filename,
+	bool _use_symmetry_info = false,
+	bool _add_dummy_label = false);
 
 void test_recognize_labels_and_axes_configurations(
 	const std::vector<Label> &_labels,
@@ -56,16 +60,26 @@ void optimize_attributes(
 	const MeshCuboidPredictor &_predictor,
 	const double _quadprog_ratio,
 	const char* _log_filename,
-	const unsigned int _max_num_iterations = 30,
+	const unsigned int _max_num_iterations = 10,
 	QGLWidget *_viewer = NULL);
 
-/*
-bool add_missing_cuboids(
+void add_missing_cuboids_once(
+	const std::vector<MeshCuboid *>& _given_cuboids,
+	const std::list<LabelIndex> &_missing_label_indices,
+	// NOTE:
+	// 'MeshCuboidCondNormalRelationPredictor' Only.
+	const MeshCuboidCondNormalRelationPredictor &_predictor,
+	std::vector<MeshCuboid *>& _new_cuboids);
+
+void add_missing_cuboids(
 	MeshCuboidStructure &_cuboid_structure,
+	const Real _modelview_matrix[16],
+	const std::list<LabelIndex> &_missing_label_indices,
 	// NOTE:
 	// 'MeshCuboidCondNormalRelationPredictor' Only.
 	const MeshCuboidCondNormalRelationPredictor &_predictor);
 
+/*
 MeshCuboid *test_joint_normal_training(
 	const MeshCuboid *_cuboid_1, const MeshCuboid *_cuboid_2,
 	const LabelIndex _label_index_1, const LabelIndex _label_index_2,

@@ -19,8 +19,13 @@ MeshCuboidStructure::~MeshCuboidStructure()
 
 void MeshCuboidStructure::clear()
 {
+	clear_sample_points();
+	clear_cuboids();
 	clear_labels();
+}
 
+void MeshCuboidStructure::clear_sample_points()
+{
 	for (std::vector<MeshSamplePoint *>::iterator it = sample_points_.begin();
 		it != sample_points_.end(); ++it)
 		delete (*it);
@@ -30,10 +35,8 @@ void MeshCuboidStructure::clear()
 	scale_ = 1.0;
 }
 
-void MeshCuboidStructure::clear_labels()
+void MeshCuboidStructure::clear_cuboids()
 {
-	labels_.clear();
-
 	for (std::vector< std::vector<MeshCuboid *> >::iterator it = label_cuboids_.begin();
 		it != label_cuboids_.end(); ++it)
 	{
@@ -41,6 +44,13 @@ void MeshCuboidStructure::clear_labels()
 			delete (*jt);
 	}
 	label_cuboids_.clear();
+}
+
+void MeshCuboidStructure::clear_labels()
+{
+	labels_.clear();
+	label_names_.clear();
+	label_symmetries_.clear();
 
 	query_label_index_ = 0;
 }
@@ -91,6 +101,135 @@ void MeshCuboidStructure::reset_transformation()
 	assert(scale_ == 1.0);
 }
 
+bool MeshCuboidStructure::load_labels(const char *_filename, bool _verbose)
+{
+	std::ifstream file(_filename);
+	if (!file)
+	{
+		std::cerr << "Can't open file: \"" << _filename << "\"" << std::endl;
+		return false;
+	}
+
+	if (_verbose)
+		std::cout << "Loading " << _filename << "..." << std::endl;
+
+
+	// NOTE:
+	// All cuboids are deleted.
+	clear_cuboids();
+	clear_labels();
+
+
+	std::string buffer;
+	Label new_label = 0;
+
+	while (!file.eof())
+	{
+		std::getline(file, buffer);
+		if (buffer == "") break;
+
+		std::stringstream strstr(buffer);
+		
+		const unsigned int num_tokens = 3;
+		std::string tokens[num_tokens];
+
+		for (unsigned int i = 0; i < num_tokens; ++i)
+		{
+			if (strstr.eof())
+			{
+				std::cerr << "Error: Wrong file format: \"" << _filename << "\"" << std::endl;
+				return false;
+			}
+
+			std::getline(strstr, tokens[i], ' ');
+		}
+
+		if (tokens[1] != "pnts" || tokens[2] != "1")
+		{
+			std::cerr << "Error: Wrong file format: \"" << _filename << "\"" << std::endl;
+			return false;
+		}
+		
+		// NOTE:
+		// In this file format, labels are defined by the recorded order.
+		labels_.push_back(new_label);
+		label_names_.push_back(tokens[0]);
+		label_symmetries_.push_back(std::list<LabelIndex>());
+		++new_label;
+	}
+
+	file.close();
+
+
+	// NOTE:
+	// Draws all points.
+	query_label_index_ = num_labels();
+
+
+	std::cout << "Done." << std::endl;
+	return true;
+}
+
+bool MeshCuboidStructure::load_label_symmetries(const char *_filename, bool _verbose)
+{
+	std::ifstream file(_filename);
+	if (!file)
+	{
+		std::cerr << "Can't open file: \"" << _filename << "\"" << std::endl;
+		return false;
+	}
+
+	if (_verbose)
+		std::cout << "Loading " << _filename << "..." << std::endl;
+
+
+	label_symmetries_.clear();
+	label_symmetries_.resize(num_labels());
+
+
+	std::string buffer;
+	Label new_label = 0;
+
+	while (!file.eof())
+	{
+		std::getline(file, buffer);
+		if (buffer == "") break;
+
+		std::stringstream strstr(buffer);
+		std::list<LabelIndex> label_symmetry;
+
+		while (!strstr.eof())
+		{
+			std::string token;
+			std::getline(strstr, token, ' ');
+
+			LabelIndex label_index = get_label_index(token);
+			assert(label_index < num_labels());
+			label_symmetry.push_back(label_index);
+		}
+
+		for (std::list<LabelIndex>::iterator it = label_symmetry.begin(); it != label_symmetry.end(); ++it)
+		{
+			LabelIndex label_index = (*it);
+
+			for (std::list<LabelIndex>::iterator jt = label_symmetry.begin(); jt != label_symmetry.end(); ++jt)
+			{
+				LabelIndex n_label_index = (*jt);
+				if (n_label_index != label_index)
+				{
+					label_symmetries_[label_index].push_back(n_label_index);
+				}
+			}
+		}
+	}
+
+	file.close();
+
+
+	std::cout << "Done." << std::endl;
+	return true;
+}
+
 bool MeshCuboidStructure::load_sample_points(const char *_filename, bool _verbose)
 {
 	std::ifstream file(_filename);
@@ -103,7 +242,9 @@ bool MeshCuboidStructure::load_sample_points(const char *_filename, bool _verbos
 	if (_verbose)
 		std::cout << "Loading " << _filename << "..." << std::endl;
 
-	clear();
+
+	clear_sample_points();
+
 
 	std::string buffer;
 
@@ -153,6 +294,17 @@ bool MeshCuboidStructure::load_sample_points(const char *_filename, bool _verbos
 
 bool MeshCuboidStructure::load_sample_point_labels(const char *_filename, bool _verbose)
 {
+	if (labels_.empty())
+	{
+		std::cerr << "Error: Load label information first." << std::endl;
+		return false;
+	}
+	else if (sample_points_.empty())
+	{
+		std::cerr << "Error: Load sample points first." << std::endl;
+		return false;
+	}
+
 	std::ifstream file(_filename);
 	if (!file)
 	{
@@ -163,13 +315,10 @@ bool MeshCuboidStructure::load_sample_point_labels(const char *_filename, bool _
 	if (_verbose)
 		std::cout << "Loading " << _filename << "..." << std::endl;
 
-	clear_labels();
 
 	std::string buffer;
-	Label new_label = 0;
-	bool loading_alpha = true;
-
 	SamplePointIndex sample_point_index = 0;
+
 	while (!file.eof() && sample_point_index < num_sample_points())
 	{
 		std::getline(file, buffer);
@@ -185,10 +334,7 @@ bool MeshCuboidStructure::load_sample_point_labels(const char *_filename, bool _
 
 		if (token.compare("@ATTRIBUTE") == 0)
 		{
-			// NOTE:
-			// In this file format, labels are defined by the recorded order.
-			labels_.push_back(new_label);
-			++new_label;
+			// Skip.
 		}
 		else if (token[0] == '@')
 		{
@@ -196,20 +342,6 @@ bool MeshCuboidStructure::load_sample_point_labels(const char *_filename, bool _
 		}
 		else
 		{
-			if (loading_alpha)
-			{
-				// NOTE:
-				// Now adding labels is finished.
-				// The last label is garbage.
-				if (labels_.size() <= 1)
-				{
-					std::cerr << "Error: Wrong file format: \"" << _filename << "\"" << std::endl;
-					return false;
-				}
-				labels_.pop_back();
-				loading_alpha = false;
-			}
-
 			std::stringstream strstr(buffer);
 			std::string token;
 
@@ -217,9 +349,8 @@ bool MeshCuboidStructure::load_sample_point_labels(const char *_filename, bool _
 			sample_point->label_index_confidence_.resize(num_labels());
 			std::fill(sample_point->label_index_confidence_.begin(), sample_point->label_index_confidence_.end(), 0);
 
-			// NOTE:
-			// In this file format, labels are defined by the recorded order.
-			for (LabelIndex label_index = 0; label_index < labels_.size(); ++label_index)
+
+			for (LabelIndex label_index = 0; label_index < num_labels(); ++label_index)
 			{
 				if (strstr.eof())
 				{
@@ -236,6 +367,7 @@ bool MeshCuboidStructure::load_sample_point_labels(const char *_filename, bool _
 	file.close();
 
 	assert(sample_point_index == num_sample_points());
+
 
 	// NOTE:
 	// Draws all points.
@@ -440,6 +572,357 @@ void MeshCuboidStructure::make_mesh_vertices_as_sample_points()
 	}
 }
 
+void MeshCuboidStructure::apply_mesh_face_labels_to_sample_points()
+{
+	assert(mesh_);
+	
+	for (SamplePointIndex sample_point_index = 0; sample_point_index < num_sample_points(); ++sample_point_index)
+	{
+		MeshSamplePoint* sample_point = sample_points_[sample_point_index];
+
+		FaceIndex fid = sample_point->corr_fid_;
+		assert(fid < mesh_->n_faces());
+
+		MyMesh::FaceHandle fh = mesh_->face_handle(fid);
+		Label label = mesh_->property(mesh_->face_label_, fh);
+
+		LabelIndex label_index;
+		bool ret = exist_label(label, &label_index);
+		assert(ret);
+		assert(label_index < num_labels());
+
+		sample_point->label_index_confidence_.clear();
+		sample_point->label_index_confidence_.resize(num_labels(), 0.0);
+
+		// Note:
+		// The confidence of the given label becomes '1.0'.
+		sample_point->label_index_confidence_[label_index] = 1.0;
+	}
+}
+
+void MeshCuboidStructure::apply_mesh_face_labels_to_cuboids()
+{
+	// Apple mesh face labels to sample points.
+	apply_mesh_face_labels_to_sample_points();
+
+	std::list<MeshCuboid *> part_list;
+
+	for (std::vector< std::vector<MeshCuboid *> >::iterator it = label_cuboids_.begin();
+		it != label_cuboids_.end(); ++it)
+	{
+		for (std::vector<MeshCuboid *>::iterator jt = (*it).begin(); jt != (*it).end(); ++jt)
+		{
+			MeshCuboid *label_cuboid = (*jt);
+			// Update the label based on the label confidence values of sample points.
+			label_cuboid->update_label_using_sample_points();
+			part_list.push_back(label_cuboid);
+		}
+	}
+
+	label_cuboids_.clear();
+	label_cuboids_.resize(num_labels());
+
+	for (std::list<MeshCuboid *>::iterator it = part_list.begin(); it != part_list.end(); ++it)
+	{
+		MeshCuboid *cuboid = (*it);
+		LabelIndex label_index = cuboid->get_label_index();
+		label_cuboids_[label_index].push_back(cuboid);
+	}
+
+	// NOTE:
+	// Draws all boxes.
+	query_label_index_ = num_labels();
+}
+
+void MeshCuboidStructure::get_mesh_face_label_cuboids()
+{
+	// Apple mesh face labels to sample points.
+	apply_mesh_face_labels_to_sample_points();
+
+	compute_label_cuboids();
+}
+
+void MeshCuboidStructure::compute_label_cuboids()
+{
+	// Initialize.
+	for (std::vector< std::vector<MeshCuboid *> >::iterator it = label_cuboids_.begin();
+		it != label_cuboids_.end(); ++it)
+	{
+		for (std::vector<MeshCuboid *>::iterator jt = (*it).begin(); jt != (*it).end(); ++jt)
+			delete (*jt);
+		(*it).clear();
+	}
+	label_cuboids_.clear();
+	label_cuboids_.resize(num_labels());
+
+	for (LabelIndex label_index = 0; label_index < num_labels(); ++label_index)
+	{
+		assert(label_cuboids_[label_index].empty());
+		MeshCuboid *cuboid = new MeshCuboid(label_index);
+		std::vector<MeshSamplePoint *> label_sample_points;
+
+		for (SamplePointIndex sample_point_index = 0; sample_point_index < num_sample_points();
+			++sample_point_index)
+		{
+			MeshSamplePoint *sample_point = sample_points_[sample_point_index];
+			assert(sample_point);
+
+			// Select sample points which has sufficient confidence for the given label.
+			if (sample_point->label_index_confidence_[label_index] >= param_confidence_tol)
+				label_sample_points.push_back(sample_point);
+		}
+
+		cuboid->add_sample_points(label_sample_points);
+		bool ret = cuboid->compute_bbox();
+		if (!ret)
+		{
+			delete cuboid;
+		}
+		else
+		{
+			label_cuboids_[label_index].push_back(cuboid);
+		}
+	}
+
+	split_label_cuboids();
+
+	// NOTE:
+	// Draws all boxes.
+	query_label_index_ = num_labels();
+}
+
+void MeshCuboidStructure::find_the_largest_label_cuboids()
+{
+	// Find the largest part for each part.
+
+	assert(label_cuboids_.size() == num_labels());
+
+	for (LabelIndex label_index = 0; label_index < num_labels(); ++label_index)
+	{
+		if (label_cuboids_[label_index].size() <= 1)
+			continue;
+
+		Real max_volume = -1.0;
+		MeshCuboid *max_volume_label_cuboid = NULL;
+
+		for (std::vector<MeshCuboid *>::iterator it = label_cuboids_[label_index].begin();
+			it != label_cuboids_[label_index].end(); ++it)
+		{
+			MeshCuboid *label_cuboid = (*it);
+			assert(label_cuboid->get_label_index() == label_index);
+			if (label_cuboid->get_bbox_volume() > max_volume)
+			{
+				max_volume = label_cuboid->get_bbox_volume();
+				max_volume_label_cuboid = label_cuboid;
+			}
+		}
+		assert(max_volume_label_cuboid);
+
+		std::vector<MeshCuboid *> new_label_cuboids;
+		new_label_cuboids.push_back(max_volume_label_cuboid);
+		label_cuboids_[label_index].swap(new_label_cuboids);
+
+		// Delete label parts except the largest one.
+		for (std::vector<MeshCuboid *>::iterator it = new_label_cuboids.begin();
+			it != new_label_cuboids.end(); ++it)
+			if (*it != max_volume_label_cuboid)
+				delete (*it);
+	}
+}
+
+std::vector<LabelIndex> MeshCuboidStructure::get_sample_point_label_indices()
+{
+	// Get sample point labels from the label confidence values.
+	std::vector<LabelIndex> sample_point_label_indices(num_sample_points());
+
+	for (SamplePointIndex sample_point_index = 0; sample_point_index < num_sample_points(); ++sample_point_index)
+	{
+		MeshSamplePoint* sample_point = sample_points_[sample_point_index];
+		assert(sample_point);
+		assert(sample_point->label_index_confidence_.size() == labels_.size());
+
+		Real max_confidence = -std::numeric_limits<Real>::max();
+		Label max_confidence_label_index = 0;
+
+		for (LabelIndex label_index = 0; label_index < num_labels(); ++label_index)
+		{
+			Real confidence = sample_point->label_index_confidence_[label_index];
+
+			if (confidence > max_confidence)
+			{
+				max_confidence = confidence;
+				max_confidence_label_index = label_index;
+			}
+		}
+
+		sample_point_label_indices[sample_point_index] = max_confidence_label_index;
+	}
+
+	return sample_point_label_indices;
+}
+
+void MeshCuboidStructure::print_label_cuboids(const LabelIndex _label_index)const
+{
+	assert(label_cuboids_.size() == num_labels());
+	assert(_label_index < num_labels());
+	
+	Label label = get_label(_label_index);
+	std::vector<MeshCuboid *> cuboid = label_cuboids_[_label_index];
+	std::cout << "Label (" << label << ")" << std::endl;
+
+	unsigned int count_cuboids = 0;
+	for (std::vector<MeshCuboid *>::const_iterator it = cuboid.begin(); it != cuboid.end();
+		++it, ++count_cuboids)
+	{
+		std::cout << "[" << count_cuboids << "]" << std::endl;
+		(*it)->print_cuboid();
+	}
+}
+
+Label MeshCuboidStructure::get_label(const LabelIndex _label_index)const
+{
+	assert(_label_index < num_labels());
+	return labels_[_label_index];
+}
+
+bool MeshCuboidStructure::exist_label(const Label _label,
+	LabelIndex* _label_index)const
+{
+	for (LabelIndex label_index = 0; label_index < num_labels(); ++label_index)
+	{
+		if (labels_[label_index] == _label)
+		{
+			// NOTE:
+			// Assign label index if the pointer is provided.
+			if (_label_index) (*_label_index) = label_index;
+			return true;
+		}
+	}
+
+	return false;
+}
+
+LabelIndex MeshCuboidStructure::get_label_index(const Label _label)const
+{
+	for (LabelIndex label_index = 0; label_index < num_labels(); ++label_index)
+		if (labels_[label_index] == _label)
+			return label_index;
+
+	assert(false);
+	return 0;
+}
+
+LabelIndex MeshCuboidStructure::get_label_index(const std::string _label_name) const
+{
+	assert(label_names_.size() == num_labels());
+
+	for (LabelIndex label_index = 0; label_index < num_labels(); ++label_index)
+		if (label_names_[label_index] == _label_name)
+			return label_index;
+
+	assert(false);
+	return 0;
+}
+
+void MeshCuboidStructure::split_label_cuboids()
+{
+	assert(mesh_);
+	assert(label_cuboids_.size() == num_labels());
+	Real object_diameter = mesh_->get_object_diameter();
+
+	for (LabelIndex label_index = 0; label_index < num_labels(); ++label_index)
+	{
+		std::vector<MeshCuboid *> &cuboids = label_cuboids_[label_index];
+		if (cuboids.empty()) continue;
+
+		std::vector<MeshCuboid *> new_cuboids;
+
+		for (std::vector<MeshCuboid *>::iterator it = cuboids.begin(); it != cuboids.end(); ++it)
+		{
+			MeshCuboid *cuboid = (*it);
+			std::vector<MeshCuboid *> sub_cuboids = cuboid->split_cuboid(object_diameter);
+			new_cuboids.insert(new_cuboids.end(), sub_cuboids.begin(), sub_cuboids.end());
+
+			// Note:
+			// Delete existing parts.
+			delete cuboid;
+		}
+
+		cuboids.swap(new_cuboids);
+
+		print_label_cuboids(label_index);
+	}
+}
+
+void MeshCuboidStructure::remove_occluded_sample_points(
+	const std::set<FaceIndex>& _visible_face_indices)
+{
+	assert(mesh_);
+
+	unsigned int num_faces = mesh_->n_faces();
+	bool *is_face_visible = new bool[num_faces];
+	memset(is_face_visible, false, num_faces * sizeof(bool));
+
+	for (std::set<FaceIndex>::const_iterator it = _visible_face_indices.begin();
+		it != _visible_face_indices.end(); ++it)
+	{
+		FaceIndex fid = (*it);
+		assert(fid < num_faces);
+		is_face_visible[fid] = true;
+	}
+
+	for (std::vector<MeshSamplePoint *>::iterator it = sample_points_.begin();
+		it != sample_points_.end();)	// No increment.
+	{
+		if (!is_face_visible[(*it)->corr_fid_])
+			it = sample_points_.erase(it);
+		else
+			++it;
+	}
+
+	delete[] is_face_visible;
+}
+
+void MeshCuboidStructure::remove_symmetric_cuboids()
+{
+	assert(label_symmetries_.size() == num_labels());
+	assert(label_cuboids_.size() == num_labels());
+
+	bool *is_label_visited = new bool[num_labels()];
+	memset(is_label_visited, false, num_labels()*sizeof(bool));
+
+	for (LabelIndex label_index = 0; label_index < num_labels(); ++label_index)
+	{
+		if (is_label_visited[label_index])
+		{
+			for (std::vector<MeshCuboid *>::iterator jt = label_cuboids_[label_index].begin();
+				jt != label_cuboids_[label_index].end(); ++jt)
+				delete (*jt);
+			label_cuboids_[label_index].clear();
+			continue;
+		}
+
+		is_label_visited[label_index] = true;
+		for (std::list<LabelIndex>::iterator it = label_symmetries_[label_index].begin();
+			it != label_symmetries_[label_index].end(); ++it)
+			is_label_visited[*it] = true;
+	}
+
+	delete[] is_label_visited;
+}
+
+/*
+Label MeshCuboidStructure::get_new_label()const
+{
+	Label max_label = 0;
+	for (std::vector<Label>::const_iterator it = labels_.begin(); it != labels_.end(); ++it)
+	{
+		max_label = std::max(max_label, *it);
+	}
+
+	return max_label + 1;
+}
+
 bool MeshCuboidStructure::apply_point_cuboid_label_map(
 	const std::vector<PointCuboidLabelMap>& _point_cuboid_label_maps,
 	const std::vector<Label>& _all_cuboid_labels)
@@ -457,7 +940,7 @@ bool MeshCuboidStructure::apply_point_cuboid_label_map(
 	// Update labels.
 	std::vector<Label> old_labels = labels_;
 	labels_ = _all_cuboid_labels;
-	
+
 
 	// Update sample points.
 	for (std::vector<MeshSamplePoint *>::iterator point_it = sample_points_.begin(); point_it != sample_points_.end(); ++point_it)
@@ -543,207 +1026,6 @@ bool MeshCuboidStructure::apply_point_cuboid_label_map(
 	return true;
 }
 
-void MeshCuboidStructure::apply_test()
-{
-	std::list<Label> duplicated_labels;
-
-	//
-	duplicated_labels.push_back(3);
-	duplicated_labels.push_back(4);
-	duplicated_labels.push_back(5);
-	//
-
-	for (std::list<Label>::iterator label_it = duplicated_labels.begin(); label_it != duplicated_labels.end(); ++label_it)
-	{
-		Label label = (*label_it);
-		LabelIndex label_index = get_label_index(label);
-		assert(label_index < label_cuboids_.size());
-
-		for (std::vector<MeshCuboid *>::iterator cuboid_it = label_cuboids_[label_index].begin();
-			cuboid_it != label_cuboids_[label_index].end(); ++cuboid_it)
-			delete (*cuboid_it);
-		label_cuboids_[label_index].clear();
-	}
-}
-
-void MeshCuboidStructure::apply_mesh_face_labels_to_sample_points()
-{
-	assert(mesh_);
-	labels_.clear();
-
-	std::list< std::vector<FaceIndex> > all_label_faces;
-	mesh_->get_all_label_faces(all_label_faces);
-
-	if (all_label_faces.empty())
-		return;
-
-	for (std::list< std::vector<FaceIndex> >::iterator l_it = all_label_faces.begin();
-		l_it != all_label_faces.end(); ++l_it)
-	{
-		std::vector<FaceIndex> &label_faces = (*l_it);
-		assert(!label_faces.empty());
-
-		FaceIndex fid = label_faces.front();
-		MyMesh::FaceHandle fh = mesh_->face_handle(fid);
-		Label label = mesh_->property(mesh_->face_label_, fh);
-
-		labels_.push_back(label);
-	}
-
-	if (labels_.empty())
-		return;
-
-	for (SamplePointIndex sample_point_index = 0; sample_point_index < num_sample_points(); ++sample_point_index)
-	{
-		MeshSamplePoint* sample_point = sample_points_[sample_point_index];
-
-		FaceIndex fid = sample_point->corr_fid_;
-		assert(fid < mesh_->n_faces());
-
-		MyMesh::FaceHandle fh = mesh_->face_handle(fid);
-		Label label = mesh_->property(mesh_->face_label_, fh);
-		LabelIndex label_index = get_label_index(label);
-		assert(label_index < num_labels());
-
-		sample_point->label_index_confidence_.resize(num_labels());
-		std::fill(sample_point->label_index_confidence_.begin(), sample_point->label_index_confidence_.end(), 0);
-
-		// Note:
-		// The confidence of the given label becomes '1.0'.
-		sample_point->label_index_confidence_[label_index] = 1.0;
-	}
-}
-
-void MeshCuboidStructure::apply_mesh_face_labels_to_cuboids()
-{
-	// Apple mesh face labels to sample points.
-	apply_mesh_face_labels_to_sample_points();
-
-	std::list<MeshCuboid *> part_list;
-
-	for (std::vector< std::vector<MeshCuboid *> >::iterator it = label_cuboids_.begin();
-		it != label_cuboids_.end(); ++it)
-	{
-		for (std::vector<MeshCuboid *>::iterator jt = (*it).begin(); jt != (*it).end(); ++jt)
-		{
-			MeshCuboid *label_cuboid = (*jt);
-			// Update the label based on the label confidence values of sample points.
-			label_cuboid->update_label_using_sample_points();
-			part_list.push_back(label_cuboid);
-		}
-	}
-
-	label_cuboids_.clear();
-	label_cuboids_.resize(num_labels());
-
-	for (std::list<MeshCuboid *>::iterator it = part_list.begin(); it != part_list.end(); ++it)
-	{
-		MeshCuboid *cuboid = (*it);
-		LabelIndex label_index = cuboid->get_label_index();
-		label_cuboids_[label_index].push_back(cuboid);
-	}
-
-	// NOTE:
-	// Draws all boxes.
-	query_label_index_ = num_labels();
-}
-
-void MeshCuboidStructure::get_mesh_face_label_cuboids()
-{
-	// Apple mesh face labels to sample points.
-	apply_mesh_face_labels_to_sample_points();
-
-	compute_label_cuboids();
-}
-
-void MeshCuboidStructure::compute_label_cuboids()
-{
-	// Initialize.
-	for (std::vector< std::vector<MeshCuboid *> >::iterator it = label_cuboids_.begin();
-		it != label_cuboids_.end(); ++it)
-	{
-		for (std::vector<MeshCuboid *>::iterator jt = (*it).begin(); jt != (*it).end(); ++jt)
-			delete (*jt);
-	}
-	label_cuboids_.clear();
-	label_cuboids_.resize(num_labels());
-
-	for (LabelIndex label_index = 0; label_index < num_labels(); ++label_index)
-	{
-		label_cuboids_[label_index].clear();
-
-		MeshCuboid *cuboid = new MeshCuboid(label_index);
-		std::vector<MeshSamplePoint *> label_sample_points;
-
-		for (SamplePointIndex sample_point_index = 0; sample_point_index < num_sample_points();
-			++sample_point_index)
-		{
-			MeshSamplePoint *sample_point = sample_points_[sample_point_index];
-			assert(sample_point);
-
-			// Select sample points which has sufficient confidence for the given label.
-			if (sample_point->label_index_confidence_[label_index] >= param_confidence_tol)
-				label_sample_points.push_back(sample_point);
-		}
-
-		cuboid->add_sample_points(label_sample_points);
-		bool ret = cuboid->compute_bbox();
-		if (!ret)
-		{
-			delete cuboid;
-		}
-		else
-		{
-			label_cuboids_[label_index].push_back(cuboid);
-		}
-	}
-
-	split_label_cuboids();
-
-	// NOTE:
-	// Draws all boxes.
-	query_label_index_ = num_labels();
-}
-
-void MeshCuboidStructure::find_the_largest_label_cuboids()
-{
-	// Find the largest part for each part.
-
-	assert(label_cuboids_.size() == num_labels());
-
-	for (LabelIndex label_index = 0; label_index < num_labels(); ++label_index)
-	{
-		if (label_cuboids_[label_index].size() <= 1)
-			continue;
-
-		Real max_volume = -1.0;
-		MeshCuboid *max_volume_label_cuboid = NULL;
-
-		for (std::vector<MeshCuboid *>::iterator it = label_cuboids_[label_index].begin();
-			it != label_cuboids_[label_index].end(); ++it)
-		{
-			MeshCuboid *label_cuboid = (*it);
-			assert(label_cuboid->get_label_index() == label_index);
-			if (label_cuboid->get_bbox_volume() > max_volume)
-			{
-				max_volume = label_cuboid->get_bbox_volume();
-				max_volume_label_cuboid = label_cuboid;
-			}
-		}
-		assert(max_volume_label_cuboid);
-
-		std::vector<MeshCuboid *> new_label_cuboids;
-		new_label_cuboids.push_back(max_volume_label_cuboid);
-		label_cuboids_[label_index].swap(new_label_cuboids);
-
-		// Delete label parts except the largest one.
-		for (std::vector<MeshCuboid *>::iterator it = new_label_cuboids.begin();
-			it != new_label_cuboids.end(); ++it)
-			if (*it != max_volume_label_cuboid)
-				delete (*it);
-	}
-}
-
 bool MeshCuboidStructure::set_new_label_indices(const std::vector<Label>& _labels)
 {
 	// If any existing label does not exist in the new set of labels, return false.
@@ -811,155 +1093,4 @@ bool MeshCuboidStructure::set_new_label_indices(const std::vector<Label>& _label
 	
 	return true;
 }
-
-std::vector<LabelIndex> MeshCuboidStructure::get_sample_point_label_indices()
-{
-	// Get sample point labels from the label confidence values.
-	std::vector<LabelIndex> sample_point_label_indices(num_sample_points());
-
-	for (SamplePointIndex sample_point_index = 0; sample_point_index < num_sample_points(); ++sample_point_index)
-	{
-		MeshSamplePoint* sample_point = sample_points_[sample_point_index];
-		assert(sample_point);
-		assert(sample_point->label_index_confidence_.size() == labels_.size());
-
-		Real max_confidence = -std::numeric_limits<Real>::max();
-		Label max_confidence_label_index = 0;
-
-		for (LabelIndex label_index = 0; label_index < num_labels(); ++label_index)
-		{
-			Real confidence = sample_point->label_index_confidence_[label_index];
-
-			if (confidence > max_confidence)
-			{
-				max_confidence = confidence;
-				max_confidence_label_index = label_index;
-			}
-		}
-
-		sample_point_label_indices[sample_point_index] = max_confidence_label_index;
-	}
-
-	return sample_point_label_indices;
-}
-
-void MeshCuboidStructure::print_label_cuboids(const LabelIndex _label_index)const
-{
-	assert(label_cuboids_.size() == num_labels());
-	assert(_label_index < num_labels());
-	
-	Label label = get_label(_label_index);
-	std::vector<MeshCuboid *> cuboid = label_cuboids_[_label_index];
-	std::cout << "Label (" << label << ")" << std::endl;
-
-	unsigned int count_cuboids = 0;
-	for (std::vector<MeshCuboid *>::const_iterator it = cuboid.begin(); it != cuboid.end();
-		++it, ++count_cuboids)
-	{
-		std::cout << "[" << count_cuboids << "]" << std::endl;
-		(*it)->print_cuboid();
-	}
-}
-
-Label MeshCuboidStructure::get_label(const LabelIndex _label_index)const
-{
-	assert(_label_index < num_labels());
-	return labels_[_label_index];
-}
-
-bool MeshCuboidStructure::exist_label(const Label _label,
-	LabelIndex* _label_index)const
-{
-	for (LabelIndex label_index = 0; label_index < num_labels(); ++label_index)
-	{
-		if (labels_[label_index] == _label)
-		{
-			// NOTE:
-			// Assign label index if the pointer is provided.
-			if (_label_index) (*_label_index) = label_index;
-			return true;
-		}
-	}
-
-	return false;
-}
-
-LabelIndex MeshCuboidStructure::get_label_index(const Label _label)const
-{
-	for (LabelIndex label_index = 0; label_index < num_labels(); ++label_index)
-		if (labels_[label_index] == _label)
-			return label_index;
-
-	assert(false);
-	return 0;
-}
-
-Label MeshCuboidStructure::get_new_label()const
-{
-	Label max_label = 0;
-	for (std::vector<Label>::const_iterator it = labels_.begin(); it != labels_.end(); ++it)
-	{
-		max_label = std::max(max_label, *it);
-	}
-
-	return max_label + 1;
-}
-
-void MeshCuboidStructure::split_label_cuboids()
-{
-	assert(mesh_);
-	assert(label_cuboids_.size() == num_labels());
-	Real object_diameter = mesh_->get_object_diameter();
-
-	for (LabelIndex label_index = 0; label_index < num_labels(); ++label_index)
-	{
-		std::vector<MeshCuboid *> &cuboids = label_cuboids_[label_index];
-		if (cuboids.empty()) continue;
-
-		std::vector<MeshCuboid *> new_cuboids;
-
-		for (std::vector<MeshCuboid *>::iterator it = cuboids.begin(); it != cuboids.end(); ++it)
-		{
-			MeshCuboid *cuboid = (*it);
-			std::vector<MeshCuboid *> sub_cuboids = cuboid->split_cuboid(object_diameter);
-			new_cuboids.insert(new_cuboids.end(), sub_cuboids.begin(), sub_cuboids.end());
-
-			// Note:
-			// Delete existing parts.
-			delete cuboid;
-		}
-
-		cuboids.swap(new_cuboids);
-
-		print_label_cuboids(label_index);
-	}
-}
-
-void MeshCuboidStructure::remove_occluded_sample_points(
-	const std::set<FaceIndex>& _visible_face_indices)
-{
-	assert(mesh_);
-
-	unsigned int num_faces = mesh_->n_faces();
-	bool *is_face_visible = new bool[num_faces];
-	memset(is_face_visible, false, num_faces * sizeof(bool));
-
-	for (std::set<FaceIndex>::const_iterator it = _visible_face_indices.begin();
-		it != _visible_face_indices.end(); ++it)
-	{
-		FaceIndex fid = (*it);
-		assert(fid < num_faces);
-		is_face_visible[fid] = true;
-	}
-
-	for (std::vector<MeshSamplePoint *>::iterator it = sample_points_.begin();
-		it != sample_points_.end();)	// No increment.
-	{
-		if (!is_face_visible[(*it)->corr_fid_])
-			it = sample_points_.erase(it);
-		else
-			++it;
-	}
-
-	delete[] is_face_visible;
-}
+*/

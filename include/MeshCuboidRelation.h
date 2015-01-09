@@ -154,7 +154,6 @@ private:
 	Eigen::MatrixXd inv_cov_;
 };
 
-/*
 class MeshCuboidCondNormalRelations {
 public:
 	MeshCuboidCondNormalRelations();
@@ -173,12 +172,17 @@ public:
 	const Eigen::VectorXd &get_mean_b()const { return mean_b_; }
 	const Eigen::MatrixXd &get_inv_cov()const { return inv_cov_; }
 
+	void set_mean_A(const Eigen::MatrixXd &_mean_A) { mean_A_ = _mean_A; }
+	void set_mean_b(const Eigen::VectorXd &_mean_b) { mean_b_ = _mean_b; }
+	void set_inv_cov(const Eigen::MatrixXd &_inv_cov_) { inv_cov_ = _inv_cov_; }
+
 private:
 	Eigen::MatrixXd mean_A_;
 	Eigen::VectorXd mean_b_;
 	Eigen::MatrixXd inv_cov_;
 };
 
+/*
 class MeshCuboidPCARelations {
 public:
 	MeshCuboidPCARelations();

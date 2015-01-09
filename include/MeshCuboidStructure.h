@@ -21,17 +21,9 @@ public:
 	MeshCuboidStructure(const MyMesh *_mesh);
 	~MeshCuboidStructure();
 
-
-	typedef struct
-	{
-		bool is_multiple_cuboids_;
-		std::list<Label> mapped_cuboid_labels_;
-	}
-	PointCuboidLabelMap;
-
-
 	void clear();
-
+	void clear_sample_points();
+	void clear_cuboids();
 	void clear_labels();
 
 	void apply_mesh_transformation();
@@ -49,6 +41,12 @@ public:
 	bool exist_label(const Label _label, LabelIndex* _label_index = NULL)const;
 
 	LabelIndex get_label_index(const Label _label)const;
+
+	LabelIndex get_label_index(const std::string _label_name)const;
+
+	bool load_labels(const char *_filename, bool _verbose = true);
+
+	bool load_label_symmetries(const char *_filename, bool _verbose = true);
 
 	bool load_sample_points(const char *_filename, bool _verbose = true);
 
@@ -71,12 +69,6 @@ public:
 	// but not modify existing parts except their labels.
 	void apply_mesh_face_labels_to_cuboids();
 
-	bool apply_point_cuboid_label_map(
-		const std::vector<PointCuboidLabelMap>& _point_cuboid_label_maps,
-		const std::vector<Label>& _all_cuboid_labels);
-
-	void apply_test();
-
 	// Apple mesh face labels to sample points,
 	// and re-create parts based on sample point labels.
 	void get_mesh_face_label_cuboids();
@@ -84,18 +76,32 @@ public:
 	// Find the largest part for each label.
 	void find_the_largest_label_cuboids();
 
-	// Apply labels in new indices.
-	bool set_new_label_indices(const std::vector<Label>& _labels);
-
 	void split_label_cuboids();
 
 	void print_label_cuboids(const LabelIndex _label_index)const;
 
 	void remove_occluded_sample_points(const std::set<FaceIndex>& _visible_face_indices);
 
+	// Remove cuboids in symmetric labels (when the same cuboids are duplicated for symmetric labels).
+	void remove_symmetric_cuboids();
+
+	// Apply labels in new indices.
+	//bool set_new_label_indices(const std::vector<Label>& _labels);
+
+	//typedef struct
+	//{
+	//	bool is_multiple_cuboids_;
+	//	std::list<Label> mapped_cuboid_labels_;
+	//}
+	//PointCuboidLabelMap;
+
+	//bool apply_point_cuboid_label_map(
+	//	const std::vector<PointCuboidLabelMap>& _point_cuboid_label_maps,
+	//	const std::vector<Label>& _all_cuboid_labels);
+
 
 private:
-	inline Label get_new_label()const;
+	//inline Label get_new_label()const;
 
 	// Apple mesh face labels to sample points
 	void apply_mesh_face_labels_to_sample_points();
@@ -106,6 +112,8 @@ public:
 
 	std::vector<MeshSamplePoint *> sample_points_;
 	std::vector<Label> labels_;
+	std::vector<std::string> label_names_;
+	std::vector< std::list<LabelIndex> > label_symmetries_;
 	std::vector< std::vector<MeshCuboid *> > label_cuboids_;
 
 	LabelIndex query_label_index_;

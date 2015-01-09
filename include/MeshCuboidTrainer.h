@@ -18,19 +18,24 @@ public:
 	bool load_features(const std::string &_filename_prefix);
 	bool load_transformations(const std::string &_filename_prefix);
 
+	void get_label_cooccurrences(
+		std::vector< std::list<LabelIndex> > &_cooccurrence_labels)const;
+
+	void get_missing_label_index_groups(
+		const std::list<LabelIndex> &_given_label_indices,
+		std::list< std::list<LabelIndex> > &_missing_label_index_groups)const;
+
+	void get_joint_normal_relations(
+		std::vector< std::vector<MeshCuboidJointNormalRelations *> > &_relations,
+		const std::list<std::string> *_ignored_object_list = NULL)const;
+
+	void get_cond_normal_relations(
+		std::vector< std::vector<MeshCuboidCondNormalRelations *> > &_relations,
+		const std::list<std::string> *_ignored_object_list = NULL)const;
+
 protected:
 	std::list<std::string> object_list_;
 	std::vector< std::list<MeshCuboidFeatures *> > feature_list_;
 	std::vector< std::list<MeshCuboidTransformation *> > transformation_list_;
-};
-
-// Use joint normal relations for binary terms.
-class MeshCuboidJointNormalRelationTrainer : public MeshCuboidTrainer{
-public:
-	MeshCuboidJointNormalRelationTrainer();
-
-	void compute_relations(
-		std::vector< std::vector<MeshCuboidJointNormalRelations *> > &_relations,
-		const std::list<std::string> *_ignored_object_list = NULL)const;
 };
 #endif	// _MESH_CUBOID_TRAINER_H_

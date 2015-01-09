@@ -20,7 +20,6 @@ void MeshViewerWidget::open_face_label_file(QString filename)
 {
 	bool ret = mesh_.load_face_label_simple(filename.toLocal8Bit());
 	if (ret) cuboid_structure_.get_mesh_face_label_cuboids();
-	//cuboid_structure_.create_cuboid_surface_points();
 	updateGL();
 }
 

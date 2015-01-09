@@ -13,8 +13,6 @@ class MeshCuboidPredictor {
 public:
 	MeshCuboidPredictor(unsigned int _num_labels);
 
-	static const Real k_max_potential;
-
 	virtual void get_missing_label_indices(
 		const std::list<LabelIndex> &_given_label_indices,
 		std::list<LabelIndex> &_missing_label_indices)const = 0;
@@ -65,12 +63,15 @@ private:
 	const std::vector< std::vector<MeshCuboidJointNormalRelations *> > &relations_;
 };
 
-/*
 // Use conditional normal relations for binary terms.
 class MeshCuboidCondNormalRelationPredictor : public MeshCuboidPredictor{
 public:
 	MeshCuboidCondNormalRelationPredictor(
-		const std::vector< std::vector<MeshCuboidCondNormalRelations> > &_relations);
+		const std::vector< std::vector<MeshCuboidCondNormalRelations *> > &_relations);
+
+	virtual void get_missing_label_indices(
+		const std::list<LabelIndex> &_given_label_indices,
+		std::list<LabelIndex> &_missing_label_indices)const;
 
 	virtual Real get_pair_potential(const MeshCuboid *_cuboid_1, const MeshCuboid *_cuboid_2,
 		const MeshCuboidAttributes *_attributes_1, const MeshCuboidAttributes *_attributes_2,
@@ -82,7 +83,7 @@ public:
 		const unsigned int _cuboid_index_1, const unsigned int _cuboid_index_2,
 		Eigen::MatrixXd &_quadratic_term, Eigen::VectorXd &_linear_term, double& _constant_term)const;
 
-	virtual void get_conditional_pair_quadratic_form(const MeshCuboid *_cuboid_1, const MeshCuboid *_cuboid_2,
+	virtual Real get_conditional_pair_quadratic_form(const MeshCuboid *_cuboid_1, const MeshCuboid *_cuboid_2,
 		const LabelIndex _label_index_1, const LabelIndex _label_index_2,
 		const unsigned int _cuboid_index_1, const unsigned int _cuboid_index_2,
 		Eigen::MatrixXd &_quadratic_term, Eigen::VectorXd &_linear_term, double& _constant_term)const;
@@ -91,6 +92,7 @@ private:
 	const std::vector< std::vector<MeshCuboidCondNormalRelations *> > &relations_;
 };
 
+/*
 // Use PCA relations for binary terms.
 class MeshCuboidPCARelationPredictor : public MeshCuboidPredictor{
 public:

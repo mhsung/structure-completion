@@ -12,5 +12,7 @@
 #define param_zero_tol								1.0E-6
 #define param_num_cuboid_surface_points				1000
 #define param_observed_point_radius					1.0E-2
+#define param_max_potential							1.0E8
+#define param_dummy_potential						1.0E4
 
 #endif // _PARAMETERS_H_

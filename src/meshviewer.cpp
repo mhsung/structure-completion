@@ -136,28 +136,24 @@ int main(int argc, char **argv)
   // Added: Minhyuk Sung. 2009-10-22
   else
   {
-#ifdef RECENT_LOAD
-	  std::string filename(RECENT_LOAD);
-	  std::ifstream file(filename.c_str());
-	  if(file)
-	  {
-		  std::string buffer;
-		  std::getline(file, buffer);
-		  if(buffer.compare("") != 0)	w.open_mesh_gui(buffer.c_str());
-
-		  std::getline(file, buffer);
-		  if (buffer.compare("") != 0)	w.open_sample_point_file(buffer.c_str());
-
-		  std::getline(file, buffer);
-		  //if (buffer.compare("") != 0)	w.open_sample_point_label_file(buffer.c_str());
-
-		  std::getline(file, buffer);
-		  //if (buffer.compare("") != 0)	w.open_face_label_file_but_preserve_cuboids(buffer.c_str());
-		  if (buffer.compare("") != 0)	w.open_face_label_file(buffer.c_str());
-
-		  file.close();
-	  }
-#endif
+//#ifdef RECENT_LOAD
+//	  std::string filename(RECENT_LOAD);
+//	  std::ifstream file(filename.c_str());
+//	  if(file)
+//	  {
+//		  std::string buffer;
+//		  std::getline(file, buffer);
+//		  if(buffer.compare("") != 0)	w.open_mesh_gui(buffer.c_str());
+//
+//		  std::getline(file, buffer);
+//		  if (buffer.compare("") != 0)	w.open_sample_point_file(buffer.c_str());
+//
+//		  std::getline(file, buffer);
+//		  if (buffer.compare("") != 0)	w.open_face_label_file(buffer.c_str());
+//
+//		  file.close();
+//	  }
+//#endif
   }
 
   if ( ++optind < argc )
