@@ -910,7 +910,7 @@ void recognize_labels_and_axes_configurations(
 	assert(log_file);
 
 	const std::vector<Label>& labels = _cuboid_structure.labels_;
-	std::vector<MeshCuboid *>& all_cuboids = _cuboid_structure.get_all_cuboids();
+	std::vector<MeshCuboid *> all_cuboids = _cuboid_structure.get_all_cuboids();
 
 	unsigned int num_labels = labels.size();
 	unsigned int num_cuboids = all_cuboids.size();
@@ -1663,7 +1663,7 @@ void add_missing_cuboids(
 	// NOTE:
 	// Each existing cuboid creates candidates of missing cuboids.
 	// The best missing cuboid for the same label will be found in the next iteration.
-	const std::vector<MeshCuboid *>& all_cuboids = _cuboid_structure.get_all_cuboids();
+	std::vector<MeshCuboid *> all_cuboids = _cuboid_structure.get_all_cuboids();
 	unsigned int num_all_cuboids = all_cuboids.size();
 	for (unsigned int cuboid_index = 0; cuboid_index < num_all_cuboids; ++cuboid_index)
 	{
