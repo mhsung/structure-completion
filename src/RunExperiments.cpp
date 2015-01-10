@@ -579,9 +579,11 @@ void MeshViewerWidget::run_prediction()
 
 			std::vector< std::vector<MeshCuboidJointNormalRelations *> > joint_normal_relations;
 			trainer.get_joint_normal_relations(joint_normal_relations, &ignored_object_list);
+			MeshCuboidJointNormalRelationPredictor joint_normal_predictor(joint_normal_relations);
 
-			std::vector< std::vector<MeshCuboidCondNormalRelations *> > cond_normal_relations;
-			trainer.get_cond_normal_relations(cond_normal_relations, &ignored_object_list);
+			//std::vector< std::vector<MeshCuboidCondNormalRelations *> > cond_normal_relations;
+			//trainer.get_cond_normal_relations(cond_normal_relations, &ignored_object_list);
+			//MeshCuboidCondNormalRelationPredictor cond_normal_predictor(cond_normal_relations);
 			//
 
 
@@ -647,8 +649,6 @@ void MeshViewerWidget::run_prediction()
 			while (true)
 			{
 				std::cout << "\n3. Recognize labels and axes configurations." << std::endl;
-				MeshCuboidJointNormalRelationPredictor joint_normal_predictor(joint_normal_relations);
-
 				recognize_labels_and_axes_configurations(
 					cuboid_structure_, joint_normal_predictor, log_filename.c_str(), first_sub_routine, true);
 
@@ -685,7 +685,7 @@ void MeshViewerWidget::run_prediction()
 				std::cout << "\n5. Optimize cuboid attributes." << std::endl;
 				// Collect all parts.
 				const double quadprog_ratio = 1E4;
-				const unsigned int max_num_iterations = 1;
+				const unsigned int max_num_iterations = 10;
 
 				optimize_attributes(cuboid_structure_, occlusion_modelview_matrix,
 					joint_normal_predictor, quadprog_ratio,
@@ -716,10 +716,9 @@ void MeshViewerWidget::run_prediction()
 
 				// FIXME: 
 				// All clusters in 'missing_label_index_groups' should be considered.
-				MeshCuboidCondNormalRelationPredictor cond_normal_predictor(cond_normal_relations);
 				add_missing_cuboids(cuboid_structure_, occlusion_modelview_matrix,
 					missing_label_index_groups.front(),
-					cond_normal_predictor);
+					joint_normal_predictor);
 
 				updateGL();
 				snapshot_filename_sstr.clear(); snapshot_filename_sstr.str("");

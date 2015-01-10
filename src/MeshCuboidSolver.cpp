@@ -1538,7 +1538,8 @@ void add_missing_cuboids_once(
 	const std::list<LabelIndex> &_missing_label_indices,
 	// NOTE:
 	// 'MeshCuboidCondNormalRelationPredictor' Only.
-	const MeshCuboidCondNormalRelationPredictor &_predictor,
+	//const MeshCuboidCondNormalRelationPredictor &_predictor,
+	const MeshCuboidJointNormalRelationPredictor &_predictor,
 	std::vector<MeshCuboid *>& _new_cuboids)
 {
 	if (_given_cuboids.empty() || _missing_label_indices.empty())
@@ -1590,7 +1591,7 @@ void add_missing_cuboids_once(
 			double pair_constant_term;
 
 			// NOTE:
-			// new_cuboid_index_2.
+			// NOTE: 'cuboid_1' is a existing cuboid, and 'cuboid_2' is a missing cuboid.
 			_predictor.get_conditional_pair_quadratic_form(cuboid_1, cuboid_2,
 				cuboid_index_1, new_cuboid_index_2,
 				label_index_1, label_index_2,
@@ -1653,7 +1654,7 @@ void add_missing_cuboids(
 	const std::list<LabelIndex> &_missing_label_indices,
 	// NOTE:
 	// 'MeshCuboidCondNormalRelationPredictor' Only.
-	const MeshCuboidCondNormalRelationPredictor &_predictor)
+	const MeshCuboidJointNormalRelationPredictor &_predictor)
 {
 	if (_missing_label_indices.empty())
 		return;

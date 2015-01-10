@@ -68,7 +68,7 @@ void add_missing_cuboids_once(
 	const std::list<LabelIndex> &_missing_label_indices,
 	// NOTE:
 	// 'MeshCuboidCondNormalRelationPredictor' Only.
-	const MeshCuboidCondNormalRelationPredictor &_predictor,
+	const MeshCuboidJointNormalRelationPredictor &_predictor,
 	std::vector<MeshCuboid *>& _new_cuboids);
 
 void add_missing_cuboids(
@@ -77,7 +77,7 @@ void add_missing_cuboids(
 	const std::list<LabelIndex> &_missing_label_indices,
 	// NOTE:
 	// 'MeshCuboidCondNormalRelationPredictor' Only.
-	const MeshCuboidCondNormalRelationPredictor &_predictor);
+	const MeshCuboidJointNormalRelationPredictor &_predictor);
 
 /*
 MeshCuboid *test_joint_normal_training(

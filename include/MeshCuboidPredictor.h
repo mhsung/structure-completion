@@ -59,6 +59,11 @@ public:
 		const unsigned int _cuboid_index_1, const unsigned int _cuboid_index_2,
 		Eigen::MatrixXd &_quadratic_term, Eigen::VectorXd &_linear_term, double& _constant_term)const;
 
+	virtual Real get_conditional_pair_quadratic_form(const MeshCuboid *_cuboid_1, const MeshCuboid *_cuboid_2,
+		const LabelIndex _label_index_1, const LabelIndex _label_index_2,
+		const unsigned int _cuboid_index_1, const unsigned int _cuboid_index_2,
+		Eigen::MatrixXd &_quadratic_term, Eigen::VectorXd &_linear_term, double& _constant_term)const;
+
 private:
 	const std::vector< std::vector<MeshCuboidJointNormalRelations *> > &relations_;
 };
