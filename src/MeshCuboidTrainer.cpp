@@ -143,6 +143,10 @@ void MeshCuboidTrainer::get_joint_normal_relations(
 	unsigned int num_labels = feature_list_.size();
 	assert(transformation_list_.size() == num_labels);
 
+	for (std::vector< std::vector<MeshCuboidJointNormalRelations *> >::iterator it_1 = _relations.begin(); it_1 != _relations.end(); ++it_1)
+		for (std::vector<MeshCuboidJointNormalRelations *>::iterator it_2 = (*it_1).begin(); it_2 != (*it_1).end(); ++it_2)
+			delete (*it_2);
+
 	_relations.clear();
 	_relations.resize(num_labels);
 	for (unsigned int cuboid_index = 0; cuboid_index < num_labels; ++cuboid_index)
@@ -286,6 +290,10 @@ void MeshCuboidTrainer::get_cond_normal_relations(
 
 	unsigned int num_labels = feature_list_.size();
 	assert(transformation_list_.size() == num_labels);
+
+	for (std::vector< std::vector<MeshCuboidCondNormalRelations *> >::iterator it_1 = _relations.begin(); it_1 != _relations.end(); ++it_1)
+		for (std::vector<MeshCuboidCondNormalRelations *>::iterator it_2 = (*it_1).begin(); it_2 != (*it_1).end(); ++it_2)
+			delete (*it_2);
 
 	_relations.clear();
 	_relations.resize(num_labels);
@@ -580,4 +588,86 @@ void MeshCuboidTrainer::get_missing_label_index_groups(
 	}
 
 	delete[] is_label_missing;
+}
+
+void MeshCuboidTrainer::load_joint_normal_relations(
+	const unsigned int _num_labels, const std::string _filename_prefix,
+	std::vector< std::vector<MeshCuboidJointNormalRelations *> > &_relations)
+{
+	for (std::vector< std::vector<MeshCuboidJointNormalRelations *> >::iterator it_1 = _relations.begin(); it_1 != _relations.end(); ++it_1)
+		for (std::vector<MeshCuboidJointNormalRelations *>::iterator it_2 = (*it_1).begin(); it_2 != (*it_1).end(); ++it_2)
+			delete (*it_2);
+
+	_relations.clear();
+	_relations.resize(_num_labels);
+
+	for (LabelIndex label_index_1 = 0; label_index_1 < _num_labels; ++label_index_1)
+	{
+		_relations[label_index_1].resize(_num_labels, NULL);
+		for (LabelIndex label_index_2 = 0; label_index_2 < _num_labels; ++label_index_2)
+		{
+			if (label_index_1 == label_index_2)
+				continue;
+
+			std::stringstream relation_filename_sstr;
+			relation_filename_sstr << _filename_prefix
+				<< label_index_1 << std::string("_")
+				<< label_index_2 << std::string(".csv");
+
+			QFileInfo relation_file(relation_filename_sstr.str().c_str());
+			if (!relation_file.exists()) continue;
+
+			_relations[label_index_1][label_index_2] = new MeshCuboidJointNormalRelations();
+			bool ret = _relations[label_index_1][label_index_2]->load_joint_normal_csv(
+				relation_filename_sstr.str().c_str());
+
+			if (!ret)
+			{
+				do {
+					std::cout << '\n' << "Press the Enter key to continue.";
+				} while (std::cin.get() != '\n');
+			}
+		}
+	}
+}
+
+void MeshCuboidTrainer::load_cond_normal_relations(
+	const unsigned int _num_labels, const std::string _filename_prefix,
+	std::vector< std::vector<MeshCuboidCondNormalRelations *> > &_relations)
+{
+	for (std::vector< std::vector<MeshCuboidCondNormalRelations *> >::iterator it_1 = _relations.begin(); it_1 != _relations.end(); ++it_1)
+		for (std::vector<MeshCuboidCondNormalRelations *>::iterator it_2 = (*it_1).begin(); it_2 != (*it_1).end(); ++it_2)
+			delete (*it_2);
+
+	_relations.clear();
+	_relations.resize(_num_labels);
+
+	for (LabelIndex label_index_1 = 0; label_index_1 < _num_labels; ++label_index_1)
+	{
+		_relations[label_index_1].resize(_num_labels, NULL);
+		for (LabelIndex label_index_2 = 0; label_index_2 < _num_labels; ++label_index_2)
+		{
+			if (label_index_1 == label_index_2)
+				continue;
+
+			std::stringstream relation_filename_sstr;
+			relation_filename_sstr << std::string("")
+				<< label_index_1 << std::string("_")
+				<< label_index_2 << std::string(".csv");
+
+			QFileInfo relation_file(relation_filename_sstr.str().c_str());
+			if (!relation_file.exists()) continue;
+
+			_relations[label_index_1][label_index_2] = new MeshCuboidCondNormalRelations();
+			bool ret = _relations[label_index_1][label_index_2]->load_cond_normal_csv(
+				relation_filename_sstr.str().c_str());
+			if (!ret)
+			{
+				do {
+					std::cout << '\n' << "Press the Enter key to continue.";
+				} while (std::cin.get() != '\n');
+			}
+		}
+	}
+	
 }

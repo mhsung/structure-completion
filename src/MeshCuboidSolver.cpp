@@ -900,12 +900,10 @@ void compute_labels_and_axes_configuration_potentials(
 void recognize_labels_and_axes_configurations(
 	MeshCuboidStructure &_cuboid_structure,
 	const MeshCuboidPredictor &_predictor,
-	const char* _log_filename,
+	const std::string _log_filename,
 	bool _use_symmetry_info,
 	bool _add_dummy_label)
 {
-	assert(_log_filename);
-
 	std::ofstream log_file(_log_filename, std::ofstream::out | std::ofstream::app);
 	assert(log_file);
 
@@ -1052,10 +1050,8 @@ void test_recognize_labels_and_axes_configurations(
 	const std::vector<Label>& _labels,
 	const std::vector<MeshCuboid *>& _cuboids,
 	const MeshCuboidPredictor &_predictor,
-	const char* _log_filename)
+	const std::string _log_filename)
 {
-	assert(_log_filename);
-
 	std::ofstream log_file(_log_filename, std::ofstream::out | std::ofstream::app);
 	assert(log_file);
 
@@ -1378,12 +1374,10 @@ void optimize_attributes(
 	const Real _modelview_matrix[16],
 	const MeshCuboidPredictor &_predictor,
 	const double _quadprog_ratio,
-	const char* _log_filename,
+	const std::string _log_filename,
 	const unsigned int _max_num_iterations,
 	QGLWidget *_viewer)
 {
-	assert(_log_filename);
-
 	std::ofstream log_file(_log_filename, std::ofstream::out | std::ofstream::app);
 	assert(log_file);
 
@@ -1689,6 +1683,65 @@ void add_missing_cuboids(
 			_cuboid_structure.label_cuboids_[label_index].push_back(cuboid);
 		}
 	}
+}
+
+void evaluate_segmentation(
+	const MeshCuboidStructure &_cuboid_structure,
+	const std::string _mesh_name,
+	const std::string _stats_filename)
+{
+	const MyMesh *mesh = _cuboid_structure.mesh_;
+	assert(mesh);
+
+	const unsigned int num_labels = _cuboid_structure.num_labels();
+	assert(_cuboid_structure.label_cuboids_.size() == num_labels);
+
+
+	std::ofstream stats_file(_stats_filename, std::ofstream::out | std::ofstream::app);
+	assert(stats_file);
+
+
+	int num_sample_points = 0;
+	int num_correct_sample_point_labels = 0;
+
+	for (LabelIndex label_index = 0; label_index < num_labels; ++label_index)
+	{
+		Label label = _cuboid_structure.get_label(label_index);
+
+		for (std::vector<MeshCuboid *>::const_iterator c_it = _cuboid_structure.label_cuboids_[label_index].begin();
+			c_it != _cuboid_structure.label_cuboids_[label_index].end(); ++c_it)
+		{
+			const MeshCuboid *cuboid = (*c_it);
+			assert(cuboid);
+			assert(cuboid->get_label_index() == label_index);
+
+			const std::vector<MeshSamplePoint *> cuboid_sample_points = cuboid->get_sample_points();
+			for (std::vector<MeshSamplePoint *>::const_iterator s_it = cuboid_sample_points.begin();
+				s_it != cuboid_sample_points.end(); ++s_it)
+			{
+				const MeshSamplePoint *sample_point = (*s_it);
+				assert(sample_point);
+
+				assert(sample_point->corr_fid_ < mesh->n_faces());
+				MyMesh::FaceHandle fh = mesh->face_handle(sample_point->corr_fid_);
+				Label face_label = mesh->property(mesh->face_label_, fh);
+
+				if (face_label == label)
+					++num_correct_sample_point_labels;
+
+				++num_sample_points;
+			}
+		}
+	}
+
+	assert(num_sample_points > 0);
+	Real error = static_cast<Real>(num_correct_sample_point_labels) / static_cast<Real>(num_correct_sample_point_labels);
+	stats_file << _mesh_name << "," <<
+		num_correct_sample_point_labels << ","
+		<< num_correct_sample_point_labels << ","
+		<< _cuboid_structure.num_sample_points() << ","
+		<< error << std::endl;
+	stats_file.close();
 }
 
 /*

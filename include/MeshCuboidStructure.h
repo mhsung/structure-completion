@@ -116,10 +116,9 @@ public:
 	std::vector< std::list<LabelIndex> > label_symmetries_;
 	std::vector< std::vector<MeshCuboid *> > label_cuboids_;
 
-	LabelIndex query_label_index_;
-
 	MyMesh::Normal translation_;
 	Real scale_;
+	LabelIndex query_label_index_;
 
 	void translate(const MyMesh::Normal _translate);
 	void scale(const Real _scale);

@@ -694,7 +694,6 @@ void MeshCuboidStructure::compute_label_cuboids()
 void MeshCuboidStructure::find_the_largest_label_cuboids()
 {
 	// Find the largest part for each part.
-
 	assert(label_cuboids_.size() == num_labels());
 
 	for (LabelIndex label_index = 0; label_index < num_labels(); ++label_index)

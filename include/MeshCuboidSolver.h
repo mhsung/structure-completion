@@ -6,6 +6,7 @@
 #include "MeshCuboidPredictor.h"
 
 #include <vector>
+#include <string>
 #include <QtOpenGL/qgl.h>
 
 void update_cuboid_surface_points(
@@ -26,7 +27,7 @@ void compute_labels_and_axes_configuration_potentials(
 void recognize_labels_and_axes_configurations(
 	MeshCuboidStructure &_cuboid_structure,
 	const MeshCuboidPredictor &_predictor,
-	const char* _log_filename,
+	const std::string _log_filename,
 	bool _use_symmetry_info = false,
 	bool _add_dummy_label = false);
 
@@ -59,7 +60,7 @@ void optimize_attributes(
 	const Real _modelview_matrix[16],
 	const MeshCuboidPredictor &_predictor,
 	const double _quadprog_ratio,
-	const char* _log_filename,
+	const std::string _log_filename,
 	const unsigned int _max_num_iterations = 10,
 	QGLWidget *_viewer = NULL);
 
@@ -78,6 +79,11 @@ void add_missing_cuboids(
 	// NOTE:
 	// 'MeshCuboidCondNormalRelationPredictor' Only.
 	const MeshCuboidJointNormalRelationPredictor &_predictor);
+
+void evaluate_segmentation(
+	const MeshCuboidStructure &_cuboid_structure,
+	const std::string _mesh_name,
+	const std::string _stats_filename);
 
 /*
 MeshCuboid *test_joint_normal_training(

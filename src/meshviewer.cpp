@@ -133,33 +133,15 @@ int main(int argc, char **argv)
   {
     w.open_mesh_gui(argv[optind]);
   }
-  // Added: Minhyuk Sung. 2009-10-22
-  else
-  {
-//#ifdef RECENT_LOAD
-//	  std::string filename(RECENT_LOAD);
-//	  std::ifstream file(filename.c_str());
-//	  if(file)
-//	  {
-//		  std::string buffer;
-//		  std::getline(file, buffer);
-//		  if(buffer.compare("") != 0)	w.open_mesh_gui(buffer.c_str());
-//
-//		  std::getline(file, buffer);
-//		  if (buffer.compare("") != 0)	w.open_sample_point_file(buffer.c_str());
-//
-//		  std::getline(file, buffer);
-//		  if (buffer.compare("") != 0)	w.open_face_label_file(buffer.c_str());
-//
-//		  file.close();
-//	  }
-//#endif
-  }
 
   if ( ++optind < argc )
   {
     w.open_texture_gui(argv[optind]);
   }
+
+  //
+  w.run_print_arguments();
+  //
 
   return app.exec();
 }
@@ -246,8 +228,8 @@ void create_menu(QMainWindow &w)
 	QObject::connect(runAct, SIGNAL(triggered()), w.centralWidget(), SLOT(run_training_from_files()));
 	w.menuBar()->addAction(runAct);
 
-	runAct = new QAction(w.tr("Prediction"), &w);
-	QObject::connect(runAct, SIGNAL(triggered()), w.centralWidget(), SLOT(run_prediction()));
+	runAct = new QAction(w.tr("Batch Prediction"), &w);
+	QObject::connect(runAct, SIGNAL(triggered()), w.centralWidget(), SLOT(run_batch_prediction()));
 	w.menuBar()->addAction(runAct);
 
 	runAct = new QAction(w.tr("Point Clustering"), &w);

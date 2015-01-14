@@ -314,10 +314,12 @@ public slots:
 	void run_print_mesh_info();
 	void run_training();
 	void run_training_from_files();
+	void run_batch_prediction();
 	void run_prediction();
 	void run_rendering_point_clusters();
 	void run_occlusion_test();
 	void set_view_direction();
+	void run_print_arguments();
 	//void run_test_joint_normal_training();
 	//void run_test_manual_relations();
 	//void run_test_cca_relations();

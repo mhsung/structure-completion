@@ -255,7 +255,7 @@ MeshCuboid::~MeshCuboid()
 	clear_cuboid_surface_points();
 }
 
-const std::vector<MeshSamplePoint *>&MeshCuboid::get_sample_points() const
+const std::vector<MeshSamplePoint *> &MeshCuboid::get_sample_points() const
 {
 	return sample_points_;
 }

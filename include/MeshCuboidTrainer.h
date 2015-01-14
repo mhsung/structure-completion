@@ -33,6 +33,14 @@ public:
 		std::vector< std::vector<MeshCuboidCondNormalRelations *> > &_relations,
 		const std::list<std::string> *_ignored_object_list = NULL)const;
 
+	static void load_joint_normal_relations(
+		const unsigned int _num_labels, const std::string _filename_prefix,
+		std::vector< std::vector<MeshCuboidJointNormalRelations *> > &_relations);
+
+	static void load_cond_normal_relations(
+		const unsigned int _num_labels, const std::string _filename_prefix,
+		std::vector< std::vector<MeshCuboidCondNormalRelations *> > &_relations);
+
 protected:
 	std::list<std::string> object_list_;
 	std::vector< std::list<MeshCuboidFeatures *> > feature_list_;
