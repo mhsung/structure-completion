@@ -188,15 +188,17 @@ target_link_libraries (${targetName}
 
 if (UNIX)
 target_link_libraries (${targetName}
-  debug
-${OPENMESH_LIBRARY_DIR}/OpenMesh/libOpenMeshCore${CMAKE_DEBUG_POSTFIX}.a
-  debug
-${OPENMESH_LIBRARY_DIR}/OpenMesh/libOpenMeshTools${CMAKE_DEBUG_POSTFIX}.a
+  debug ${OPENMESH_LIBRARY_DIR}/OpenMesh/libOpenMeshCore${CMAKE_DEBUG_POSTFIX}.a
+  debug ${OPENMESH_LIBRARY_DIR}/OpenMesh/libOpenMeshCore${CMAKE_DEBUG_POSTFIX}.so
+  debug ${OPENMESH_LIBRARY_DIR}/OpenMesh/libOpenMeshTools${CMAKE_DEBUG_POSTFIX}.a
+  debug ${OPENMESH_LIBRARY_DIR}/OpenMesh/libOpenMeshTools${CMAKE_DEBUG_POSTFIX}.so
 )
   
 target_link_libraries (${targetName}
   optimized ${OPENMESH_LIBRARY_DIR}/OpenMesh/libOpenMeshCore.a
+  optimized ${OPENMESH_LIBRARY_DIR}/OpenMesh/libOpenMeshCore.so
   optimized ${OPENMESH_LIBRARY_DIR}/OpenMesh/libOpenMeshTools.a
+  optimized ${OPENMESH_LIBRARY_DIR}/OpenMesh/libOpenMeshTools.so
 )
 endif()
 
