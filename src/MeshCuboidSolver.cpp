@@ -257,45 +257,55 @@ Eigen::VectorXd solve_quadratic_programming(
 	Eigen::MatrixXd* _init_values_mask = NULL,
 	double _quadprog_ratio = 1.0)
 {
-	const unsigned int dimension = _quadratic_term.cols();
-	assert(_quadratic_term.rows() == dimension);
-	assert(_linear_term.rows() == dimension);
+	const unsigned int n = _quadratic_term.cols();
+	assert(_quadratic_term.rows() == n);
+	assert(_linear_term.rows() == n);
 
-	Eigen::VectorXd x = Eigen::VectorXd::Zero(dimension);
+	Eigen::VectorXd x = Eigen::VectorXd::Zero(n);
 
 	Eigen::MatrixXd G = _quadratic_term;
 	Eigen::VectorXd g0 = _linear_term;
+	Eigen::MatrixXd CE(n, 0);
+	Eigen::VectorXd ce0(0.0);
+	Eigen::MatrixXd CI(n, 0);
+	Eigen::VectorXd ci0(0.0);
 
 	std::cout << "Energy: (";
 
 	// Optional.
 	if (_init_values_vec)
 	{
+		assert((*_init_values_vec).rows() == n);
+
 		double init_error = 0;
 		Eigen::VectorXd x0 = (*_init_values_vec);
 		init_error += x0.transpose() * _quadratic_term * x0;
 		init_error += 2 * _linear_term.transpose() * x0;
 		init_error += _constant_term;
 		std::cout << "initial = " << init_error << ", ";
-	}
 
-	// Optional.
-	//if (_init_values_mask && _init_values_vec)
-	//{
-	//	CE = (*_init_values_mask).transpose();
-	//	ce0 = -(*_init_values_mask) * (*_init_values_vec);
-	//}
-	//else
-	//if (!_init_values_mask && _init_values_vec)
-	//{
-	//	// Initial Prior.
-	//	if (_quadprog_ratio > 0)
-	//	{
-	//		std::cout << "quadprog_ratio = " << _quadprog_ratio << std::endl;
-	//		G = (1.0 / init_error) * G + _quadprog_ratio * Eigen::MatrixXd::Identity(dimension, dimension);
-	//		g0 = (1.0 / init_error) * g0 - _quadprog_ratio * (*_init_values_vec);
-	//	}
-	//}
+		//if (_init_values_mask)
+		//{
+		//	assert((*_init_values_mask).cols() == n);
+		//	const unsigned int p = (*_init_values_mask).rows();
+
+		//	CE.resize(n, p);
+		//	ce0.resize(p);
+		//	CE = (*_init_values_mask).transpose();
+		//	ce0 = -(*_init_values_mask) * x0;
+		//}
+		//else
+		//{
+		//	// Initial Prior.
+		//	if (_quadprog_ratio > 0)
+		//	{
+		//		std::cout << "quadprog_ratio = " << _quadprog_ratio << std::endl;
+		//		G = (1.0 / init_error) * G + _quadprog_ratio * Eigen::MatrixXd::Identity(dimension, dimension);
+		//		g0 = (1.0 / init_error) * g0 - _quadprog_ratio * (*_init_values_vec);
+		//	}
+		//}
+	}
+	
 
 	// Make the quadratic term symmetric.
 	G = 0.5 * (G + G.transpose());
@@ -306,13 +316,7 @@ Eigen::VectorXd solve_quadratic_programming(
 
 	// Direct solution.
 	//x = -G.inverse() * g0;
-
-	// Use QuadProg++.
-	Eigen::MatrixXd CE(dimension, 0);
-	Eigen::VectorXd ce0(0.0);
-	Eigen::MatrixXd CI(dimension, 0);
-	Eigen::VectorXd ci0(0.0);
-
+	
 	double energy = QP::solve_quadprog(G, g0, CE, ce0, CI, ci0, x);
 	//std::cout << "QuadProg++ Error = " << energy << std::endl;
 
@@ -1204,7 +1208,7 @@ void get_optimization_formulation(
 		MeshCuboid *cuboid = _cuboids[cuboid_index];
 		MeshCuboidAttributes attributes;
 		attributes.compute_attributes(cuboid);
-		_init_values.block<num_attributes, 1>(num_attributes * cuboid_index, 0)
+		_init_values.segment<num_attributes>(num_attributes * cuboid_index)
 			= attributes.get_attributes();
 	}
 
@@ -1530,10 +1534,7 @@ void optimize_attributes(
 void add_missing_cuboids_once(
 	const std::vector<MeshCuboid *>& _given_cuboids,
 	const std::list<LabelIndex> &_missing_label_indices,
-	// NOTE:
-	// 'MeshCuboidCondNormalRelationPredictor' Only.
-	//const MeshCuboidCondNormalRelationPredictor &_predictor,
-	const MeshCuboidJointNormalRelationPredictor &_predictor,
+	const MeshCuboidPredictor &_predictor,
 	std::vector<MeshCuboid *>& _new_cuboids)
 {
 	if (_given_cuboids.empty() || _missing_label_indices.empty())
@@ -1548,19 +1549,16 @@ void add_missing_cuboids_once(
 		it != _missing_label_indices.end(); ++it)
 	{
 		LabelIndex label_index = (*it);
-		// FIXME:
-		// Assume that the local axes of missing cuboids are the same with global axes.
 		MeshCuboid *missing_cuboid = new MeshCuboid(label_index);
 		all_cuboids.push_back(missing_cuboid);
 	}
-
 
 	unsigned int num_cuboids = all_cuboids.size();
 	unsigned int num_new_cuboids = num_cuboids - num_given_cuboids;
 	assert(num_new_cuboids > 0);
 
 	const unsigned int num_attributes = MeshCuboidAttributes::k_num_attributes;
-	unsigned int mat_size = num_new_cuboids * num_attributes;
+	unsigned int mat_size = num_cuboids * num_attributes;
 
 	Eigen::MatrixXd quadratic_term(mat_size, mat_size);
 	Eigen::VectorXd linear_term(mat_size);
@@ -1568,26 +1566,26 @@ void add_missing_cuboids_once(
 	quadratic_term.setZero();
 	linear_term.setZero();
 
-	for (unsigned int cuboid_index_1 = 0; cuboid_index_1 < num_given_cuboids; ++cuboid_index_1)
+	for (unsigned int cuboid_index_1 = 0; cuboid_index_1 < num_cuboids; ++cuboid_index_1)
 	{
 		MeshCuboid *cuboid_1 = all_cuboids[cuboid_index_1];
+		assert(cuboid_1);
 		LabelIndex label_index_1 = cuboid_1->get_label_index();
 
-		for (unsigned int new_cuboid_index_2 = 0; new_cuboid_index_2 < num_new_cuboids; ++new_cuboid_index_2)
+		for (unsigned int cuboid_index_2 = 0; cuboid_index_2 < num_cuboids; ++cuboid_index_2)
 		{
-			unsigned int cuboid_index_2 = num_given_cuboids + new_cuboid_index_2;
+			if (cuboid_index_1 == cuboid_index_2) continue;
 
 			MeshCuboid *cuboid_2 = all_cuboids[cuboid_index_2];
+			assert(cuboid_2);
 			LabelIndex label_index_2 = cuboid_2->get_label_index();
 
 			Eigen::MatrixXd pair_quadratic_term(mat_size, mat_size);
 			Eigen::VectorXd pair_linear_term(mat_size);
 			double pair_constant_term;
 
-			// NOTE:
-			// NOTE: 'cuboid_1' is a existing cuboid, and 'cuboid_2' is a missing cuboid.
-			_predictor.get_conditional_pair_quadratic_form(cuboid_1, cuboid_2,
-				cuboid_index_1, new_cuboid_index_2,
+			_predictor.get_pair_quadratic_form(cuboid_1, cuboid_2,
+				cuboid_index_1, cuboid_index_2,
 				label_index_1, label_index_2,
 				pair_quadratic_term, pair_linear_term, pair_constant_term);
 
@@ -1598,10 +1596,53 @@ void add_missing_cuboids_once(
 	}
 
 
-	// Solve quadratic programming.
-	Eigen::VectorXd new_values = solve_quadratic_programming(quadratic_term, linear_term, constant_term);
+	// Attributes of given cuboids are fixed.
+	unsigned int given_mat_size = num_given_cuboids * num_attributes;
+	unsigned int new_mat_size = num_new_cuboids * num_attributes;
+	assert(given_mat_size + new_mat_size == mat_size);
 
-	assert(new_values.rows() == mat_size);
+	Eigen::MatrixXd new_quadratic_term(new_mat_size, new_mat_size);
+	Eigen::VectorXd new_linear_term(new_mat_size);
+	double new_constant_term = 0;
+	new_quadratic_term.setZero();
+	new_linear_term.setZero();
+
+	Eigen::VectorXd given_init_values = Eigen::VectorXd::Zero(given_mat_size);
+	for (unsigned int cuboid_index = 0; cuboid_index < num_given_cuboids; ++cuboid_index)
+	{
+		MeshCuboid *cuboid = all_cuboids[cuboid_index];
+		assert(cuboid);
+		MeshCuboidAttributes attributes;
+		attributes.compute_attributes(cuboid);
+		given_init_values.segment<num_attributes>(num_attributes * cuboid_index) = attributes.get_attributes();
+	}
+
+	// NOTE:
+	// First 'num_given_cuboids' cuboids are given cuboids,
+	// and last 'num_new_cuboids' cuboids are missing cuboids.
+	Eigen::MatrixXd quadratic_term_11 = quadratic_term.block(0, 0, given_mat_size, given_mat_size);
+	Eigen::MatrixXd quadratic_term_12 = quadratic_term.block(0, given_mat_size, given_mat_size, new_mat_size);
+	Eigen::MatrixXd quadratic_term_21 = quadratic_term.block(given_mat_size, 0, new_mat_size, given_mat_size);
+	Eigen::MatrixXd quadratic_term_22 = quadratic_term.block(given_mat_size, given_mat_size, new_mat_size, new_mat_size);
+
+	Eigen::VectorXd linear_tern_1 = linear_term.segment(0, given_mat_size);
+	Eigen::VectorXd linear_tern_2 = linear_term.segment(given_mat_size, new_mat_size);
+
+	new_quadratic_term = quadratic_term_22;
+
+	new_linear_term += (0.5 * given_init_values.transpose() * quadratic_term_12).transpose();
+	new_linear_term += (0.5 * given_init_values.transpose() * quadratic_term_21.transpose()).transpose();
+	new_linear_term += linear_tern_2;
+
+	new_constant_term += (given_init_values.transpose() * quadratic_term_11 * given_init_values);
+	new_constant_term += (2 * linear_tern_1.transpose() * given_init_values);
+	new_constant_term += constant_term;
+
+
+	// Solve quadratic programming.
+	Eigen::VectorXd new_values = solve_quadratic_programming(new_quadratic_term, new_linear_term, new_constant_term);
+
+	assert(new_values.rows() == new_mat_size);
 
 
 	_new_cuboids.clear();
@@ -1612,15 +1653,14 @@ void add_missing_cuboids_once(
 		MeshCuboid *cuboid = all_cuboids[cuboid_index];
 		// NOTE:
 		// new_cuboid_index.
-		Eigen::VectorXd new_attributes_vec = new_values.block<num_attributes, 1>(
-			num_attributes * new_cuboid_index, 0);
+		Eigen::VectorXd new_attributes_vec = new_values.segment<num_attributes>(
+			num_attributes * new_cuboid_index);
 
 		MyMesh::Point new_bbox_center(0.0);
 		std::array<MyMesh::Point, MeshCuboid::k_num_corners> new_bbox_corners;
 
 		//for (unsigned int i = 0; i < 3; ++i)
 		//	new_bbox_center[i] = new_attributes_vec[MeshCuboidAttributes::k_center_index + i];
-
 		for (unsigned int corner_index = 0; corner_index < MeshCuboid::k_num_corners; ++corner_index)
 		{
 			for (unsigned int i = 0; i < 3; ++i)
@@ -1646,9 +1686,7 @@ void add_missing_cuboids(
 	MeshCuboidStructure &_cuboid_structure,
 	const Real _modelview_matrix[16],
 	const std::list<LabelIndex> &_missing_label_indices,
-	// NOTE:
-	// 'MeshCuboidCondNormalRelationPredictor' Only.
-	const MeshCuboidJointNormalRelationPredictor &_predictor)
+	const MeshCuboidPredictor &_predictor)
 {
 	if (_missing_label_indices.empty())
 		return;

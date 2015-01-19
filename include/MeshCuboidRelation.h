@@ -66,7 +66,7 @@ public:
 	// [27] : center height.
 	// [28 - 35] : corner heights.
 	static const int k_num_features = 36;
-
+	static const int k_corner_index = 3;
 	// NOTE:
 	// First 'k_num_local_coord_values' values are local coordinate values.
 	static const int k_num_local_points = 9;
@@ -132,16 +132,16 @@ public:
 	MeshCuboidJointNormalRelations();
 	~MeshCuboidJointNormalRelations();
 
-	static const unsigned int k_mat_size = 2 * MeshCuboidFeatures::k_num_features;
+	static const unsigned int k_mat_size =
+		2 * MeshCuboidFeatures::k_num_features - MeshCuboidFeatures::k_corner_index;
 
 	bool load_joint_normal_csv(const char* _filename);
 	bool save_joint_normal_csv(const char* _filename)const;
 
 	bool load_joint_normal_dat(const char* _filename);
 
-	double compute_error(
-		const Eigen::VectorXd &_features_vec_1,
-		const Eigen::VectorXd &_features_vec_2)const;
+	double compute_error(const MeshCuboid *_cuboid_1, const MeshCuboid *_cuboid_2,
+		const MeshCuboidTransformation *_transformation_1)const;
 
 	const Eigen::VectorXd &get_mean()const { return mean_; }
 	const Eigen::MatrixXd &get_inv_cov()const { return inv_cov_; }
@@ -164,9 +164,8 @@ public:
 
 	bool load_cond_normal_dat(const char* _filename);
 
-	double compute_error(
-		const Eigen::VectorXd &_features_vec_1,
-		const Eigen::VectorXd &_features_vec_2)const;
+	double compute_error(const MeshCuboid *_cuboid_1, const MeshCuboid *_cuboid_2,
+		const MeshCuboidTransformation *_transformation_1)const;
 
 	const Eigen::MatrixXd &get_mean_A()const { return mean_A_; }
 	const Eigen::VectorXd &get_mean_b()const { return mean_b_; }

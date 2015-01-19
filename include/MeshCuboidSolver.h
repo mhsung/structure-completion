@@ -67,18 +67,14 @@ void optimize_attributes(
 void add_missing_cuboids_once(
 	const std::vector<MeshCuboid *>& _given_cuboids,
 	const std::list<LabelIndex> &_missing_label_indices,
-	// NOTE:
-	// 'MeshCuboidCondNormalRelationPredictor' Only.
-	const MeshCuboidJointNormalRelationPredictor &_predictor,
+	const MeshCuboidPredictor &_predictor,
 	std::vector<MeshCuboid *>& _new_cuboids);
 
 void add_missing_cuboids(
 	MeshCuboidStructure &_cuboid_structure,
 	const Real _modelview_matrix[16],
 	const std::list<LabelIndex> &_missing_label_indices,
-	// NOTE:
-	// 'MeshCuboidCondNormalRelationPredictor' Only.
-	const MeshCuboidJointNormalRelationPredictor &_predictor);
+	const MeshCuboidPredictor &_predictor);
 
 void evaluate_segmentation(
 	const MeshCuboidStructure &_cuboid_structure,

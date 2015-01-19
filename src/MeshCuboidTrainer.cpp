@@ -236,7 +236,10 @@ void MeshCuboidTrainer::get_joint_normal_relations(
 			assert(transformation_1.size() == num_objects);
 			assert(transformation_2.size() == num_objects);
 
-			Eigen::MatrixXd X_1(num_objects, num_features);
+			// NOTE:
+			// Since the center point is always the origin in the local coordinates,
+			// it is not used as the feature values.
+			Eigen::MatrixXd X_1(num_objects, num_features - MeshCuboidFeatures::k_corner_index);
 			Eigen::MatrixXd X_2(num_objects, num_features);
 
 			for (int object_index = 0; object_index < num_objects; ++object_index)
@@ -244,23 +247,28 @@ void MeshCuboidTrainer::get_joint_normal_relations(
 				assert(feature_1[object_index]);
 				assert(feature_2[object_index]);
 				assert(transformation_1[object_index]);
-				assert(transformation_2[object_index]);
+				//assert(transformation_2[object_index]);
 
-				Eigen::VectorXd transformed_feature_1 = transformation_2[object_index]->get_transformed_features(
+				Eigen::VectorXd transformed_feature_vec_11 = transformation_1[object_index]->get_transformed_features(
 					(*feature_1[object_index]));
+				assert(std::abs(transformed_feature_vec_11[0]) < NUMERIAL_ERROR_THRESHOLD);
+				assert(std::abs(transformed_feature_vec_11[1]) < NUMERIAL_ERROR_THRESHOLD);
+				assert(std::abs(transformed_feature_vec_11[2]) < NUMERIAL_ERROR_THRESHOLD);
 
-				Eigen::VectorXd transformed_feature_2 = transformation_1[object_index]->get_transformed_features(
+				Eigen::VectorXd transformed_feature_vec_12 = transformation_1[object_index]->get_transformed_features(
 					(*feature_2[object_index]));
 
-				assert(transformed_feature_1.size() == MeshCuboidFeatures::k_num_features);
-				assert(transformed_feature_2.size() == MeshCuboidFeatures::k_num_features);
+				assert(transformed_feature_vec_11.size() == MeshCuboidFeatures::k_num_features);
+				assert(transformed_feature_vec_12.size() == MeshCuboidFeatures::k_num_features);
 				
-				X_1.row(object_index) = transformed_feature_1.transpose();
-				X_2.row(object_index) = transformed_feature_2.transpose();
+				X_1.row(object_index) = transformed_feature_vec_11.bottomRows(
+					num_features - MeshCuboidFeatures::k_corner_index).transpose();
+				X_2.row(object_index) = transformed_feature_vec_12.transpose();
 			}
 
-			Eigen::MatrixXd X(num_objects, 2 * num_features);
-			X << X_1, X_2;
+			Eigen::MatrixXd X(num_objects, X_1.cols() + X_2.cols());
+			X.leftCols(X_1.cols()) = X_1;
+			X.rightCols(X_2.cols()) = X_2;
 
 			Eigen::RowVectorXd mean = X.colwise().mean();
 			Eigen::MatrixXd centered_X = X.rowwise() - mean;

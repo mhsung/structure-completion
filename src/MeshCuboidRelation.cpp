@@ -867,14 +867,31 @@ bool MeshCuboidJointNormalRelations::load_joint_normal_dat(const char* _filename
 	return true;
 }
 
-double MeshCuboidJointNormalRelations::compute_error(
-	const Eigen::VectorXd &_features_vec_1, const Eigen::VectorXd &_features_vec_2) const
+double MeshCuboidJointNormalRelations::compute_error(const MeshCuboid *_cuboid_1, const MeshCuboid *_cuboid_2,
+	const MeshCuboidTransformation *_transformation_1) const
 {
-	assert(_features_vec_1.rows() == MeshCuboidFeatures::k_num_features);
-	assert(_features_vec_2.rows() == MeshCuboidFeatures::k_num_features);
-	
-	Eigen::VectorXd concat_features(2 * MeshCuboidFeatures::k_num_features);
-	concat_features << _features_vec_1, _features_vec_2;
+	assert(_cuboid_1);
+	assert(_cuboid_2);
+	assert(_transformation_1);
+
+	Eigen::VectorXd transformed_features_vec_11 = _transformation_1->get_transformed_features(_cuboid_1);
+	assert(std::abs(transformed_features_vec_11[0]) < NUMERIAL_ERROR_THRESHOLD);
+	assert(std::abs(transformed_features_vec_11[1]) < NUMERIAL_ERROR_THRESHOLD);
+	assert(std::abs(transformed_features_vec_11[2]) < NUMERIAL_ERROR_THRESHOLD);
+
+	Eigen::VectorXd transformed_features_vec_12 = _transformation_1->get_transformed_features(_cuboid_2);
+
+	assert(transformed_features_vec_11.rows() == MeshCuboidFeatures::k_num_features);
+	assert(transformed_features_vec_12.rows() == MeshCuboidFeatures::k_num_features);
+
+	// NOTE:
+	// Since the center point is always the origin in the local coordinates,
+	// it is not used as the feature values.
+	Eigen::VectorXd concat_features(2 * MeshCuboidFeatures::k_num_features - MeshCuboidFeatures::k_corner_index);
+	concat_features << transformed_features_vec_11.bottomRows(
+		MeshCuboidFeatures::k_num_features - MeshCuboidFeatures::k_corner_index),
+		transformed_features_vec_12;
+
 	assert(mean_.rows() == concat_features.rows());
 	assert(inv_cov_.rows() == concat_features.rows());
 	assert(inv_cov_.cols() == concat_features.rows());
@@ -884,7 +901,7 @@ double MeshCuboidJointNormalRelations::compute_error(
 	// Mahalanobis norm.
 	double error = diff.transpose() * inv_cov_ * diff;
 	assert(error >= 0);
-	
+
 	//std::cerr << "Negative error value (error = " << error << ")" << std::endl;
 	//Eigen::IOFormat csv_format(Eigen::StreamPrecision, 0, ",");
 
@@ -1120,21 +1137,32 @@ bool MeshCuboidCondNormalRelations::load_cond_normal_dat(const char* _filename)
 	return true;
 }
 
-double MeshCuboidCondNormalRelations::compute_error(
-	const Eigen::VectorXd &_features_vec_1, const Eigen::VectorXd &_features_vec_2) const
+double MeshCuboidCondNormalRelations::compute_error(const MeshCuboid *_cuboid_1, const MeshCuboid *_cuboid_2,
+	const MeshCuboidTransformation *_transformation_1)const
 {
-	assert(_features_vec_1.rows() == _features_vec_2.rows());
-	assert(mean_A_.rows() == _features_vec_1.rows());
-	assert(mean_b_.rows() == _features_vec_1.rows());
-	assert(inv_cov_.rows() == _features_vec_1.rows());
-	assert(inv_cov_.cols() == _features_vec_1.rows());
+	assert(_cuboid_1);
+	assert(_cuboid_2);
+	assert(_transformation_1);
 
-	const Eigen::VectorXd global_feature_values_1 = _features_vec_1.bottomRows(
+	MeshCuboidFeatures features_1;
+	features_1.compute_features(_cuboid_1);
+	Eigen::VectorXd features_vec_1 = features_1.get_features();
+	Eigen::VectorXd transformed_features_vec_12 = _transformation_1->get_transformed_features(_cuboid_2);
+
+	assert(features_vec_1.rows() == MeshCuboidFeatures::k_num_features);
+	assert(transformed_features_vec_12.rows() == MeshCuboidFeatures::k_num_features);
+
+	const Eigen::VectorXd global_feature_values_1 = features_vec_1.bottomRows(
 		MeshCuboidFeatures::k_num_global_feature_values);
+
+	assert(mean_A_.rows() == features_vec_1.rows());
 	assert(mean_A_.cols() == global_feature_values_1.rows());
+	assert(mean_b_.rows() == features_vec_1.rows());
+	assert(inv_cov_.rows() == features_vec_1.rows());
+	assert(inv_cov_.cols() == features_vec_1.rows());
 
 	const Eigen::VectorXd mean_2 = mean_A_ * global_feature_values_1 + mean_b_;
-	Eigen::VectorXd diff = _features_vec_2 - mean_2;
+	Eigen::VectorXd diff = transformed_features_vec_12 - mean_2;
 
 	// Mahalanobis norm.
 	double error = diff.transpose() * inv_cov_ * diff;

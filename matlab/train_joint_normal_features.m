@@ -36,6 +36,8 @@ for i = 1:num_cuboids
         transformation_j = transformations{j}(cuboids_exist_ij, :);
         num_objects = length(transformation_i);
         assert(num_objects == length(transformation_j));
+        if num_objects == 0; continue; end;
+        
 
         X_i = cuboids_i;
         X_j = cuboids_j;
@@ -79,7 +81,8 @@ for i = 1:num_cuboids
         centered_X = X - repmat(mean_X, num_objects, 1);
         cov = (centered_X' * centered_X) / num_objects;
         %inv_cov = pca_inv_cov(cov);
-        inv_cov = inv(cov + 1.0E-3 * eye(size(cov)));
+        %inv_cov = inv(cov + 1.0E-3 * eye(size(cov)));
+        inv_cov = graphicalLasso(cov + 1.0E-3 * eye(size(cov)), 1.0E-3);
         
         joint_mean{i}{j} = mean_X';
         joint_inv_cov{i}{j} = inv_cov;
@@ -89,8 +92,8 @@ for i = 1:num_cuboids
         error = diag(diff' * inv_cov * diff);
         disp(['(', num2str(i), ', ', num2str(j), '): max_error = ', num2str(max(error))]);
 
-        % csvwrite(['test_', num2str(i-1), '_', num2str(j-1), '.csv'], inv_cov);
-        % inv_cov = csvread(['test_', num2str(i-1), '_', num2str(j-1), '.csv']);
+        csvwrite(['test_', num2str(i-1), '_', num2str(j-1), '.csv'], inv_cov);
+        inv_cov = csvread(['test_', num2str(i-1), '_', num2str(j-1), '.csv']);
         
         %%
 %         mean_1 = mean_X(1:num_features)';

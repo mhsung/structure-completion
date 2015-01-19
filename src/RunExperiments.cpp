@@ -396,10 +396,6 @@ void MeshViewerWidget::run_training()
 
 	mesh_name_list_file.close();
 
-	//
-	run_training_from_files();
-	//
-
 	std::cout << std::endl;
 	std::cout << " -- Batch Completed. -- " << std::endl;
 }
@@ -438,30 +434,30 @@ void MeshViewerWidget::run_training_from_files()
 	}
 	//
 
-	//
-	std::vector< std::vector<MeshCuboidCondNormalRelations *> > cond_normal_relations;
-	trainer.get_cond_normal_relations(cond_normal_relations);
+	////
+	//std::vector< std::vector<MeshCuboidCondNormalRelations *> > cond_normal_relations;
+	//trainer.get_cond_normal_relations(cond_normal_relations);
 
-	num_cuboids = cond_normal_relations.size();
-	for (unsigned int cuboid_index_1 = 0; cuboid_index_1 < num_cuboids; ++cuboid_index_1)
-	{
-		assert(cond_normal_relations[cuboid_index_1].size() == num_cuboids);
-		for (unsigned int cuboid_index_2 = 0; cuboid_index_2 < num_cuboids; ++cuboid_index_2)
-		{
-			if (cuboid_index_1 == cuboid_index_2) continue;
+	//num_cuboids = cond_normal_relations.size();
+	//for (unsigned int cuboid_index_1 = 0; cuboid_index_1 < num_cuboids; ++cuboid_index_1)
+	//{
+	//	assert(cond_normal_relations[cuboid_index_1].size() == num_cuboids);
+	//	for (unsigned int cuboid_index_2 = 0; cuboid_index_2 < num_cuboids; ++cuboid_index_2)
+	//	{
+	//		if (cuboid_index_1 == cuboid_index_2) continue;
 
-			const MeshCuboidCondNormalRelations *relation_12 = cond_normal_relations[cuboid_index_1][cuboid_index_2];
-			if (!relation_12) continue;
+	//		const MeshCuboidCondNormalRelations *relation_12 = cond_normal_relations[cuboid_index_1][cuboid_index_2];
+	//		if (!relation_12) continue;
 
-			std::stringstream relation_filename_sstr;
-			relation_filename_sstr << FLAGS_cond_normal_relation_filename_prefix << cuboid_index_1
-				<< "_" << cuboid_index_2 << ".csv";
+	//		std::stringstream relation_filename_sstr;
+	//		relation_filename_sstr << FLAGS_cond_normal_relation_filename_prefix << cuboid_index_1
+	//			<< "_" << cuboid_index_2 << ".csv";
 
-			std::cout << "Saving '" << relation_filename_sstr.str() << "'..." << std::endl;
-			relation_12->save_cond_normal_csv(relation_filename_sstr.str().c_str());
-		}
-	}
-	//
+	//		std::cout << "Saving '" << relation_filename_sstr.str() << "'..." << std::endl;
+	//		relation_12->save_cond_normal_csv(relation_filename_sstr.str().c_str());
+	//	}
+	//}
+	////
 }
 
 void MeshViewerWidget::run_batch_prediction()

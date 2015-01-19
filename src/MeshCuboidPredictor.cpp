@@ -313,20 +313,13 @@ Real MeshCuboidJointNormalRelationPredictor::get_pair_potential(
 
 	Real potential = k_max_potential;
 	const MeshCuboidJointNormalRelations *relation_12 = relations_[_label_index_1][_label_index_2];
+	const MeshCuboidJointNormalRelations *relation_21 = relations_[_label_index_2][_label_index_1];
 
-	if (relation_12)
+	if (relation_12 && relation_21)
 	{
-		MeshCuboidFeatures features_1, features_2;
-		features_1.compute_features(_cuboid_1);
-		features_2.compute_features(_cuboid_2);
-
-		Eigen::VectorXd features_vec_1 = features_1.get_features();
-		Eigen::VectorXd features_vec_2 = features_2.get_features();
-
-		Eigen::VectorXd transformed_features_vec_1 = _transformation_2->get_transformed_features(_cuboid_1);
-		Eigen::VectorXd transformed_features_vec_2 = _transformation_1->get_transformed_features(_cuboid_2);
-
-		potential = relation_12->compute_error(transformed_features_vec_1, transformed_features_vec_2);
+		Real potential_12 = relation_12->compute_error(_cuboid_1, _cuboid_2, _transformation_1);
+		Real potential_21 = relation_21->compute_error(_cuboid_2, _cuboid_1, _transformation_2);
+		potential = potential_12 + potential_21;
 	}
 
 	return potential;
@@ -381,39 +374,45 @@ Real MeshCuboidJointNormalRelationPredictor::get_pair_quadratic_form(
 	Eigen::MatrixXd translation_1;
 	transformation_1.get_linear_map_transformation(rotation_1, translation_1);
 
-	MeshCuboidTransformation transformation_2;
-	transformation_2.compute_transformation(_cuboid_2);
-	Eigen::MatrixXd rotation_2;
-	Eigen::MatrixXd translation_2;
-	transformation_2.get_linear_map_transformation(rotation_2, translation_2);
-
 
 	// (Ax + b)'C(Ax + b) = x'(A'CA)x + 2*(b'CA)x.
-	Eigen::MatrixXd A = Eigen::MatrixXd::Zero(2 * num_features, mat_size);
-	Eigen::VectorXd b = Eigen::VectorXd::Zero(2 * num_features);
-	Eigen::MatrixXd C = Eigen::MatrixXd::Zero(2 * num_features, 2 * num_features);
-
+	Eigen::MatrixXd A_orig = Eigen::MatrixXd::Zero(2 * num_features, mat_size);
 	unsigned int start_index_1 = (_cuboid_index_1 * num_attributes);
 	unsigned int start_index_2 = (_cuboid_index_2 * num_attributes);
 
-	A.block<num_features, num_attributes>(0, start_index_1)
-		= A.block<num_features, num_attributes>(0, start_index_1)
-		+ rotation_2 * attributes_to_features_map_1;
+	// The rotation is fixed, and attribute-to-feature map is a function of 'cuboid_1' attributes.
+	A_orig.block<num_features, num_attributes>(0, start_index_1)
+		= A_orig.block<num_features, num_attributes>(0, start_index_1)
+		+ rotation_1 * attributes_to_features_map_1;
 
-	A.block<num_features, num_attributes>(0, start_index_2)
-		= A.block<num_features, num_attributes>(0, start_index_2)
-		+ translation_2;
-
-	A.block<num_features, num_attributes>(num_features, start_index_2)
-		= A.block<num_features, num_attributes>(num_features, start_index_2)
-		+ rotation_1 * attributes_to_features_map_2;
-
-	A.block<num_features, num_attributes>(num_features, start_index_1)
-		= A.block<num_features, num_attributes>(num_features, start_index_1)
+	// The translation is a function of 'cuboid_1' attributes.
+	A_orig.block<num_features, num_attributes>(0, start_index_1)
+		= A_orig.block<num_features, num_attributes>(0, start_index_1)
 		+ translation_1;
 
-	b = b - relation_12->get_mean();
-	C = relation_12->get_inv_cov();
+	// The rotation is fixed, and attribute-to-feature map is a function of 'cuboid_2' attributes.
+	A_orig.block<num_features, num_attributes>(num_features, start_index_2)
+		= A_orig.block<num_features, num_attributes>(num_features, start_index_2)
+		+ rotation_1 * attributes_to_features_map_2;
+
+	// The translation is a function of 'cuboid_1' attributes.
+	A_orig.block<num_features, num_attributes>(num_features, start_index_1)
+		= A_orig.block<num_features, num_attributes>(num_features, start_index_1)
+		+ translation_1;
+
+	// NOTE:
+	// Since the center point is always the origin in the local coordinates,
+	// it is not used as the feature values.
+	Eigen::MatrixXd A = A_orig.bottomRows(2 * num_features - MeshCuboidFeatures::k_corner_index);
+	assert(A.rows() == 2 * num_features - MeshCuboidFeatures::k_corner_index);
+
+	Eigen::VectorXd b = -relation_12->get_mean();
+	assert(b.rows() == 2 * num_features - MeshCuboidFeatures::k_corner_index);
+
+	Eigen::MatrixXd C = relation_12->get_inv_cov();
+	assert(C.rows() == 2 * num_features - MeshCuboidFeatures::k_corner_index);
+	assert(C.cols() == 2 * num_features - MeshCuboidFeatures::k_corner_index);
+
 
 	_quadratic_term = A.transpose() * C * A;
 	_linear_term = (b.transpose() * C * A).transpose();
@@ -437,134 +436,9 @@ Real MeshCuboidJointNormalRelationPredictor::get_pair_quadratic_form(
 
 
 #ifdef DEBUG_TEST
-	Eigen::VectorXd transformed_features_vec_1 = transformation_2.get_transformed_features(_cuboid_1);
-	Eigen::VectorXd transformed_features_vec_2 = transformation_1.get_transformed_features(_cuboid_2);
-
-	//{
-	//	std::stringstream filename_sstr;
-	//	filename_sstr << std::string("transformed_features_vec_")
-	//		<< _label_index_1 << std::string("_")
-	//		<< _label_index_2 << std::string(".csv");
-	//	std::ofstream csv_file(filename_sstr.str());
-	//	Eigen::IOFormat csv_format(Eigen::StreamPrecision, 0, ",");
-	//	csv_file << transformed_features_vec_1.format(csv_format) << std::endl;
-	//	csv_file.close();
-	//}
-
-	//{
-	//	std::stringstream filename_sstr;
-	//	filename_sstr << std::string("transformed_features_vec_")
-	//		<< _label_index_2 << std::string("_")
-	//		<< _label_index_1 << std::string(".csv");
-	//	std::ofstream csv_file(filename_sstr.str());
-	//	Eigen::IOFormat csv_format(Eigen::StreamPrecision, 0, ",");
-	//	csv_file << transformed_features_vec_2.format(csv_format) << std::endl;
-	//	csv_file.close();
-	//}
-
-	Real same_potential = relation_12->compute_error(transformed_features_vec_1, transformed_features_vec_2);
-
+	Real same_potential = relation_12->compute_error(_cuboid_1, _cuboid_2, &transformation_1);
 	CHECK_NUMERICAL_ERROR(__FUNCTION__, potential, same_potential);
 #endif
-
-	//Eigen::IOFormat csv_format(Eigen::StreamPrecision, 0, ",");
-	//std::stringstream filename_sstr;
-	//filename_sstr << std::string("quadratic_mat_")
-	//	<< _cuboid_index_1 << std::string("_")
-	//	<< _cuboid_index_2 << std::string(".csv");
-
-	//std::ofstream csv_file(filename_sstr.str());
-	//Eigen::IOFormat csv_format(Eigen::StreamPrecision, 0, ",");
-	//csv_file << _quadratic_term.format(csv_format) << std::endl;
-	//csv_file.close();
-
-	return potential;
-}
-
-Real MeshCuboidJointNormalRelationPredictor::get_conditional_pair_quadratic_form(
-	const MeshCuboid *_cuboid_1, const MeshCuboid *_cuboid_2,
-	const unsigned int _cuboid_index_1, const unsigned int _cuboid_index_2,
-	const LabelIndex _label_index_1, const LabelIndex _label_index_2,
-	Eigen::MatrixXd &_quadratic_term, Eigen::VectorXd &_linear_term, Real& _constant_term) const
-{
-	// NOTE: '_cuboid_1' is a existing cuboid, and '_cuboid_2' is a missing cuboid.
-
-	assert(_cuboid_1); assert(_cuboid_2);
-	assert(_label_index_1 < num_labels_);
-	assert(_label_index_2 < num_labels_);
-
-	// NOTE:
-	// Now considering only different label pairs.
-	assert(_label_index_1 != _label_index_2);
-
-	const unsigned int num_attributes = MeshCuboidAttributes::k_num_attributes;
-	const unsigned int num_features = MeshCuboidFeatures::k_num_features;
-	const unsigned int mat_size = _quadratic_term.cols();
-
-	assert(_quadratic_term.rows() == mat_size);
-	assert(_linear_term.rows() == mat_size);
-	assert(_cuboid_index_1 * num_attributes <= mat_size);
-	assert(_cuboid_index_2 * num_attributes <= mat_size);
-
-	_quadratic_term.setZero();
-	_linear_term.setZero();
-	_constant_term = 0;
-
-	const MeshCuboidJointNormalRelations *relation_12 = relations_[_label_index_1][_label_index_2];
-	if (!relation_12) return 0.0;
-
-
-	MeshCuboidFeatures features_2;
-	Eigen::MatrixXd attributes_to_features_map_2;
-	features_2.compute_features(_cuboid_2, &attributes_to_features_map_2);
-
-	assert(attributes_to_features_map_2.rows() == num_features);
-	assert(attributes_to_features_map_2.cols() == num_attributes);
-
-	MeshCuboidTransformation transformation_1;
-	transformation_1.compute_transformation(_cuboid_1);
-	Eigen::MatrixXd rotation_1;
-	Eigen::MatrixXd translation_1;
-	transformation_1.get_linear_map_transformation(rotation_1, translation_1);
-
-	MeshCuboidAttributes attributes_1;
-	attributes_1.compute_attributes(_cuboid_1);
-	Eigen::VectorXd attributes_1_vec = attributes_1.get_attributes();
-
-
-	// (Ax + b)'C(Ax + b) = x'(A'CA)x + 2*(b'CA)x.
-	Eigen::MatrixXd A = Eigen::MatrixXd::Zero(num_features, mat_size);
-	Eigen::VectorXd b = Eigen::VectorXd::Zero(num_features);
-	Eigen::MatrixXd C = Eigen::MatrixXd::Zero(num_features, 2 * num_features);
-
-	unsigned int start_index_1 = (_cuboid_index_1 * num_attributes);
-	unsigned int start_index_2 = (_cuboid_index_2 * num_attributes);
-
-	A.block<num_features, num_attributes>(0, start_index_2)
-		= A.block<num_features, num_attributes>(0, start_index_2)
-		+ rotation_1 * attributes_to_features_map_2;
-
-	b = translation_1 * attributes_1_vec - relation_12->get_mean().segment<num_features>(num_features);
-
-	C = relation_12->get_inv_cov().block<num_features, num_features>(num_features, num_features);
-
-	_quadratic_term = A.transpose() * C * A;
-	_linear_term = (b.transpose() * C * A).transpose();
-	_constant_term = (b.transpose() * C * b);
-
-
-	MeshCuboidAttributes attributes_2;
-	attributes_2.compute_attributes(_cuboid_2);
-
-	Eigen::VectorXd x2 = attributes_2.get_attributes();
-	Eigen::VectorXd x = Eigen::VectorXd::Zero(mat_size);
-	x.block<num_attributes, 1>(start_index_2, 0) = x2;
-
-	Real potential = 0;
-	potential += (x.transpose() * _quadratic_term * x);
-	potential += (2 * _linear_term.transpose() * x);
-	potential += _constant_term;
-
 
 	//Eigen::IOFormat csv_format(Eigen::StreamPrecision, 0, ",");
 	//std::stringstream filename_sstr;
@@ -656,20 +530,8 @@ Real MeshCuboidCondNormalRelationPredictor::get_pair_potential(
 
 	if (relation_12 && relation_21)
 	{
-		MeshCuboidFeatures features_1, features_2;
-		features_1.compute_features(_cuboid_1);
-		features_2.compute_features(_cuboid_2);
-
-		// 1 -> 2.
-		Eigen::VectorXd features_vec_1 = features_1.get_features();
-		Eigen::VectorXd transformed_features_vec_21 = _transformation_1->get_transformed_features(_cuboid_2);
-		Real potential_12 = relation_12->compute_error(features_vec_1, transformed_features_vec_21);
-
-		// 2 -> 1.
-		Eigen::VectorXd features_vec_2 = features_2.get_features();
-		Eigen::VectorXd transformed_features_vec_12 = _transformation_2->get_transformed_features(_cuboid_1);
-		Real potential_21 = relation_21->compute_error(features_vec_2, transformed_features_vec_12);
-
+		Real potential_12 = relation_12->compute_error(_cuboid_1, _cuboid_2, _transformation_1);
+		Real potential_21 = relation_21->compute_error(_cuboid_2, _cuboid_1, _transformation_2);
 		potential = potential_12 + potential_21;
 	}
 
@@ -776,11 +638,9 @@ Real MeshCuboidCondNormalRelationPredictor::get_pair_quadratic_form(
 	potential += (2 * _linear_term.transpose() * x);
 	potential += _constant_term;
 
-#ifdef DEBUG_TEST
-	Eigen::VectorXd features_vec_1 = features_1.get_features();
-	Eigen::VectorXd transformed_features_vec_21 = transformation_1.get_transformed_features(_cuboid_2);
-	Real same_potential = relation_12->compute_error(features_vec_1, transformed_features_vec_21);
 
+#ifdef DEBUG_TEST
+	Real same_potential = relation_12->compute_error(_cuboid_1, _cuboid_2, &transformation_1);
 	CHECK_NUMERICAL_ERROR(__FUNCTION__, potential, same_potential);
 #endif
 	
@@ -793,121 +653,6 @@ Real MeshCuboidCondNormalRelationPredictor::get_pair_quadratic_form(
 	//csv_file << quadratic_form.format(csv_format) << std::endl;
 	//csv_file.close();
 	
-	return potential;
-}
-
-Real MeshCuboidCondNormalRelationPredictor::get_conditional_pair_quadratic_form(
-	const MeshCuboid *_cuboid_1, const MeshCuboid *_cuboid_2,
-	const unsigned int _cuboid_index_1, const unsigned int _cuboid_index_2,
-	const LabelIndex _label_index_1, const LabelIndex _label_index_2,
-	Eigen::MatrixXd &_quadratic_term, Eigen::VectorXd &_linear_term, Real& _constant_term) const
-{
-	// NOTE: '_cuboid_1' is a existing cuboid, and '_cuboid_2' is a missing cuboid.
-
-	assert(_cuboid_1); assert(_cuboid_2);
-	assert(_label_index_1 < num_labels_);
-	assert(_label_index_2 < num_labels_);
-
-	// NOTE:
-	// Now considering only different label pairs.
-	assert(_label_index_1 != _label_index_2);
-
-	const unsigned int num_attributes = MeshCuboidAttributes::k_num_attributes;
-	const unsigned int num_features = MeshCuboidFeatures::k_num_features;
-	const unsigned int num_local_points = MeshCuboidFeatures::k_num_local_points;
-	const unsigned int num_global_feature_values = MeshCuboidFeatures::k_num_global_feature_values;
-	const unsigned int mat_size = _quadratic_term.cols();
-
-	assert(_quadratic_term.rows() == mat_size);
-	assert(_linear_term.rows() == mat_size);
-	assert(_cuboid_index_2 * num_attributes <= mat_size);
-
-	_quadratic_term.setZero();
-	_linear_term.setZero();
-	_constant_term = 0;
-
-
-	MeshCuboidFeatures features_1, features_2;
-	Eigen::MatrixXd attributes_to_features_map_1, attributes_to_features_map_2;
-
-	features_1.compute_features(_cuboid_1, &attributes_to_features_map_1);
-	features_2.compute_features(_cuboid_2, &attributes_to_features_map_2);
-
-	assert(attributes_to_features_map_1.rows() == num_features);
-	assert(attributes_to_features_map_2.rows() == num_features);
-
-	assert(attributes_to_features_map_1.cols() == num_attributes);
-	assert(attributes_to_features_map_2.cols() == num_attributes);
-
-	MeshCuboidTransformation transformation_1;
-	transformation_1.compute_transformation(_cuboid_1);
-	Eigen::MatrixXd rotation_1;
-	Eigen::MatrixXd translation_1;
-	transformation_1.get_linear_map_transformation(rotation_1, translation_1);
-
-	MeshCuboidAttributes attributes_1;
-	attributes_1.compute_attributes(_cuboid_1);
-	Eigen::VectorXd attributes_1_vec = attributes_1.get_attributes();
-
-	Eigen::VectorXd features_vec_1 = features_1.get_features();
-	const Eigen::VectorXd non_global_coord_features_1 = features_vec_1.bottomRows(
-		num_global_feature_values);
-
-
-	const MeshCuboidCondNormalRelations *relation_12 = relations_[_label_index_1][_label_index_2];
-	if (!relation_12) return 0.0;
-
-
-	const Eigen::VectorXd mean_2 = relation_12->get_mean_A() * non_global_coord_features_1 + relation_12->get_mean_b();
-
-	// (Ax + b)'C(Ax + b) = x'(A'CA)x + 2*(b'CA)x.
-	Eigen::MatrixXd A = Eigen::MatrixXd::Zero(num_features, mat_size);
-	Eigen::VectorXd b = Eigen::VectorXd::Zero(num_features);
-	Eigen::MatrixXd C = Eigen::MatrixXd::Zero(num_features, num_features);
-
-	unsigned int start_index_2 = (_cuboid_index_2 * num_attributes);
-
-	A.block<num_features, num_attributes>(0, start_index_2)
-		= A.block<num_features, num_attributes>(0, start_index_2)
-		+ rotation_1 * attributes_to_features_map_2;
-
-	b = translation_1 * attributes_1_vec - mean_2;
-
-	C = relation_12->get_inv_cov();
-
-	_quadratic_term = A.transpose() * C * A;
-	_linear_term = (b.transpose() * C * A).transpose();
-	_constant_term = (b.transpose() * C * b);
-
-
-	MeshCuboidAttributes attributes_2;
-	attributes_2.compute_attributes(_cuboid_2);
-	Eigen::VectorXd x2 = attributes_2.get_attributes();
-	Eigen::VectorXd x = Eigen::VectorXd::Zero(mat_size);
-	x.block<num_attributes, 1>(start_index_2, 0) = x2;
-
-	Real potential = 0;
-	potential += (x.transpose() * _quadratic_term * x);
-	potential += (2 * _linear_term.transpose() * x);
-	potential += _constant_term;
-
-
-#ifdef DEBUG_TEST
-	Eigen::VectorXd transformed_features_vec_21 = transformation_1.get_transformed_features(_cuboid_2);
-	Real same_potential = relation_12->compute_error(features_vec_1, transformed_features_vec_21);
-
-	CHECK_NUMERICAL_ERROR(__FUNCTION__, same_potential, potential);
-#endif
-	
-	//std::stringstream filename_sstr;
-	//filename_sstr << std::string("quadratic_mat_")
-	//	<< _cuboid_index_1 << std::string("_")
-	//	<< _cuboid_index_2 << std::string(".csv");
-	//std::ofstream csv_file(filename_sstr.str());
-	//Eigen::IOFormat csv_format(Eigen::StreamPrecision, 0, ",");
-	//csv_file << quadratic_form.format(csv_format) << std::endl;
-	//csv_file.close();
-
 	return potential;
 }
 
