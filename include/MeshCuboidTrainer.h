@@ -18,7 +18,7 @@ public:
 	bool load_features(const std::string &_filename_prefix);
 	bool load_transformations(const std::string &_filename_prefix);
 
-	void get_label_cooccurrences(
+	void get_conflicted_labels(
 		std::vector< std::list<LabelIndex> > &_cooccurrence_labels)const;
 
 	void get_missing_label_index_groups(

@@ -15,7 +15,7 @@
 DEFINE_bool(run_training, false, "");
 DEFINE_bool(run_prediction, false, "");
 
-DEFINE_string(data_root_path, "D:/data/shape2pose/", "");
+DEFINE_string(data_root_path, "D:/Data/shape2pose/", "");
 DEFINE_string(label_info_path, "data/0_body/coseg_chairs/", "");
 DEFINE_string(mesh_path, "data/1_input/coseg_chairs/off/", "");
 DEFINE_string(sample_path, "data/2_analysis/coseg_chairs/points/even1000/", "");
@@ -515,19 +515,33 @@ void MeshViewerWidget::run_prediction()
 	std::string mesh_name = std::string(mesh_file.baseName().toLocal8Bit());
 
 	std::string mesh_label_filepath = FLAGS_data_root_path + FLAGS_mesh_label_path + std::string("/") + mesh_name + std::string(".seg");
-	std::string sample_filename = FLAGS_data_root_path + FLAGS_sample_path + std::string("/") + mesh_name + std::string(".pts");
+	std::string sample_filepath = FLAGS_data_root_path + FLAGS_sample_path + std::string("/") + mesh_name + std::string(".pts");
 	std::string sample_label_filepath = FLAGS_data_root_path + FLAGS_sample_label_path + std::string("/") + mesh_name + std::string(".arff");
-	
+
 	QFileInfo mesh_label_file(mesh_label_filepath.c_str());
-	QFileInfo sample_file(sample_filename.c_str());
+	QFileInfo sample_file(sample_filepath.c_str());
 	QFileInfo sample_label_file(sample_label_filepath.c_str());
 
-	if (!mesh_file.exists()
-		|| !mesh_label_file.exists()
-		|| !sample_file.exists()
-		|| !sample_label_file.exists())
+	if (!mesh_file.exists())
+	{
+		std::cerr << "Error: The mesh file does not exist (" << mesh_filepath << ")." << std::endl;
 		return;
-	
+	}
+	if (!mesh_label_file.exists())
+	{
+		std::cerr << "Warning: The mesh label file does not exist (" << mesh_label_filepath << ")." << std::endl;
+	}
+	if (!sample_file.exists())
+	{
+		std::cerr << "Error: The sample file does not exist (" << sample_filepath << ")." << std::endl;
+		return;
+	}
+	if (!sample_label_file.exists())
+	{
+		std::cerr << "Error: The sample label file does not exist (" << sample_label_filepath << ")." << std::endl;
+		return;
+	}
+
 	std::string snapshot_filename_prefix = FLAGS_output_path + std::string("/") + mesh_name + std::string("_");
 	std::stringstream snapshot_filename_sstr;
 	unsigned int snapshot_index = 0;
@@ -536,16 +550,16 @@ void MeshViewerWidget::run_prediction()
 	std::ofstream log_file(log_filename);
 	log_file.clear();
 	log_file.close();
-	
-	//std::string stats_filename = FLAGS_output_path + std::string("/") + std::string("stats.csv");
-	//std::ofstream stats_file(stats_filename);
-	//stats_file.clear();
-	//stats_file.close();
-	
+
+	std::string stats_filename = FLAGS_output_path + std::string("/") + mesh_name + std::string("_stats.csv");
+	std::ofstream stats_file(stats_filename);
+	stats_file.clear();
+	stats_file.close();
+
 	QDir output_dir;
 	output_dir.mkpath(FLAGS_output_path.c_str());
-	
-	
+
+
 	// Initialize basic information.
 	unsigned int num_labels = cuboid_structure_.num_labels();
 	cuboid_structure_.clear_cuboids();
@@ -569,11 +583,21 @@ void MeshViewerWidget::run_prediction()
 	slotDrawMode(findAction(CUSTOM_VIEW));
 
 	open_mesh_gui(mesh_filepath.c_str());
-	ret = mesh_.load_face_label_simple(mesh_label_filepath.c_str());
-	assert(ret);
 
-	open_sample_point_file(sample_filename.c_str());
+	if (mesh_label_file.exists())
+	{
+		ret = mesh_.load_face_label_simple(mesh_label_filepath.c_str());
+		assert(ret);
+	}
+
+	open_sample_point_file(sample_filepath.c_str());
 	open_sample_point_label_file(sample_label_filepath.c_str());
+
+	if (cuboid_structure_.num_sample_points() == 0)
+	{
+		std::cerr << "Error: No sample point loaded (" << sample_filepath << ")." << std::endl;
+		return;
+	}
 
 
 	// Start prediction process.
@@ -625,19 +649,25 @@ void MeshViewerWidget::run_prediction()
 	++snapshot_index;
 	draw_cuboid_axes_ = true;
 
+	if (cuboid_structure_.get_all_cuboids().empty())
+		return;
 
-	bool first_sub_routine = true;
 
-	while (true)
+	const unsigned int max_iterations = 10;
+	bool stop_iteration = false;
+	
+	std::vector<LabelIndex> sample_point_label_indices(cuboid_structure_.num_sample_points(),
+		cuboid_structure_.num_labels());
+
+	for (unsigned int iteration = 0; iteration < max_iterations; ++iteration)
 	{
 		std::cout << "\n3. Recognize labels and axes configurations." << std::endl;
 
 		// NOTE:
 		// Use symmetric label information only at the first time of the iteration.
+		bool first_iteration = (iteration == 0);
 		recognize_labels_and_axes_configurations(
-			cuboid_structure_, joint_normal_predictor, log_filename, first_sub_routine, true);
-
-		first_sub_routine = false;
+			cuboid_structure_, joint_normal_predictor, log_filename, first_iteration, true);
 
 		draw_cuboid_axes_ = true;
 		updateGL();
@@ -662,20 +692,26 @@ void MeshViewerWidget::run_prediction()
 		}
 		++snapshot_index;
 
+		//ret = evaluate_segmentation(cuboid_structure_, sample_point_label_indices, mesh_name, stats_filename);
+		//if (ret) break;
+
 
 		std::cout << "\n5. Optimize cuboid attributes." << std::endl;
 		const double quadprog_ratio = 1E4;
-		const unsigned int max_num_iterations = 10;
+		const unsigned int max_optimization_iteration = 5;
 
 		optimize_attributes(cuboid_structure_, occlusion_modelview_matrix,
 			joint_normal_predictor, quadprog_ratio,
-			log_filename, max_num_iterations, this);
+			log_filename, max_optimization_iteration, this);
 
 		updateGL();
 		snapshot_filename_sstr.clear(); snapshot_filename_sstr.str("");
 		snapshot_filename_sstr << snapshot_filename_prefix << snapshot_index;
 		slotSnapshot(snapshot_filename_sstr.str().c_str());
 		++snapshot_index;
+
+		if (stop_iteration)
+			break;
 
 
 		std::cout << "\n6. Add missing cuboids." << std::endl;
@@ -691,23 +727,31 @@ void MeshViewerWidget::run_prediction()
 
 		// NOTE:
 		// Iterate the sub-routine until there is no more missing label.
-		if (missing_label_index_groups.empty())
-			break;
+		if (!missing_label_index_groups.empty())
+		{
+			// FIXME: 
+			// All clusters in 'missing_label_index_groups' should be considered.
+			add_missing_cuboids(cuboid_structure_, occlusion_modelview_matrix,
+				missing_label_index_groups.front(),
+				joint_normal_predictor);
 
-		// FIXME: 
-		// All clusters in 'missing_label_index_groups' should be considered.
-		add_missing_cuboids(cuboid_structure_, occlusion_modelview_matrix,
-			missing_label_index_groups.front(),
-			joint_normal_predictor);
-
-		updateGL();
-		snapshot_filename_sstr.clear(); snapshot_filename_sstr.str("");
-		snapshot_filename_sstr << snapshot_filename_prefix << snapshot_index;
-		slotSnapshot(snapshot_filename_sstr.str().c_str());
-		++snapshot_index;
+			updateGL();
+			snapshot_filename_sstr.clear(); snapshot_filename_sstr.str("");
+			snapshot_filename_sstr << snapshot_filename_prefix << snapshot_index;
+			slotSnapshot(snapshot_filename_sstr.str().c_str());
+			++snapshot_index;
+		}
+		else
+		{
+			// Stop iteration next time.
+			stop_iteration = true;
+		}
 	}
 
-	//evaluate_segmentation(cuboid_structure_, mesh_name, stats_filename);
+	if (mesh_label_file.exists())
+	{
+		evaluate_segmentation(cuboid_structure_, sample_point_label_indices, mesh_name, stats_filename);
+	}
 
 
 	//annDeallocPts(occlusion_test_ann_points);

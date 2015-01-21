@@ -24,12 +24,18 @@ typedef unsigned int SamplePointIndex;
 class MeshSamplePoint
 {
 public:
-	MeshSamplePoint(MyMesh::Point _point)
-		: point_(_point) {};
-	MeshSamplePoint(FaceIndex _corr_fid, MyMesh::Point _bary_coord, MyMesh::Point _pos)
-		: corr_fid_(_corr_fid), bary_coord_(_bary_coord), point_(_pos) {};
+	MeshSamplePoint(
+		SamplePointIndex _sample_point_index,
+		FaceIndex _corr_fid,
+		MyMesh::Point _bary_coord,
+		MyMesh::Point _pos)
+		: sample_point_index_(_sample_point_index)
+		, corr_fid_(_corr_fid)
+		, bary_coord_(_bary_coord)
+		, point_(_pos) {};
 	virtual ~MeshSamplePoint() {};
 
+	SamplePointIndex sample_point_index_;
 	FaceIndex corr_fid_;
 	MyMesh::Point bary_coord_;
 	MyMesh::Point point_;

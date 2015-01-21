@@ -1723,11 +1723,14 @@ void add_missing_cuboids(
 	}
 }
 
-void evaluate_segmentation(
+bool evaluate_segmentation(
 	const MeshCuboidStructure &_cuboid_structure,
+	std::vector<LabelIndex> _sample_point_label_indices,
 	const std::string _mesh_name,
 	const std::string _stats_filename)
 {
+	assert(_sample_point_label_indices.size() == _cuboid_structure.num_sample_points());
+
 	const MyMesh *mesh = _cuboid_structure.mesh_;
 	assert(mesh);
 
@@ -1739,7 +1742,8 @@ void evaluate_segmentation(
 	assert(stats_file);
 
 
-	int num_sample_points = 0;
+	int num_cuboid_sample_points = 0;
+	int num_changed_sample_point_labels = 0;
 	int num_correct_sample_point_labels = 0;
 
 	for (LabelIndex label_index = 0; label_index < num_labels; ++label_index)
@@ -1759,6 +1763,15 @@ void evaluate_segmentation(
 			{
 				const MeshSamplePoint *sample_point = (*s_it);
 				assert(sample_point);
+				SamplePointIndex sample_point_index = sample_point->sample_point_index_;
+				assert(sample_point_index < _sample_point_label_indices.size());
+				assert(_cuboid_structure.sample_points_[sample_point_index] == sample_point);
+
+				if (label_index != _sample_point_label_indices[sample_point_index])
+				{
+					_sample_point_label_indices[sample_point_index] = label_index;
+					++num_changed_sample_point_labels;
+				}
 
 				assert(sample_point->corr_fid_ < mesh->n_faces());
 				MyMesh::FaceHandle fh = mesh->face_handle(sample_point->corr_fid_);
@@ -1767,19 +1780,34 @@ void evaluate_segmentation(
 				if (face_label == label)
 					++num_correct_sample_point_labels;
 
-				++num_sample_points;
+				++num_cuboid_sample_points;
 			}
 		}
 	}
 
-	assert(num_sample_points > 0);
-	Real error = static_cast<Real>(num_correct_sample_point_labels) / static_cast<Real>(num_correct_sample_point_labels);
-	stats_file << _mesh_name << "," <<
-		num_correct_sample_point_labels << ","
-		<< num_correct_sample_point_labels << ","
-		<< _cuboid_structure.num_sample_points() << ","
-		<< error << std::endl;
+	// If labels of some sample points are changes, return false and continue the iterations.
+	//if (num_changed_sample_point_labels > 0)
+	//	return false;
+
+	std::stringstream sstr;
+	if (num_cuboid_sample_points == 0)
+	{
+		sstr << "Error: No sample point included in cuboids." << std::endl;
+	}
+	else
+	{
+		Real error = static_cast<Real>(num_correct_sample_point_labels) / static_cast<Real>(num_cuboid_sample_points);
+		sstr << _mesh_name << "," <<
+			num_correct_sample_point_labels << ","
+			<< num_cuboid_sample_points << ","
+			<< _cuboid_structure.num_sample_points() << ","
+			<< error << std::endl;
+	}
+
+	std::cout << sstr.str();
+	stats_file << sstr.str();
 	stats_file.close();
+	return true;
 }
 
 /*

@@ -11,7 +11,7 @@ void MeshViewerWidget::run_test_initialize()
 	slotDrawMode(findAction(CUSTOM_VIEW));
 	draw_cuboid_axes_ = true;
 
-	cuboid_structure_.load_cuboids("cuboids.csv");
+	cuboid_structure_.test_load_cuboids("cuboids.csv");
 
 	unsigned int num_all_cuboid_labels = 2;
 

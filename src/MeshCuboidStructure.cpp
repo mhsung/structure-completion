@@ -248,7 +248,7 @@ bool MeshCuboidStructure::load_sample_points(const char *_filename, bool _verbos
 
 	std::string buffer;
 
-	for (unsigned int count = 0; !file.eof(); count++)
+	for (SamplePointIndex sample_point_index = 0; !file.eof(); ++sample_point_index)
 	{
 		std::getline(file, buffer);
 
@@ -279,8 +279,9 @@ bool MeshCuboidStructure::load_sample_points(const char *_filename, bool _verbos
 		pz = atof(token.c_str());
 		MyMesh::Point pos = MyMesh::Point(px, py, pz);
 
-		sample_points_.push_back(
-			new MeshSamplePoint(corr_fid, bary_coord, pos));
+		MeshSamplePoint *sample_point = new MeshSamplePoint(sample_point_index, corr_fid, bary_coord, pos);
+		sample_points_.push_back(sample_point);
+		assert(sample_points_[sample_point_index] == sample_point);
 	}
 
 	file.close();
@@ -378,7 +379,7 @@ bool MeshCuboidStructure::load_sample_point_labels(const char *_filename, bool _
 	return true;
 }
 
-bool MeshCuboidStructure::load_cuboids(const char *_filename, bool _verbose)
+bool MeshCuboidStructure::test_load_cuboids(const char *_filename, bool _verbose)
 {
 	std::ifstream file(_filename);
 	if (!file)
@@ -438,6 +439,7 @@ bool MeshCuboidStructure::load_cuboids(const char *_filename, bool _verbose)
 		label_cuboids_.push_back(new_label_cuboid);
 	}
 
+	SamplePointIndex sample_point_index = 0;
 	////
 	//for (unsigned int label_index = 0; label_index < num_labels(); ++label_index)
 	if (num_labels() > 0)
@@ -467,8 +469,9 @@ bool MeshCuboidStructure::load_cuboids(const char *_filename, bool _verbose)
 				Real py = (max_y - min_y) / static_cast<Real>(num_axis_points - 1) * j + min_y;
 
 				MyMesh::Point pos = MyMesh::Point(px, py, pz);
-				MeshSamplePoint *sample_point = new MeshSamplePoint(0, MyMesh::Point(0.0), pos);
+				MeshSamplePoint *sample_point = new MeshSamplePoint(sample_point_index, 0, MyMesh::Point(0.0), pos);
 				sample_point->label_index_confidence_.resize(num_labels());
+				++sample_point_index;
 
 				for (unsigned int label_index = 0; label_index < num_labels(); label_index++)
 					sample_point->label_index_confidence_[label_index] = 0;
@@ -549,6 +552,7 @@ void MeshCuboidStructure::make_mesh_vertices_as_sample_points()
 	apply_mesh_transformation();
 
 	sample_points_.reserve(3 * mesh_->n_faces());
+	SamplePointIndex sample_point_index = 0;
 
 	for (MyMesh::FaceIter f_it = mesh_->faces_begin(); f_it != mesh_->faces_end(); ++f_it)
 	{
@@ -566,8 +570,8 @@ void MeshCuboidStructure::make_mesh_vertices_as_sample_points()
 
 			MyMesh::Point pos = mesh_->point(vh);
 
-			sample_points_.push_back(
-				new MeshSamplePoint(corr_fid, bary_coord, pos));
+			sample_points_.push_back(new MeshSamplePoint(sample_point_index, corr_fid, bary_coord, pos));
+			++sample_point_index;
 		}
 	}
 }
@@ -877,6 +881,13 @@ void MeshCuboidStructure::remove_occluded_sample_points(
 			it = sample_points_.erase(it);
 		else
 			++it;
+	}
+
+	// Re-numbering.
+	for (SamplePointIndex sample_point_index = 0; sample_point_index < num_sample_points(); ++sample_point_index)
+	{
+		MeshSamplePoint *sample_point = sample_points_[sample_point_index];
+		sample_point->sample_point_index_ = sample_point_index;
 	}
 
 	delete[] is_face_visible;

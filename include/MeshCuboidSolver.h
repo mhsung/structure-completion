@@ -76,8 +76,9 @@ void add_missing_cuboids(
 	const std::list<LabelIndex> &_missing_label_indices,
 	const MeshCuboidPredictor &_predictor);
 
-void evaluate_segmentation(
+bool evaluate_segmentation(
 	const MeshCuboidStructure &_cuboid_structure,
+	std::vector<LabelIndex> _sample_point_label_indices,
 	const std::string _mesh_name,
 	const std::string _stats_filename);
 

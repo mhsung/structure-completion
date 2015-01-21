@@ -459,13 +459,13 @@ void MeshCuboidTrainer::get_cond_normal_relations(
 	}
 }
 
-void MeshCuboidTrainer::get_label_cooccurrences(std::vector< std::list<LabelIndex> > &_cooccurrence_labels)const
+void MeshCuboidTrainer::get_conflicted_labels(std::vector< std::list<LabelIndex> > &_coflicted_labels)const
 {
 	unsigned int num_labels = feature_list_.size();
 	assert(transformation_list_.size() == num_labels);
 
-	_cooccurrence_labels.clear();
-	_cooccurrence_labels.resize(num_labels);
+	_coflicted_labels.clear();
+	_coflicted_labels.resize(num_labels);
 
 	for (unsigned int label_index_1 = 0; label_index_1 < num_labels; ++label_index_1)
 	{
@@ -497,10 +497,10 @@ void MeshCuboidTrainer::get_label_cooccurrences(std::vector< std::list<LabelInde
 				++f_it_2;
 			}
 
-			// NOTE: If both labels appear simultaneously at least in one object,
-			// they are defined as co-occurred labels.
-			if (num_objects > 0)
-				_cooccurrence_labels[label_index_1].push_back(label_index_2);
+			// NOTE: If both labels have never appeared simultaneously in any object,
+			// they are defined as conflicted labels.
+			if (num_objects == 0)
+				_coflicted_labels[label_index_1].push_back(label_index_2);
 		}
 	}
 }
@@ -512,89 +512,99 @@ void MeshCuboidTrainer::get_missing_label_index_groups(
 	unsigned int num_labels = feature_list_.size();
 	assert(transformation_list_.size() == num_labels);
 
-	std::vector< std::list<LabelIndex> > cooccurrence_labels;
-	get_label_cooccurrences(cooccurrence_labels);
-	assert(cooccurrence_labels.size() == num_labels);
+	std::vector< std::list<LabelIndex> > conflicted_labels;
+	get_conflicted_labels(conflicted_labels);
+	assert(conflicted_labels.size() == num_labels);
 
 
-	// Consider co-occurring labels of the given label indices.
+	// Consider conflicted labels of the given label indices.
 	bool *is_label_missing = new bool[num_labels];
 	memset(is_label_missing, true, num_labels*sizeof(bool));
 
 	for (std::list<LabelIndex>::const_iterator it = _given_label_indices.begin();
 		it != _given_label_indices.end(); ++it)
 	{
-		LabelIndex curr_label_index = (*it);
-		assert(curr_label_index < num_labels);
+		LabelIndex label_index = (*it);
+		assert(label_index < num_labels);
 
-		bool *is_label_cooccurred = new bool[num_labels];
-		memset(is_label_cooccurred, false, num_labels*sizeof(bool));
-		is_label_cooccurred[curr_label_index] = true;
+		// Ignore the given labels.
+		is_label_missing[label_index] = false;
 
-		const std::list<LabelIndex> &curr_cooccurrence_labels = cooccurrence_labels[curr_label_index];
-		for (std::list<LabelIndex>::const_iterator n_it = curr_cooccurrence_labels.begin();
-			n_it != curr_cooccurrence_labels.end(); ++n_it)
+		// Ignore conflicted labels of the given labels.
+		for (std::list<LabelIndex>::const_iterator n_it = conflicted_labels[label_index].begin();
+			n_it != conflicted_labels[label_index].end(); ++n_it)
 		{
-			LabelIndex neighbor_label_index = (*n_it);
-			assert(neighbor_label_index < num_labels);
-			is_label_cooccurred[neighbor_label_index] = true;
+			LabelIndex n_label_index = (*n_it);
+			assert(n_label_index < num_labels);
+			is_label_missing[n_label_index] = false;
 		}
-
-		// Ignore non-co-occurred labels.
-		for (LabelIndex label_index = 0; label_index < num_labels; ++label_index)
-			if (!is_label_cooccurred[label_index])
-				is_label_missing[label_index] = false;
-
-		// Ignore existing labels.
-		is_label_missing[curr_label_index] = false;
-
-		delete[] is_label_cooccurred;
 	}
 
 
 	// Clustering missing label indices.
+
+	// Any missing label should be included at least once in any of the missing label groups.
+	bool *is_label_not_included = new bool[num_labels];
+	memcpy(is_label_not_included, is_label_missing, num_labels*sizeof(bool));
 	_missing_label_index_groups.clear();
 
 	while (true)
 	{
+		// Find a label which is never included in any of the missing label groups.
 		LabelIndex seed_label_index = 0;
 		for (; seed_label_index < num_labels; ++seed_label_index)
-			if (is_label_missing[seed_label_index])
+			if (is_label_not_included[seed_label_index])
 				break;
 
 		if (seed_label_index == num_labels) break;
+		//printf("- seed : %d\n", seed_label_index);
 
-		std::deque<LabelIndex> queue;
-		queue.push_back(seed_label_index);
-		is_label_missing[seed_label_index] = false;
-
-
+		// Any missing label can be added
+		// (even though it has been in included in other missing label groups).
+		bool *is_label_available = new bool[num_labels];
+		memcpy(is_label_available, is_label_missing, num_labels*sizeof(bool));
 		std::list<LabelIndex> missing_label_indices;
-		while (!queue.empty())
+
+		std::list<LabelIndex> label_queue;
+		label_queue.push_back(seed_label_index);
+
+		// Add all labels in to the queue.
+		// The order does not matter except the seed.
+		// The seed should be first since it must be added.
+		for (LabelIndex label_index = 0; label_index < num_labels; ++label_index)
+			if (label_index != seed_label_index)
+				label_queue.push_back(label_index);
+
+
+		for (std::list<LabelIndex>::iterator it = label_queue.begin(); it != label_queue.end(); ++it)
 		{
-			LabelIndex curr_label_index = queue.front();
-			assert(curr_label_index < num_labels);
-			missing_label_indices.push_back(curr_label_index);
-			queue.pop_front();
+			LabelIndex label_index = (*it);
 
-			const std::list<LabelIndex> &curr_cooccurrence_labels = cooccurrence_labels[curr_label_index];
-			for (std::list<LabelIndex>::const_iterator n_it = curr_cooccurrence_labels.begin();
-				n_it != curr_cooccurrence_labels.end(); ++n_it)
+			if (is_label_available[label_index])
 			{
-				LabelIndex neighbor_label_index = (*n_it);
-				assert(neighbor_label_index < num_labels);
+				missing_label_indices.push_back(label_index);
+				//printf("- added : %d\n", label_index);
 
-				if (is_label_missing[neighbor_label_index])
+				is_label_available[label_index] = false;
+				// The label is included in a group.
+				is_label_not_included[label_index] = false;
+
+				// Any conflicted label becomes unavailable.
+				for (std::list<LabelIndex>::const_iterator n_it = conflicted_labels[label_index].begin();
+					n_it != conflicted_labels[label_index].end(); ++n_it)
 				{
-					queue.push_back(neighbor_label_index);
-					is_label_missing[neighbor_label_index] = false;
+					LabelIndex n_label_index = (*n_it);
+					assert(n_label_index < num_labels);
+					is_label_available[n_label_index] = false;
 				}
 			}
 		}
-
+		
 		_missing_label_index_groups.push_back(missing_label_indices);
+		delete[] is_label_available;
 	}
 
+	delete[] is_label_not_included;
 	delete[] is_label_missing;
 }
 

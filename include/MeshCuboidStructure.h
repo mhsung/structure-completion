@@ -54,7 +54,7 @@ public:
 
 	// FIXME.
 	// Test code.
-	bool load_cuboids(const char *_filename, bool _verbose = true);
+	bool test_load_cuboids(const char *_filename, bool _verbose = true);
 
 	std::vector<MeshCuboid *> get_all_cuboids()const;
 
