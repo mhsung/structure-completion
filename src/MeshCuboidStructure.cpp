@@ -17,6 +17,51 @@ MeshCuboidStructure::~MeshCuboidStructure()
 {
 }
 
+MeshCuboidStructure& MeshCuboidStructure::operator=(const MeshCuboidStructure& _other)
+{
+	this->mesh_ = _other.mesh_;
+
+	this->labels_ = _other.labels_;
+	this->label_names_ = _other.label_names_;
+	this->label_symmetries_ = _other.label_symmetries_;
+
+	this->translation_ = _other.translation_;
+	this->scale_ = _other.scale_;
+
+	this->query_label_index_ = _other.query_label_index_;
+
+	// Deep copy sample points.
+	assert(_other.sample_points_.size() == _other.num_sample_points());
+	this->sample_points_.clear();
+	this->sample_points_.reserve(_other.num_sample_points());
+
+	for (std::vector<MeshSamplePoint *>::const_iterator it = _other.sample_points_.begin();
+		it != _other.sample_points_.end(); ++it)
+	{
+		MeshSamplePoint *sample_point = new MeshSamplePoint(**it);
+		this->sample_points_.push_back(sample_point);
+	}
+
+	// Deep copy label cuboids.
+	assert(_other.label_cuboids_.size() == _other.num_labels());
+	unsigned int num_labels = _other.num_labels();
+	this->label_cuboids_.clear();
+	this->label_cuboids_.resize(num_labels);
+
+	for (LabelIndex label_index = 0; label_index < num_labels; ++label_index)
+	{
+		this->label_cuboids_[label_index].reserve(_other.label_cuboids_[label_index].size());
+		for (std::vector<MeshCuboid *>::const_iterator it = _other.label_cuboids_[label_index].begin();
+			it != _other.label_cuboids_[label_index].end(); ++it)
+		{
+			MeshCuboid *cuboid = new MeshCuboid(**it);
+			this->label_cuboids_[label_index].push_back(cuboid);
+		}
+	}
+
+	return (*this);
+}
+
 void MeshCuboidStructure::clear()
 {
 	clear_sample_points();

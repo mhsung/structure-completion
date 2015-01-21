@@ -192,21 +192,22 @@ MeshCuboid::MeshCuboid(const LabelIndex _label_index)
 
 MeshCuboid::MeshCuboid(const MeshCuboid& _other)
 {
-	this->sample_points_ = _other.sample_points_;
-
 	this->label_index_ = _other.label_index_;
 
+	// NOTE:
+	// Do not deep copy sample points.
+	this->sample_points_ = _other.sample_points_;
+
+	this->sample_to_cuboid_surface_correspondence_ = _other.sample_to_cuboid_surface_correspondence_;
+	this->cuboid_surface_to_sample_corresopndence_ = _other.cuboid_surface_to_sample_corresopndence_;
+
+	this->bbox_axes_ = _other.bbox_axes_;
 	this->bbox_center_ = _other.bbox_center_;
-
 	this->bbox_size_ = _other.bbox_size_;
-
 	this->bbox_corners_ = _other.bbox_corners_;
 
-	for (unsigned int axis_index = 0; axis_index < 3; ++axis_index)
-		this->bbox_axes_[axis_index] = _other.bbox_axes_[axis_index];
-
-	// NOTE:
 	// Deep copy cuboid surface points.
+	assert(_other.cuboid_surface_points_.size() == _other.num_cuboid_surface_points());
 	this->cuboid_surface_points_.clear();
 	this->cuboid_surface_points_.reserve(_other.num_cuboid_surface_points());
 
@@ -221,21 +222,22 @@ MeshCuboid::MeshCuboid(const MeshCuboid& _other)
 
 MeshCuboid& MeshCuboid::operator=(const MeshCuboid& _other)
 {
-	this->sample_points_ = _other.sample_points_;
-
 	this->label_index_ = _other.label_index_;
 
+	// NOTE:
+	// Do not deep copy sample points.
+	this->sample_points_ = _other.sample_points_;
+
+	this->sample_to_cuboid_surface_correspondence_ = _other.sample_to_cuboid_surface_correspondence_;
+	this->cuboid_surface_to_sample_corresopndence_ = _other.cuboid_surface_to_sample_corresopndence_;
+
+	this->bbox_axes_ = _other.bbox_axes_;
 	this->bbox_center_ = _other.bbox_center_;
-
 	this->bbox_size_ = _other.bbox_size_;
-
 	this->bbox_corners_ = _other.bbox_corners_;
 
-	for (unsigned int axis_index = 0; axis_index < 3; ++axis_index)
-		this->bbox_axes_[axis_index] = _other.bbox_axes_[axis_index];
-
-	// NOTE:
 	// Deep copy cuboid surface points.
+	assert(_other.cuboid_surface_points_.size() == _other.num_cuboid_surface_points());
 	this->cuboid_surface_points_.clear();
 	this->cuboid_surface_points_.reserve(_other.num_cuboid_surface_points());
 

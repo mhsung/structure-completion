@@ -544,17 +544,12 @@ void MeshViewerWidget::run_prediction()
 
 	std::string snapshot_filename_prefix = FLAGS_output_path + std::string("/") + mesh_name + std::string("_");
 	std::stringstream snapshot_filename_sstr;
-	unsigned int snapshot_index = 0;
 
-	std::string log_filename = FLAGS_output_path + std::string("/") + mesh_name + std::string("_log.txt");
-	std::ofstream log_file(log_filename);
-	log_file.clear();
-	log_file.close();
+	std::string log_filename_prefix = FLAGS_output_path + std::string("/") + mesh_name + std::string("_log_");
+	std::stringstream log_filename_sstr;
 
-	std::string stats_filename = FLAGS_output_path + std::string("/") + mesh_name + std::string("_stats.csv");
-	std::ofstream stats_file(stats_filename);
-	stats_file.clear();
-	stats_file.close();
+	std::string stats_filename_prefix = FLAGS_output_path + std::string("/") + mesh_name + std::string("_stats_");
+	std::stringstream stats_filename_sstr;
 
 	QDir output_dir;
 	output_dir.mkpath(FLAGS_output_path.c_str());
@@ -600,8 +595,8 @@ void MeshViewerWidget::run_prediction()
 	}
 
 
-	// Start prediction process.
-	std::cout << "\n1. Remove occluded points." << std::endl;
+	// Pre-processing.
+	std::cout << "\n - Remove occluded points." << std::endl;
 	open_modelview_matrix_file(FLAGS_occlusion_pose_filename.c_str());
 	remove_occluded_points();
 	//run_occlusion_test();
@@ -621,100 +616,125 @@ void MeshViewerWidget::run_prediction()
 	//assert(occlusion_test_points_kd_tree);
 
 	open_modelview_matrix_file(FLAGS_pose_filename.c_str());
-
+	mesh_.clear_colors();
 
 	draw_occlusion_test_points_ = true;
 	updateGL();
 	snapshot_filename_sstr.clear(); snapshot_filename_sstr.str("");
-	snapshot_filename_sstr << snapshot_filename_prefix << snapshot_index;
+	snapshot_filename_sstr << snapshot_filename_prefix << std::string("_input");
 	slotSnapshot(snapshot_filename_sstr.str().c_str());
-	++snapshot_index;
 	draw_occlusion_test_points_ = false;
 
 
-	std::cout << "\n2. Cluster points and construct initial cuboids." << std::endl;
-	cuboid_structure_.compute_label_cuboids();
+	std::cout << "\n - Cluster points and construct initial cuboids." << std::endl;
+	draw_cuboid_axes_ = false;
 
+	cuboid_structure_.compute_label_cuboids();
 	// Remove cuboids in symmetric labels.
 	cuboid_structure_.remove_symmetric_cuboids();
-
-	update_cuboid_surface_points(cuboid_structure_, occlusion_modelview_matrix);
-
-	mesh_.clear_colors();
-	draw_cuboid_axes_ = false;
-	updateGL();
-	snapshot_filename_sstr.clear(); snapshot_filename_sstr.str("");
-	snapshot_filename_sstr << snapshot_filename_prefix << snapshot_index;
-	slotSnapshot(snapshot_filename_sstr.str().c_str());
-	++snapshot_index;
-	draw_cuboid_axes_ = true;
 
 	if (cuboid_structure_.get_all_cuboids().empty())
 		return;
 
-
-	const unsigned int max_iterations = 10;
-	bool stop_iteration = false;
+	update_cuboid_surface_points(cuboid_structure_, occlusion_modelview_matrix);
 	
-	std::vector<LabelIndex> sample_point_label_indices(cuboid_structure_.num_sample_points(),
-		cuboid_structure_.num_labels());
 
-	for (unsigned int iteration = 0; iteration < max_iterations; ++iteration)
+	// Sub-routine.
+	bool first_iteration = true;
+	bool last_iteration = false;
+
+	std::list< std::pair<std::string, MeshCuboidStructure> > cuboid_structure_candidates;
+	cuboid_structure_candidates.push_back(std::make_pair(std::string("0"), cuboid_structure_));
+
+
+	while (!cuboid_structure_candidates.empty())
 	{
-		std::cout << "\n3. Recognize labels and axes configurations." << std::endl;
+		// FIXME:
+		// The cuboid structure should not deep copy all sample points.
+		std::string cuboid_structure_name = cuboid_structure_candidates.front().first;
+		cuboid_structure_ = cuboid_structure_candidates.front().second;
+		cuboid_structure_candidates.pop_front();
 
-		// NOTE:
-		// Use symmetric label information only at the first time of the iteration.
-		bool first_iteration = (iteration == 0);
-		recognize_labels_and_axes_configurations(
-			cuboid_structure_, joint_normal_predictor, log_filename, first_iteration, true);
+		unsigned int snapshot_index = 0;
+		log_filename_sstr.clear(); log_filename_sstr.str("");
+		log_filename_sstr << log_filename_prefix << std::string("_c_") << cuboid_structure_name;
+		std::ofstream log_file(log_filename_sstr.str());
+		log_file.clear(); log_file.close();
 
-		draw_cuboid_axes_ = true;
+		stats_filename_sstr.clear(); stats_filename_sstr.str("");
+		stats_filename_sstr << stats_filename_prefix << std::string("_c_") << cuboid_structure_name;
+
+
 		updateGL();
 		snapshot_filename_sstr.clear(); snapshot_filename_sstr.str("");
-		snapshot_filename_sstr << snapshot_filename_prefix << snapshot_index;
+		snapshot_filename_sstr << snapshot_filename_prefix
+			<< std::string("_c_") << cuboid_structure_name
+			<< std::string("_s_") << snapshot_index;
+		slotSnapshot(snapshot_filename_sstr.str().c_str());
+		++snapshot_index;
+		draw_cuboid_axes_ = true;
+		
+
+		std::cout << "\n1. Recognize labels and axes configurations." << std::endl;
+		// NOTE:
+		// Use symmetric label information only at the first time of the iteration.
+		recognize_labels_and_axes_configurations(cuboid_structure_,
+			joint_normal_predictor, log_filename_sstr.str(), first_iteration,
+			true);
+		first_iteration = false;
+
+		updateGL();
+		snapshot_filename_sstr.clear(); snapshot_filename_sstr.str("");
+		snapshot_filename_sstr << snapshot_filename_prefix
+			<< std::string("_c_") << cuboid_structure_name
+			<< std::string("_s_") << snapshot_index;
 		slotSnapshot(snapshot_filename_sstr.str().c_str());
 		++snapshot_index;
 
 
-		std::cout << "\n4. Segment sample points." << std::endl;
+		std::cout << "\n2. Segment sample points." << std::endl;
 		segment_sample_points(cuboid_structure_);
 
-		for (cuboid_structure_.query_label_index_ = 0;
-			cuboid_structure_.query_label_index_ <= cuboid_structure_.label_cuboids_.size();
-			++cuboid_structure_.query_label_index_)
-		{
-			updateGL();
-			snapshot_filename_sstr.clear(); snapshot_filename_sstr.str("");
-			snapshot_filename_sstr << snapshot_filename_prefix << snapshot_index << std::string("_")
-				<< cuboid_structure_.query_label_index_;
-			slotSnapshot(snapshot_filename_sstr.str().c_str());
-		}
+		updateGL();
+		snapshot_filename_sstr.clear(); snapshot_filename_sstr.str("");
+		snapshot_filename_sstr << snapshot_filename_prefix
+			<< std::string("_c_") << cuboid_structure_name
+			<< std::string("_s_") << snapshot_index;
+		slotSnapshot(snapshot_filename_sstr.str().c_str());
 		++snapshot_index;
 
-		//ret = evaluate_segmentation(cuboid_structure_, sample_point_label_indices, mesh_name, stats_filename);
-		//if (ret) break;
 
-
-		std::cout << "\n5. Optimize cuboid attributes." << std::endl;
+		std::cout << "\n3. Optimize cuboid attributes." << std::endl;
 		const double quadprog_ratio = 1E4;
 		const unsigned int max_optimization_iteration = 5;
 
 		optimize_attributes(cuboid_structure_, occlusion_modelview_matrix,
-			joint_normal_predictor, quadprog_ratio,
-			log_filename, max_optimization_iteration, this);
+			joint_normal_predictor, quadprog_ratio, log_filename_sstr.str(),
+			max_optimization_iteration, this);
 
 		updateGL();
 		snapshot_filename_sstr.clear(); snapshot_filename_sstr.str("");
-		snapshot_filename_sstr << snapshot_filename_prefix << snapshot_index;
+		snapshot_filename_sstr << snapshot_filename_prefix
+			<< std::string("_c_") << cuboid_structure_name
+			<< std::string("_s_") << snapshot_index;
 		slotSnapshot(snapshot_filename_sstr.str().c_str());
 		++snapshot_index;
 
-		if (stop_iteration)
-			break;
+
+		// Escape loop.
+		if (last_iteration)
+		{
+			if (mesh_label_file.exists())
+			{
+				evaluate_segmentation(cuboid_structure_, mesh_name, stats_filename_sstr.str());
+			}
+
+			last_iteration = false;
+			continue;
+		}
 
 
-		std::cout << "\n6. Add missing cuboids." << std::endl;
+		std::cout << "\n4. Add missing cuboids." << std::endl;
 		assert(cuboid_structure_.num_labels() == num_labels);
 		std::list<LabelIndex> given_label_indices;
 		for (LabelIndex label_index = 0; label_index < num_labels; ++label_index)
@@ -725,32 +745,36 @@ void MeshViewerWidget::run_prediction()
 		trainer.get_missing_label_index_groups(given_label_indices, missing_label_index_groups);
 
 
-		// NOTE:
-		// Iterate the sub-routine until there is no more missing label.
-		if (!missing_label_index_groups.empty())
-		{
-			// FIXME: 
-			// All clusters in 'missing_label_index_groups' should be considered.
-			add_missing_cuboids(cuboid_structure_, occlusion_modelview_matrix,
-				missing_label_index_groups.front(),
-				joint_normal_predictor);
+		unsigned int missing_label_index_group_index = 0;
 
-			updateGL();
-			snapshot_filename_sstr.clear(); snapshot_filename_sstr.str("");
-			snapshot_filename_sstr << snapshot_filename_prefix << snapshot_index;
-			slotSnapshot(snapshot_filename_sstr.str().c_str());
-			++snapshot_index;
+		// NOTE:
+		// If there is no missing label, the next iteration becomes the last one.
+		if (missing_label_index_groups.empty())
+		{
+			std::stringstream new_cuboid_structure_name;
+			new_cuboid_structure_name << cuboid_structure_name << missing_label_index_group_index;
+			cuboid_structure_candidates.push_front(
+				std::make_pair(new_cuboid_structure_name.str(), cuboid_structure_));
+			last_iteration = true;
 		}
 		else
 		{
-			// Stop iteration next time.
-			stop_iteration = true;
-		}
-	}
+			for (std::list< std::list<LabelIndex> >::iterator it = missing_label_index_groups.begin();
+				it != missing_label_index_groups.end(); ++it)
+			{
+				std::list<LabelIndex> &missing_label_indices = (*it);
+				MeshCuboidStructure new_cuboid_structure = cuboid_structure_;
 
-	if (mesh_label_file.exists())
-	{
-		evaluate_segmentation(cuboid_structure_, sample_point_label_indices, mesh_name, stats_filename);
+				add_missing_cuboids(new_cuboid_structure, occlusion_modelview_matrix,
+					missing_label_indices, joint_normal_predictor);
+
+				std::stringstream new_cuboid_structure_name;
+				new_cuboid_structure_name << cuboid_structure_name << missing_label_index_group_index;
+				cuboid_structure_candidates.push_front(
+					std::make_pair(new_cuboid_structure_name.str(), new_cuboid_structure));
+				++missing_label_index_group_index;
+			}
+		}
 	}
 
 

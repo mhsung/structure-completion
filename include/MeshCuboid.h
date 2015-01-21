@@ -28,12 +28,21 @@ public:
 		SamplePointIndex _sample_point_index,
 		FaceIndex _corr_fid,
 		MyMesh::Point _bary_coord,
-		MyMesh::Point _pos)
+		MyMesh::Point _point)
 		: sample_point_index_(_sample_point_index)
 		, corr_fid_(_corr_fid)
 		, bary_coord_(_bary_coord)
-		, point_(_pos) {};
-	virtual ~MeshSamplePoint() {};
+		, point_(_point)
+	{}
+
+	MeshSamplePoint(
+		const MeshSamplePoint& _other)
+		: sample_point_index_(_other.sample_point_index_)
+		, corr_fid_(_other.corr_fid_)
+		, bary_coord_(_other.bary_coord_)
+		, point_(_other.point_)
+		, label_index_confidence_(_other.label_index_confidence_)
+	{}
 
 	SamplePointIndex sample_point_index_;
 	FaceIndex corr_fid_;
@@ -54,7 +63,7 @@ public:
 		, normal_(_normal)
 		, cuboid_face_index_(_cuboid_face_index)
 		, corner_weights_(_corner_weights)
-		, visibility_(0)
+		, visibility_(0) 
 	{}
 
 	MeshCuboidSurfacePoint(

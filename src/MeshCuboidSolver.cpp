@@ -725,6 +725,8 @@ void compute_labels_and_axes_configuration_potentials(
 			assert(label_index < num_labels);
 			assert(axis_configuration_index < num_axis_configurations);
 
+			// FIXME:
+			// The cuboid should not deep copy all cuboid surface points.
 			MeshCuboid *cuboid = new MeshCuboid(*_cuboids[cuboid_index]);	// Copy constructor.
 			cuboid->set_label_index(label_index);
 			cuboid->set_axis_configuration(axis_configuration_index);
@@ -1723,13 +1725,13 @@ void add_missing_cuboids(
 	}
 }
 
-bool evaluate_segmentation(
+void evaluate_segmentation(
 	const MeshCuboidStructure &_cuboid_structure,
-	std::vector<LabelIndex> _sample_point_label_indices,
+	//std::vector<LabelIndex> _sample_point_label_indices,
 	const std::string _mesh_name,
 	const std::string _stats_filename)
 {
-	assert(_sample_point_label_indices.size() == _cuboid_structure.num_sample_points());
+	//assert(_sample_point_label_indices.size() == _cuboid_structure.num_sample_points());
 
 	const MyMesh *mesh = _cuboid_structure.mesh_;
 	assert(mesh);
@@ -1743,8 +1745,8 @@ bool evaluate_segmentation(
 
 
 	int num_cuboid_sample_points = 0;
-	int num_changed_sample_point_labels = 0;
 	int num_correct_sample_point_labels = 0;
+	//int num_changed_sample_point_labels = 0;
 
 	for (LabelIndex label_index = 0; label_index < num_labels; ++label_index)
 	{
@@ -1763,15 +1765,16 @@ bool evaluate_segmentation(
 			{
 				const MeshSamplePoint *sample_point = (*s_it);
 				assert(sample_point);
-				SamplePointIndex sample_point_index = sample_point->sample_point_index_;
-				assert(sample_point_index < _sample_point_label_indices.size());
-				assert(_cuboid_structure.sample_points_[sample_point_index] == sample_point);
 
-				if (label_index != _sample_point_label_indices[sample_point_index])
-				{
-					_sample_point_label_indices[sample_point_index] = label_index;
-					++num_changed_sample_point_labels;
-				}
+				//SamplePointIndex sample_point_index = sample_point->sample_point_index_;
+				//assert(sample_point_index < _sample_point_label_indices.size());
+				//assert(_cuboid_structure.sample_points_[sample_point_index] == sample_point);
+
+				//if (label_index != _sample_point_label_indices[sample_point_index])
+				//{
+				//	_sample_point_label_indices[sample_point_index] = label_index;
+				//	++num_changed_sample_point_labels;
+				//}
 
 				assert(sample_point->corr_fid_ < mesh->n_faces());
 				MyMesh::FaceHandle fh = mesh->face_handle(sample_point->corr_fid_);
@@ -1807,7 +1810,6 @@ bool evaluate_segmentation(
 	std::cout << sstr.str();
 	stats_file << sstr.str();
 	stats_file.close();
-	return true;
 }
 
 /*

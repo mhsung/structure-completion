@@ -21,6 +21,8 @@ public:
 	MeshCuboidStructure(const MyMesh *_mesh);
 	~MeshCuboidStructure();
 
+	MeshCuboidStructure& operator=(const MeshCuboidStructure& _other);	// Copy assignment.
+
 	void clear();
 	void clear_sample_points();
 	void clear_cuboids();
@@ -52,10 +54,6 @@ public:
 
 	bool load_sample_point_labels(const char *_filename, bool _verbose = true);
 
-	// FIXME.
-	// Test code.
-	bool test_load_cuboids(const char *_filename, bool _verbose = true);
-
 	std::vector<MeshCuboid *> get_all_cuboids()const;
 
 	void make_mesh_vertices_as_sample_points();
@@ -84,6 +82,9 @@ public:
 
 	// Remove cuboids in symmetric labels (when the same cuboids are duplicated for symmetric labels).
 	void remove_symmetric_cuboids();
+
+	// TEST.
+	bool test_load_cuboids(const char *_filename, bool _verbose = true);
 
 	// Apply labels in new indices.
 	//bool set_new_label_indices(const std::vector<Label>& _labels);

@@ -537,13 +537,16 @@ void MeshViewerWidget::draw_openmesh(const std::string& _drawmode)
 			}
 			glEnd();
 		}
+		*/
 
 		// Draw edges (Black).
 		glPolygonMode( GL_FRONT_AND_BACK, GL_LINE);
-		black_color();
+		gray_color();
+		glLineWidth(0.1f);
 		glDepthRange( 0.0, 1.0 );
 		draw_openmesh( "Wireframe" );
 
+		/*
 		// Draw a seed (Red).
 		if( mesh_.seed_vertex_index_ < mesh_.n_vertices() )
 		{
@@ -608,7 +611,7 @@ void MeshViewerWidget::draw_openmesh(const std::string& _drawmode)
 					radius = (*it)->label_index_confidence_[cuboid_structure_.query_label_index_];
 				}
 
-				radius = radius * (mesh_.get_object_diameter() * 0.002) * point_size_;
+				radius = radius * (mesh_.get_object_diameter() * 0.01) * point_size_;
 				if (radius > 0)
 				{
 					glPushMatrix();

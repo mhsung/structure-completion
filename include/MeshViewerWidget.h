@@ -351,6 +351,7 @@ protected:
 	void yellow_color()	{ glColor4f(255.0f / 256.0f, 192.0f / 256.0f,   0.0f / 256.0f, 1.0f); }
 	void violet_color()	{ glColor4f(112.0f / 256.0f,  48.0f / 256.0f, 160.0f / 256.0f, 1.0f); }
 	void black_color()	{ glColor4f(  0.0f / 256.0f,  32.0f / 256.0f,  96.0f / 256.0f, 1.0f); }
+	void gray_color()	{ glColor4f(127.0f / 256.0f, 127.0f / 256.0f, 127.0f / 256.0f, 1.0f); }
 
 	/// draw the mesh
 	virtual void draw_scene(const std::string& _draw_mode)
