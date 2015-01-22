@@ -19,9 +19,12 @@
 class MeshCuboidStructure {
 public:
 	MeshCuboidStructure(const MyMesh *_mesh);
+	MeshCuboidStructure(const MeshCuboidStructure& _other);	// Copy constructor.
 	~MeshCuboidStructure();
 
 	MeshCuboidStructure& operator=(const MeshCuboidStructure& _other);	// Copy assignment.
+	void deep_copy(const MeshCuboidStructure& _other);
+
 
 	void clear();
 	void clear_sample_points();

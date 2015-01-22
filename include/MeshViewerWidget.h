@@ -73,7 +73,7 @@
 #include "MyMesh.h"
 #include "MeshCuboidStructure.h"
 #include "MeshCuboidPredictor.h"
-#include "QGLOcculsionTestWidget.h"
+//#include "QGLOcculsionTestWidget.h"
 
 
 //== CLASS DEFINITION =========================================================
@@ -111,14 +111,14 @@ private:
 	MeshCuboidStructure cuboid_structure_;
 	bool draw_cuboid_axes_;
 
-	QGLOcculsionTestWidget *occlusion_test_widget_;
-	std::vector< std::pair<MyMesh::Point, Real> > occlusion_test_points_;
-	bool draw_occlusion_test_points_;
+	//QGLOcculsionTestWidget *occlusion_test_widget_;
+	//std::vector< std::pair<MyMesh::Point, Real> > occlusion_test_points_;
+	//bool draw_occlusion_test_points_;
 
 	MyMesh::Point view_point_;
 	MyMesh::Normal view_direction_;
 
-	// TEST
+	// TEST.
 	std::vector< std::vector<MeshCuboidJointNormalRelations *> > joint_normal_relations_;
 	MeshCuboidJointNormalRelationPredictor *test_joint_normal_predictor_;
 	double test_occlusion_modelview_matrix_[16];
@@ -134,26 +134,26 @@ public:
 		, selection_mode_(PICK_SEED)
 		, cuboid_structure_(&mesh_)
 		, draw_cuboid_axes_(true)
-		, draw_occlusion_test_points_(false)
 		, view_point_(0.0)
 		, view_direction_(0.0)
     {
-		// NOTE:
-		// Enable alpha channel.
-		QGLFormat fmt;
-		fmt.setAlpha(true);
-		occlusion_test_widget_ = new QGLOcculsionTestWidget(fmt);
+		//// NOTE:
+		//// Enable alpha channel.
+		//QGLFormat fmt;
+		//fmt.setAlpha(true);
+		//occlusion_test_widget_ = new QGLOcculsionTestWidget(fmt);
+		//draw_occlusion_test_points_ = false;
 
-		// TEST
+		// TEST.
 		test_joint_normal_predictor_ = NULL;
 		//
 	}
 
 	~MeshViewerWidget()
 	{
-		delete occlusion_test_widget_;
+		//delete occlusion_test_widget_;
 
-		// TEST
+		// TEST.
 		for (LabelIndex label_index_1 = 0; label_index_1 < joint_normal_relations_.size(); ++label_index_1)
 			for (LabelIndex label_index_2 = 0; label_index_2 < joint_normal_relations_[label_index_1].size(); ++label_index_2)
 				delete joint_normal_relations_[label_index_1][label_index_2];
@@ -239,7 +239,7 @@ public slots:
 			open_sample_point_label_file(fileName);
 	}
 
-	void query_open_face_label_file()
+	void query_open_mesh_face_label_file()
 	{
 		QString fileName = QFileDialog::getOpenFileName(this,
 			tr("Open a mesh face label file"),
@@ -247,7 +247,7 @@ public slots:
 			tr("Labels (*.seg);;"
 			"All Files (*)"));
 		if (!fileName.isEmpty())
-			open_face_label_file(fileName);
+			open_mesh_face_label_file(fileName);
 	}
 
 	void query_open_face_label_file_but_preserve_cuboids()
@@ -258,7 +258,7 @@ public slots:
 			tr("Labels (*.seg);;"
 			"All Files (*)"));
 		if (!fileName.isEmpty())
-			open_face_label_file_but_preserve_cuboids(fileName);
+			open_mesh_face_label_file(fileName);
 	}
 
 	void query_open_modelview_matrix_file()
@@ -296,8 +296,9 @@ public slots:
 
 	void open_sample_point_file(QString filename);
 	void open_sample_point_label_file(QString filename);
-	void open_face_label_file(QString filename);
-	void open_face_label_file_but_preserve_cuboids(QString filename);
+	void open_mesh_face_label_file(QString filename);
+	void update_mesh_cuboids();
+	void apply_mesh_labels_to_cuboids();
 
 	void open_modelview_matrix_file(QString filename);
 	void save_modelview_matrix_file(QString filename);
@@ -317,14 +318,11 @@ public slots:
 	void run_batch_prediction();
 	void run_prediction();
 	void run_rendering_point_clusters();
-	void run_occlusion_test();
 	void set_view_direction();
 	void run_print_arguments();
-	//void run_test_joint_normal_training();
-	//void run_test_manual_relations();
-	//void run_test_cca_relations();
+	//void run_occlusion_test();
 
-	// TEST
+	// TEST.
 	void run_test_initialize();
 	void run_test_translate(const MyMesh::Normal _translation);
 	void run_test_scale(const Real _scale_x, const Real _scale_y);

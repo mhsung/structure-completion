@@ -183,12 +183,17 @@ void create_menu(QMainWindow &w)
 
 	runAct = new QAction(w.tr("Open mesh face labels..."), &w);
 	runAct->setStatusTip(w.tr("Open a mesh face label file"));
-	QObject::connect(runAct, SIGNAL(triggered()), w.centralWidget(), SLOT(query_open_face_label_file()));
+	QObject::connect(runAct, SIGNAL(triggered()), w.centralWidget(), SLOT(query_open_mesh_face_label_file()));
 	fileMenu->addAction(runAct);
 
-	runAct = new QAction(w.tr("Open mesh face labels (preserving parts)..."), &w);
-	runAct->setStatusTip(w.tr("Open a mesh face label file (while preserving parts)"));
-	QObject::connect(runAct, SIGNAL(triggered()), w.centralWidget(), SLOT(query_open_face_label_file_but_preserve_cuboids()));
+	fileMenu->addSeparator();
+
+	runAct = new QAction(w.tr("Update mesh cuboids"), &w);
+	QObject::connect(runAct, SIGNAL(triggered()), w.centralWidget(), SLOT(update_mesh_cuboids()));
+	fileMenu->addAction(runAct);
+
+	runAct = new QAction(w.tr("Apply mesh labels to cuboids"), &w);
+	QObject::connect(runAct, SIGNAL(triggered()), w.centralWidget(), SLOT(apply_mesh_labels_to_cuboids()));
 	fileMenu->addAction(runAct);
 
 	fileMenu->addSeparator(); 
@@ -236,16 +241,12 @@ void create_menu(QMainWindow &w)
 	QObject::connect(runAct, SIGNAL(triggered()), w.centralWidget(), SLOT(run_rendering_point_clusters()));
 	w.menuBar()->addAction(runAct);
 
-	runAct = new QAction(w.tr("Occlusion Test"), &w);
-	QObject::connect(runAct, SIGNAL(triggered()), w.centralWidget(), SLOT(run_occlusion_test()));
-	w.menuBar()->addAction(runAct);
-
 	runAct = new QAction(w.tr("Set View Direction"), &w);
 	QObject::connect(runAct, SIGNAL(triggered()), w.centralWidget(), SLOT(set_view_direction()));
 	w.menuBar()->addAction(runAct);
 
 
-	// TEST
+	// TEST.
 	runAct = new QAction(w.tr("[Test] Initialize"), &w);
 	QObject::connect(runAct, SIGNAL(triggered()), w.centralWidget(), SLOT(run_test_initialize()));
 	w.menuBar()->addAction(runAct);

@@ -6,27 +6,34 @@
 
 void MeshViewerWidget::open_sample_point_file(QString filename)
 {
-	cuboid_structure_.load_sample_points(filename.toLocal8Bit());
+	bool ret = cuboid_structure_.load_sample_points(filename.toLocal8Bit());
+	assert(ret);
 	updateGL();
 }
 
 void MeshViewerWidget::open_sample_point_label_file(QString filename)
 {
-	cuboid_structure_.load_sample_point_labels(filename.toLocal8Bit());
+	bool ret = cuboid_structure_.load_sample_point_labels(filename.toLocal8Bit());
+	assert(ret);
 	updateGL();
 }
 
-void MeshViewerWidget::open_face_label_file(QString filename)
+void MeshViewerWidget::open_mesh_face_label_file(QString filename)
 {
 	bool ret = mesh_.load_face_label_simple(filename.toLocal8Bit());
-	if (ret) cuboid_structure_.get_mesh_face_label_cuboids();
+	assert(ret);
 	updateGL();
 }
 
-void MeshViewerWidget::open_face_label_file_but_preserve_cuboids(QString filename)
+void MeshViewerWidget::update_mesh_cuboids()
 {
-	bool ret = mesh_.load_face_label_simple(filename.toLocal8Bit());
-	if (ret) cuboid_structure_.apply_mesh_face_labels_to_cuboids();
+	cuboid_structure_.get_mesh_face_label_cuboids();
+	updateGL();
+}
+
+void MeshViewerWidget::apply_mesh_labels_to_cuboids()
+{
+	cuboid_structure_.apply_mesh_face_labels_to_cuboids();
 	updateGL();
 }
 
@@ -337,7 +344,7 @@ void MeshViewerWidget::keyPressEvent( QKeyEvent* _event)
 		break;
 
 	/*
-	// TEST
+	// TEST.
 	case Key_Left:
 		if (_event->modifiers() & ControlModifier)
 			run_test_rotate(-1.0);

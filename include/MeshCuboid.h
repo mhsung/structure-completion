@@ -90,11 +90,14 @@ public:
 	virtual ~MeshCuboid();
 
 	MeshCuboid& operator=(const MeshCuboid& _other);	// Copy assignment.
+	void deep_copy(const MeshCuboid& _other);
 
 	static const unsigned int k_num_corners = 8;
 	static const unsigned int k_num_faces = 6;
+	static const unsigned int k_num_edges = 12;
 	static const unsigned int k_num_face_corners = 4;
 	static const unsigned int k_face_corner_indices[k_num_faces][k_num_face_corners];
+	static const unsigned int k_face_edges[k_num_edges][2];
 
 	typedef enum {
 		POSITIVE_X_AXIS,
@@ -231,6 +234,9 @@ public:
 	// The distance becomes less than zero when the point is inside the cuboid.
 	void points_to_cuboid_distances(const Eigen::MatrixXd& _points,
 		Eigen::VectorXd &_distances);
+
+	static Real distance_between_cuboids(
+		const MeshCuboid *_cuboid_1, const MeshCuboid *_cuboid_2);
 
 	void print_cuboid()const;
 

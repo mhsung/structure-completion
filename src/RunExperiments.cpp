@@ -1,10 +1,11 @@
 #include "MeshViewerWidget.h"
+#include "MeshCuboidEvaluator.h"
 #include "MeshCuboidNonLinearSolver.h"
 #include "MeshCuboidPredictor.h"
 #include "MeshCuboidRelation.h"
 #include "MeshCuboidTrainer.h"
 #include "MeshCuboidSolver.h"
-#include "QGLOcculsionTestWidget.h"
+//#include "QGLOcculsionTestWidget.h"
 
 #include <Eigen/Core>
 #include <gflags/gflags.h>
@@ -92,76 +93,6 @@ void MeshViewerWidget::set_view_direction()
 	updateGL();
 }
 
-void MeshViewerWidget::run_occlusion_test()
-{
-	assert(occlusion_test_widget_);
-
-	std::vector<Eigen::Vector3f> sample_points;
-	sample_points.reserve(cuboid_structure_.num_sample_points());
-	for (unsigned point_index = 0; point_index < cuboid_structure_.num_sample_points();
-		++point_index)
-	{
-		MyMesh::Point point = cuboid_structure_.sample_points_[point_index]->point_;
-		Eigen::Vector3f point_vec;
-		point_vec << point[0], point[1], point[2];
-		sample_points.push_back(point_vec);
-	}
-
-	occlusion_test_widget_->set_sample_points(sample_points);
-	occlusion_test_widget_->set_modelview_matrix(modelview_matrix_);
-
-	std::array<Eigen::Matrix<float, Eigen::Dynamic, Eigen::Dynamic, Eigen::RowMajor>, 4> occlusion_test_result;
-	occlusion_test_widget_->get_occlusion_test_result(
-		static_cast<float>(FLAGS_occlusion_test_radius), occlusion_test_result);
-
-	occlusion_test_points_.clear();
-	occlusion_test_points_.reserve(occlusion_test_result[0].rows() * occlusion_test_result[0].cols());
-
-	for (unsigned int row = 0; row < occlusion_test_result[0].rows(); ++row)
-	{
-		for (unsigned int col = 0; col < occlusion_test_result[0].cols(); ++col)
-		{
-			Mesh::Point point;
-			for (unsigned int i = 0; i < 3; ++i)
-				point[i] = static_cast<Real>(occlusion_test_result[i](row, col));
-			Real value = static_cast<Real>(occlusion_test_result[3](row, col));
-			assert(value >= 0);
-			assert(value <= 1);
-
-			// NOTE:
-			// Reverse values.
-			// After reversing, the value '1' means that the voxel is perfectly occluded.
-			occlusion_test_points_.push_back(std::make_pair(point, 1.0 - value));
-		}
-	}
-
-	draw_occlusion_test_points_ = true;
-	//updateGL();
-}
-
-ANNkd_tree* create_occlusion_test_points_kd_tree(
-	const std::vector< std::pair<MyMesh::Point, Real> > &_occlusion_test_points,
-	const MeshCuboidStructure &_cuboid_structure,
-	Eigen::VectorXd &_values,
-	ANNpointArray &_ann_points)
-{
-	Eigen::MatrixXd points = Eigen::MatrixXd(3, _occlusion_test_points.size());
-	_values = Eigen::VectorXd(_occlusion_test_points.size());
-
-	for (unsigned point_index = 0; point_index < _occlusion_test_points.size();
-		++point_index)
-	{
-		MyMesh::Point point = _occlusion_test_points[point_index].first;
-		Eigen::Vector3d point_vec;
-		point_vec << point[0], point[1], point[2];
-		points.col(point_index) = point_vec;
-		_values(point_index) = _occlusion_test_points[point_index].second;
-	}
-	
-	ANNkd_tree* kd_tree = ICP::create_kd_tree(points, _ann_points);
-	return kd_tree;
-}
-
 void MeshViewerWidget::run_training()
 {
 	bool ret = true;
@@ -215,16 +146,16 @@ void MeshViewerWidget::run_training()
 			|| file_info.suffix().compare("off") == 0))
 		{
 			std::string mesh_name = std::string(file_info.baseName().toLocal8Bit());
-			std::string mesh_filename = std::string(file_info.filePath().toLocal8Bit());
-			std::string mesh_label_filename = FLAGS_data_root_path + FLAGS_mesh_label_path + std::string("/") + mesh_name + std::string(".seg");
-			std::string sample_filename = FLAGS_data_root_path + FLAGS_sample_path + std::string("/") + mesh_name + std::string(".pts");
-			std::string sample_label_filename = FLAGS_data_root_path + FLAGS_sample_label_path + std::string("/") + mesh_name + std::string(".arff");
-			std::string snapshot_filename = FLAGS_output_path + std::string("/") + mesh_name;
+			std::string mesh_filepath = std::string(file_info.filePath().toLocal8Bit());
+			std::string mesh_label_filepath = FLAGS_data_root_path + FLAGS_mesh_label_path + std::string("/") + mesh_name + std::string(".seg");
+			std::string sample_filepath = FLAGS_data_root_path + FLAGS_sample_path + std::string("/") + mesh_name + std::string(".pts");
+			std::string sample_label_filepath = FLAGS_data_root_path + FLAGS_sample_label_path + std::string("/") + mesh_name + std::string(".arff");
+			std::string snapshot_filepath = FLAGS_output_path + std::string("/") + mesh_name;
 
-			QFileInfo mesh_file(mesh_filename.c_str());
-			QFileInfo sample_file(sample_filename.c_str());
-			QFileInfo sample_label_file(sample_label_filename.c_str());
-			QFileInfo mesh_label_file(mesh_label_filename.c_str());
+			QFileInfo mesh_file(mesh_filepath.c_str());
+			QFileInfo sample_file(sample_filepath.c_str());
+			QFileInfo sample_label_file(sample_label_filepath.c_str());
+			QFileInfo mesh_label_file(mesh_label_filepath.c_str());
 
 			if (!mesh_file.exists()
 				|| !sample_file.exists()
@@ -238,19 +169,20 @@ void MeshViewerWidget::run_training()
 			cuboid_structure_.clear_cuboids();
 			cuboid_structure_.clear_sample_points();
 
-			open_mesh_gui(mesh_filename.c_str());
-			open_sample_point_file(sample_filename.c_str());
+			open_mesh_gui(mesh_filepath.c_str());
+			open_sample_point_file(sample_filepath.c_str());
+			open_mesh_face_label_file(mesh_label_filepath.c_str());
 
 			if (run_ground_truth)
 			{
 				//cuboid_structure_.make_mesh_vertices_as_sample_points();
-				open_face_label_file(mesh_label_filename.c_str());
+				cuboid_structure_.get_mesh_face_label_cuboids();
 			}
 			else
 			{
-				open_sample_point_label_file(sample_label_filename.c_str());
+				open_sample_point_label_file(sample_label_filepath.c_str());
 				cuboid_structure_.compute_label_cuboids();
-				open_face_label_file_but_preserve_cuboids(mesh_label_filename.c_str());
+				cuboid_structure_.apply_mesh_face_labels_to_cuboids();
 			}
 
 			// Find the largest part for each part.
@@ -261,7 +193,7 @@ void MeshViewerWidget::run_training()
 
 			mesh_.clear_colors();
 			updateGL();
-			slotSnapshot(snapshot_filename.c_str());
+			slotSnapshot(snapshot_filepath.c_str());
 
 			
 			assert(cuboid_structure_.num_labels() == num_labels);
@@ -545,10 +477,10 @@ void MeshViewerWidget::run_prediction()
 	std::string snapshot_filename_prefix = FLAGS_output_path + std::string("/") + mesh_name + std::string("_");
 	std::stringstream snapshot_filename_sstr;
 
-	std::string log_filename_prefix = FLAGS_output_path + std::string("/") + mesh_name + std::string("_log_");
+	std::string log_filename_prefix = FLAGS_output_path + std::string("/") + mesh_name + std::string("_log");
 	std::stringstream log_filename_sstr;
 
-	std::string stats_filename_prefix = FLAGS_output_path + std::string("/") + mesh_name + std::string("_stats_");
+	std::string stats_filename_prefix = FLAGS_output_path + std::string("/") + mesh_name + std::string("_stats");
 	std::stringstream stats_filename_sstr;
 
 	QDir output_dir;
@@ -581,8 +513,7 @@ void MeshViewerWidget::run_prediction()
 
 	if (mesh_label_file.exists())
 	{
-		ret = mesh_.load_face_label_simple(mesh_label_filepath.c_str());
-		assert(ret);
+		open_mesh_face_label_file(mesh_label_filepath.c_str());
 	}
 
 	open_sample_point_file(sample_filepath.c_str());
@@ -618,12 +549,10 @@ void MeshViewerWidget::run_prediction()
 	open_modelview_matrix_file(FLAGS_pose_filename.c_str());
 	mesh_.clear_colors();
 
-	draw_occlusion_test_points_ = true;
 	updateGL();
 	snapshot_filename_sstr.clear(); snapshot_filename_sstr.str("");
 	snapshot_filename_sstr << snapshot_filename_prefix << std::string("_input");
 	slotSnapshot(snapshot_filename_sstr.str().c_str());
-	draw_occlusion_test_points_ = false;
 
 
 	std::cout << "\n - Cluster points and construct initial cuboids." << std::endl;
@@ -637,7 +566,7 @@ void MeshViewerWidget::run_prediction()
 		return;
 
 	update_cuboid_surface_points(cuboid_structure_, occlusion_modelview_matrix);
-	
+
 
 	// Sub-routine.
 	bool first_iteration = true;
@@ -657,12 +586,14 @@ void MeshViewerWidget::run_prediction()
 
 		unsigned int snapshot_index = 0;
 		log_filename_sstr.clear(); log_filename_sstr.str("");
-		log_filename_sstr << log_filename_prefix << std::string("_c_") << cuboid_structure_name;
+		log_filename_sstr << log_filename_prefix << std::string("_c_")
+			<< cuboid_structure_name << std::string(".txt");
 		std::ofstream log_file(log_filename_sstr.str());
 		log_file.clear(); log_file.close();
 
 		stats_filename_sstr.clear(); stats_filename_sstr.str("");
-		stats_filename_sstr << stats_filename_prefix << std::string("_c_") << cuboid_structure_name;
+		stats_filename_sstr << stats_filename_prefix << std::string("_c_")
+			<< cuboid_structure_name << std::string(".csv");
 
 
 		updateGL();
@@ -726,7 +657,8 @@ void MeshViewerWidget::run_prediction()
 		{
 			if (mesh_label_file.exists())
 			{
-				evaluate_segmentation(cuboid_structure_, mesh_name, stats_filename_sstr.str());
+				MeshCuboidEvaluator evaluator(cuboid_structure_, mesh_name, cuboid_structure_name);
+				evaluator.save_evaluate_results(stats_filename_sstr.str());
 			}
 
 			last_iteration = false;
@@ -869,513 +801,73 @@ void MeshViewerWidget::run_rendering_point_clusters()
 }
 
 /*
-// point_label_"index" -> cuboid_label.
-std::vector<MeshCuboidStructure::PointCuboidLabelMap> point_cuboid_label_maps;
-
-bool load_point_cuboid_label_map(const char *_filename, bool _verbose = true)
+void MeshViewerWidget::run_occlusion_test()
 {
-	std::ifstream file(_filename);
-	if (!file)
+	assert(occlusion_test_widget_);
+
+	std::vector<Eigen::Vector3f> sample_points;
+	sample_points.reserve(cuboid_structure_.num_sample_points());
+	for (unsigned point_index = 0; point_index < cuboid_structure_.num_sample_points();
+		++point_index)
 	{
-		std::cerr << "Can't open file: \"" << _filename << "\"" << std::endl;
-		return false;
+		MyMesh::Point point = cuboid_structure_.sample_points_[point_index]->point_;
+		Eigen::Vector3f point_vec;
+		point_vec << point[0], point[1], point[2];
+		sample_points.push_back(point_vec);
 	}
 
-	if (_verbose)
-		std::cout << "Loading " << _filename << "..." << std::endl;
+	occlusion_test_widget_->set_sample_points(sample_points);
+	occlusion_test_widget_->set_modelview_matrix(modelview_matrix_);
 
-	point_cuboid_label_maps.clear();
-	all_cuboid_labels.clear();
+	std::array<Eigen::Matrix<float, Eigen::Dynamic, Eigen::Dynamic, Eigen::RowMajor>, 4> occlusion_test_result;
+	occlusion_test_widget_->get_occlusion_test_result(
+		static_cast<float>(FLAGS_occlusion_test_radius), occlusion_test_result);
 
-	std::string buffer;
-	while (!file.eof())
+	occlusion_test_points_.clear();
+	occlusion_test_points_.reserve(occlusion_test_result[0].rows() * occlusion_test_result[0].cols());
+
+	for (unsigned int row = 0; row < occlusion_test_result[0].rows(); ++row)
 	{
-		std::getline(file, buffer);
-
-		std::stringstream strstr(buffer);
-		std::string token;
-		if (strstr.eof()) continue;
-		else std::getline(strstr, token, ',');
-
-		if (token.compare("p") == 0)
+		for (unsigned int col = 0; col < occlusion_test_result[0].cols(); ++col)
 		{
-			MeshCuboidStructure::PointCuboidLabelMap map;
+			Mesh::Point point;
+			for (unsigned int i = 0; i < 3; ++i)
+				point[i] = static_cast<Real>(occlusion_test_result[i](row, col));
+			Real value = static_cast<Real>(occlusion_test_result[3](row, col));
+			assert(value >= 0);
+			assert(value <= 1);
 
-			assert(!strstr.eof());
-			std::getline(strstr, token, ',');
-			map.is_multiple_cuboids_ = static_cast<bool>(atoi(token.c_str()));
-			map.mapped_cuboid_labels_.clear();
-			while (!strstr.eof())
-			{
-				std::getline(strstr, token, ',');
-				if (token != "")
-				{
-					Label cuboid_label = atoi(token.c_str());
-					map.mapped_cuboid_labels_.push_back(cuboid_label);
-				}
-			}
-
-			point_cuboid_label_maps.push_back(map);
-		}
-		else if (token.compare("c") == 0)
-		{
-			assert(!strstr.eof());
-			std::getline(strstr, token, ',');
-			Label cuboid_label = atoi(token.c_str());
-
-			all_cuboid_labels.push_back(cuboid_label);
+			// NOTE:
+			// Reverse values.
+			// After reversing, the value '1' means that the voxel is perfectly occluded.
+			occlusion_test_points_.push_back(std::make_pair(point, 1.0 - value));
 		}
 	}
 
-	file.close();
-
-	for (LabelIndex point_label_index = 0; point_label_index < point_cuboid_label_maps.size(); ++point_label_index)
-	{
-		if (point_cuboid_label_maps[point_label_index].mapped_cuboid_labels_.empty())
-		{
-			std::cerr << "Error: This point label index is not defined in the file (point_label_index = "
-				<< point_label_index << ")." << std::endl;
-			return false;
-		}
-
-		for (std::list<Label>::iterator label_it = point_cuboid_label_maps[point_label_index].mapped_cuboid_labels_.begin();
-			label_it != point_cuboid_label_maps[point_label_index].mapped_cuboid_labels_.end(); ++label_it)
-		{
-			Label cuboid_label = (*label_it);
-			if (std::find(all_cuboid_labels.begin(), all_cuboid_labels.end(), cuboid_label) == all_cuboid_labels.end())
-			{
-				std::cerr << "Error: This cuboid label is not defined in the file (cuboid_label = "
-					<< cuboid_label << ")." << std::endl;
-				return false;
-			}
-		}
-	}
-
-	return true;
+	draw_occlusion_test_points_ = true;
+	//updateGL();
 }
 
-void MeshViewerWidget::run_test_joint_normal_training()
+ANNkd_tree* create_occlusion_test_points_kd_tree(
+	const std::vector< std::pair<MyMesh::Point, Real> > &_occlusion_test_points,
+	const MeshCuboidStructure &_cuboid_structure,
+	Eigen::VectorXd &_values,
+	ANNpointArray &_ann_points)
 {
-	bool ret = true;
-	ret = ret & cuboid_structure_.load_labels((FLAGS_data_root_path +
-		FLAGS_label_info_path + FLAGS_label_info_filename).c_str());
-	ret = ret & cuboid_structure_.load_label_symmetries((FLAGS_data_root_path +
-		FLAGS_label_info_path + FLAGS_label_symmetry_info_filename).c_str());
-	if (!ret)
+	Eigen::MatrixXd points = Eigen::MatrixXd(3, _occlusion_test_points.size());
+	_values = Eigen::VectorXd(_occlusion_test_points.size());
+
+	for (unsigned point_index = 0; point_index < _occlusion_test_points.size();
+		++point_index)
 	{
-		do {
-			std::cout << "Error: Cannot open label information files.";
-			std::cout << '\n' << "Press the Enter key to continue.";
-		} while (std::cin.get() != '\n');
+		MyMesh::Point point = _occlusion_test_points[point_index].first;
+		Eigen::Vector3d point_vec;
+		point_vec << point[0], point[1], point[2];
+		points.col(point_index) = point_vec;
+		_values(point_index) = _occlusion_test_points[point_index].second;
 	}
-
-	unsigned int num_labels = cuboid_structure_.num_labels();
-
-
-	std::vector< std::vector<MeshCuboidJointNormalRelations> > joint_normal_relations(num_labels);
-	for (LabelIndex label_index_1 = 0; label_index_1 < num_labels; ++label_index_1)
-	{
-		joint_normal_relations[label_index_1].resize(num_labels);
-		for (LabelIndex label_index_2 = 0; label_index_2 < num_labels; ++label_index_2)
-		{
-			if (label_index_1 == label_index_2)
-				continue;
-
-			std::stringstream relation_filename_sstr;
-			relation_filename_sstr << std::string("joint_normal_")
-				<< label_index_1 << std::string("_")
-				<< label_index_2 << std::string(".dat");
-			bool ret = joint_normal_relations[label_index_1][label_index_2].load_joint_normal_dat(
-				relation_filename_sstr.str().c_str());
-			if (!ret)
-			{
-				do {
-					std::cout << '\n' << "Press the Enter key to continue.";
-				} while (std::cin.get() != '\n');
-			}
-		}
-	}
-
-
-	slotDrawMode(findAction(CUSTOM_VIEW));
-
-	// For every file in the base path.
-	QDir dir(FLAGS_data_root_path + FLAGS_mesh_path.c_str());
-	assert(dir.exists());
-	dir.setFilter(QDir::Files | QDir::Hidden | QDir::NoSymLinks);
-	dir.setSorting(QDir::Name);
-
-
-	QFileInfoList dir_list = dir.entryInfoList();
-	for (int i = 0; i < dir_list.size(); i++)
-	{
-		QFileInfo file_info = dir_list.at(i);
-		if (file_info.exists() &&
-			(file_info.suffix().compare("obj") == 0
-			|| file_info.suffix().compare("off") == 0))
-		{
-			std::string mesh_name = std::string(file_info.baseName().toLocal8Bit());
-			std::string mesh_filename = std::string(file_info.filePath().toLocal8Bit());
-			std::string sample_filename = FLAGS_data_root_path + FLAGS_sample_path + std::string("/") + mesh_name + std::string(".pts");
-			std::string sample_label_filename = FLAGS_data_root_path + FLAGS_sample_label_path + std::string("/") + mesh_name + std::string(".arff");
-			std::string mesh_label_filename = FLAGS_data_root_path + FLAGS_mesh_label_path + std::string("/") + mesh_name + std::string(".seg");
-			std::string snapshot_filename = FLAGS_output_path + std::string("/") + mesh_name;
-
-			QFileInfo mesh_file(mesh_filename.c_str());
-			QFileInfo sample_file(sample_filename.c_str());
-			QFileInfo sample_label_file(sample_label_filename.c_str());
-			QFileInfo mesh_label_file(mesh_label_filename.c_str());
-
-			if (!mesh_file.exists()
-				|| !sample_file.exists()
-				|| !sample_label_file.exists()
-				|| !mesh_label_file.exists())
-				continue;
-
-
-			cuboid_structure_.clear_cuboids();
-			cuboid_structure_.clear_sample_points();
-
-			open_mesh_gui(mesh_filename.c_str());
-			open_sample_point_file(sample_filename.c_str());
-			open_face_label_file(mesh_label_filename.c_str());
-			open_modelview_matrix_file(FLAGS_pose_filename.c_str());
-
-			mesh_.clear_colors();
-			updateGL();
-
-			// Find the best 'cuboid_j' w.r.t. 'cuboid_i'.
-			for (LabelIndex label_index_1 = 0; label_index_1 < num_labels; ++label_index_1)
-			{
-				Label label_1 = all_cuboid_labels[label_index_1];
-				MeshCuboid *cuboid_1 = NULL;
-
-				// NOTE:
-				// The current implementation assumes that there is only one part for each label.
-				assert(cuboid_structure_.label_cuboids_[label_index_1].size() <= 1);
-				if (!cuboid_structure_.label_cuboids_[label_index_1].empty())
-					cuboid_1 = cuboid_structure_.label_cuboids_[label_index_1].front();
-				if (!cuboid_1) continue;
-
-				for (LabelIndex label_index_2 = 0; label_index_2 < num_labels; ++label_index_2)
-				{
-					if (label_index_1 == label_index_2)
-						continue;
-
-					Label label_2 = all_cuboid_labels[label_index_2];
-
-					// NOTE:
-					// The current implementation assumes that there is only one part for each label.
-					assert(cuboid_structure_.label_cuboids_[label_index_2].size() <= 1);
-					if (!cuboid_structure_.label_cuboids_[label_index_2].empty())
-					{
-						assert(cuboid_1);
-						MeshCuboid *&cuboid_2 = cuboid_structure_.label_cuboids_[label_index_2].front();
-
-						MeshCuboid *new_cuboid_2 = test_joint_normal_training(
-							cuboid_1, cuboid_2, label_index_1, label_index_2, joint_normal_relations);
-						std::swap(cuboid_2, new_cuboid_2);
-
-						updateGL();
-						slotSnapshot((snapshot_filename + std::string("_") + std::to_string(label_1)
-							+ std::string("_") + std::to_string(label_2)).c_str());
-
-						std::swap(new_cuboid_2, cuboid_2);
-						delete new_cuboid_2;
-					}
-				}
-			}
-
-			for (LabelIndex label_index = 0; label_index < num_labels; ++label_index)
-			{
-				Label label = all_cuboid_labels[label_index];
-				for (std::vector<MeshCuboid *>::iterator it = cuboid_structure_.label_cuboids_[label_index].begin();
-					it != cuboid_structure_.label_cuboids_[label_index].end(); ++it)
-						(*it)->set_label_index(label_index);
-			}
-
-			std::vector<MeshCuboid *> cuboids;
-			for (std::vector< std::vector<MeshCuboid *> >::iterator it = cuboid_structure_.label_cuboids_.begin();
-				it != cuboid_structure_.label_cuboids_.end(); ++it)
-				cuboids.insert(cuboids.end(), (*it).begin(), (*it).end());
-
-			MeshCuboidJointNormalRelationPredictor joint_normal_predictor(joint_normal_relations);
-			optimize_attributes(cuboids, joint_normal_predictor, 0.1);
-
-			updateGL();
-			slotSnapshot(snapshot_filename.c_str());
-		}
-	}
-
-	std::cout << " -- Batch Completed. -- " << std::endl;
-}
-
-void MeshViewerWidget::run_test_manual_relations()
-{
-	bool ret = true;
-	ret = ret & cuboid_structure_.load_labels((FLAGS_data_root_path +
-		FLAGS_label_info_path + FLAGS_label_info_filename).c_str());
-	ret = ret & cuboid_structure_.load_label_symmetries((FLAGS_data_root_path +
-		FLAGS_label_info_path + FLAGS_label_symmetry_info_filename).c_str());
-	if (!ret)
-	{
-		do {
-			std::cout << "Error: Cannot open label information files.";
-			std::cout << '\n' << "Press the Enter key to continue.";
-		} while (std::cin.get() != '\n');
-	}
-
-	unsigned int num_labels = cuboid_structure_.num_labels();
-
-
-	std::vector<MeshCuboidStats> single_stats(num_labels);
-	std::vector< std::vector<MeshCuboidStats> > pair_stats(num_labels);
-
-	for (LabelIndex label_index_1 = 0; label_index_1 < num_labels; ++label_index_1)
-	{
-		std::string single_stats_filename = FLAGS_single_stats_filename_prefix
-			+ std::to_string(label_index_1) + std::string(".csv");
-		ret = single_stats[label_index_1].load_stats(single_stats_filename.c_str());
-		assert(ret);
-
-		pair_stats[label_index_1].resize(num_labels);
-		for (LabelIndex label_index_2 = label_index_1; label_index_2 < num_labels; ++label_index_2)
-		{
-			std::string pair_stats_filename = FLAGS_pair_stats_filename_prefix
-				+ std::to_string(label_index_1) + std::string("_")
-				+ std::to_string(label_index_2) + std::string(".csv");
-			ret = pair_stats[label_index_1][label_index_2].load_stats(pair_stats_filename.c_str());
-			assert(ret);
-		}
-	}
-
-
-	slotDrawMode(findAction(CUSTOM_VIEW));
-	open_modelview_matrix_file(FLAGS_pose_filename.c_str());
-
-	// For every file in the base path.
-	QDir dir(FLAGS_data_root_path + FLAGS_mesh_path.c_str());
-	assert(dir.exists());
-	dir.setFilter(QDir::Files | QDir::Hidden | QDir::NoSymLinks);
-	dir.setSorting(QDir::Name);
-
-
-	QFileInfoList dir_list = dir.entryInfoList();
-	for (int i = 0; i < dir_list.size(); i++)
-	{
-		QFileInfo file_info = dir_list.at(i);
-		if (file_info.exists() &&
-			(file_info.suffix().compare("obj") == 0
-			|| file_info.suffix().compare("off") == 0))
-		{
-			std::string mesh_name = std::string(file_info.baseName().toLocal8Bit());
-			std::string mesh_filename = std::string(file_info.filePath().toLocal8Bit());
-			std::string sample_filename = FLAGS_data_root_path + FLAGS_sample_path + std::string("/") + mesh_name + std::string(".pts");
-			std::string sample_label_filename = FLAGS_data_root_path + FLAGS_sample_label_path + std::string("/") + mesh_name + std::string(".arff");
-			std::string mesh_label_filename = FLAGS_data_root_path + FLAGS_mesh_label_path + std::string("/") + mesh_name + std::string(".seg");
-			std::string snapshot_filename = FLAGS_output_path + std::string("/") + mesh_name + std::string("_in");
-
-			std::string recognition_snapshot_filename = FLAGS_output_path + std::string("/") + mesh_name + std::string("_out");
-			std::string recognition_log_filename = FLAGS_output_path + std::string("/") + mesh_name + std::string(".txt");
-
-			QFileInfo mesh_file(mesh_filename.c_str());
-			QFileInfo sample_file(sample_filename.c_str());
-			QFileInfo sample_label_file(sample_label_filename.c_str());
-			QFileInfo mesh_label_file(mesh_label_filename.c_str());
-
-			if (!mesh_file.exists()
-				|| !sample_file.exists()
-				|| !sample_label_file.exists()
-				|| !mesh_label_file.exists())
-				continue;
-
-
-			cuboid_structure_.clear_cuboids();
-			cuboid_structure_.clear_sample_points();
-
-			open_mesh_gui(mesh_filename.c_str());
-			open_sample_point_file(sample_filename.c_str());
-			open_sample_point_label_file(sample_label_filename.c_str());
-			cuboid_structure_.compute_label_cuboids();
-
-			ret = cuboid_structure_.apply_point_cuboid_label_map(
-				point_cuboid_label_maps, all_cuboid_labels);
-			assert(ret);
-
-			mesh_.clear_colors();
-			updateGL();
-			slotSnapshot(snapshot_filename.c_str());
-
-
-			// Collect all parts.
-			std::vector<MeshCuboid *> cuboids;
-			for (std::vector< std::vector<MeshCuboid *> >::iterator it = cuboid_structure_.label_cuboids_.begin();
-				it != cuboid_structure_.label_cuboids_.end(); ++it)
-				cuboids.insert(cuboids.end(), (*it).begin(), (*it).end());
-
-
-			MeshCuboidManualRelationPredictor predictor(single_stats, pair_stats);
-			ret = recognize_labels_and_axes_configurations(
-				all_cuboid_labels, cuboids, predictor, recognition_log_filename.c_str());
-
-
-			// Put recognized cuboids.
-			cuboid_structure_.label_cuboids_.clear();
-			cuboid_structure_.label_cuboids_.resize(num_labels);
-			for (LabelIndex label_index = 0; label_index < num_labels; ++label_index)
-			{
-				cuboid_structure_.label_cuboids_[label_index].clear();
-				for (std::vector<MeshCuboid *>::iterator it = cuboids.begin(); it != cuboids.end(); ++it)
-				{
-					if ((*it)->get_label_index() == label_index)
-						cuboid_structure_.label_cuboids_[label_index].push_back(*it);
-				}
-			}
-
-			updateGL();
-			slotSnapshot(recognition_snapshot_filename.c_str());
-		}
-	}
-
-	std::cout << " -- Batch Completed. -- " << std::endl;
-}
-
-void MeshViewerWidget::run_test_cca_relations()
-{
-	bool ret = true;
-	ret = ret & cuboid_structure_.load_labels((FLAGS_data_root_path +
-		FLAGS_label_info_path + FLAGS_label_info_filename).c_str());
-	ret = ret & cuboid_structure_.load_label_symmetries((FLAGS_data_root_path +
-		FLAGS_label_info_path + FLAGS_label_symmetry_info_filename).c_str());
-	if (!ret)
-	{
-		do {
-			std::cout << "Error: Cannot open label information files.";
-			std::cout << '\n' << "Press the Enter key to continue.";
-		} while (std::cin.get() != '\n');
-	}
-
-	unsigned int num_labels = cuboid_structure_.num_labels();
-
-
-	std::vector< std::vector< std::vector<MeshCuboidCCARelations> > > relations(num_labels);
-	for (LabelIndex label_index_1 = 0; label_index_1 < num_labels; ++label_index_1)
-	{
-		relations[label_index_1].resize(num_labels);
-		// NOTE:
-		// Use increasing order of label indices for cuboid pairs.
-		// Check 'MeshCuboidPredictor.cpp' file.
-		for (LabelIndex label_index_2 = label_index_1 + 1; label_index_2 < num_labels; ++label_index_2)
-		{
-			relations[label_index_1][label_index_2].resize(num_labels);
-
-			for (LabelIndex label_index_3 = 0; label_index_3 < num_labels; ++label_index_3)
-			{
-				std::string relation_filename = "cca_relation_"
-					+ std::to_string(label_index_1) + std::string("_")
-					+ std::to_string(label_index_2) + std::string("_")
-					+ std::to_string(label_index_3) + std::string(".csv");
-				bool ret = relations[label_index_1][label_index_2][label_index_3].load_cca_bases(
-					relation_filename.c_str());
-				if (!ret)
-				{
-					do {
-						std::cout << '\n' << "Press the Enter key to continue.";
-					} while (std::cin.get() != '\n');
-				}
-			}
-		}
-	}
-
-
-	slotDrawMode(findAction(CUSTOM_VIEW));
-	open_modelview_matrix_file(FLAGS_pose_filename.c_str());
-
-	// For every file in the base path.
-	QDir dir(FLAGS_data_root_path + FLAGS_mesh_path.c_str());
-	assert(dir.exists());
-	dir.setFilter(QDir::Files | QDir::Hidden | QDir::NoSymLinks);
-	dir.setSorting(QDir::Name);
-
-
-	QFileInfoList dir_list = dir.entryInfoList();
-	for (int i = 0; i < dir_list.size(); i++)
-	{
-		QFileInfo file_info = dir_list.at(i);
-		if (file_info.exists() &&
-			(file_info.suffix().compare("obj") == 0
-			|| file_info.suffix().compare("off") == 0))
-		{
-			std::string mesh_name = std::string(file_info.baseName().toLocal8Bit());
-			std::string mesh_filename = std::string(file_info.filePath().toLocal8Bit());
-			std::string sample_filename = FLAGS_data_root_path + FLAGS_sample_path + std::string("/") + mesh_name + std::string(".pts");
-			std::string sample_label_filename = FLAGS_data_root_path + FLAGS_sample_label_path + std::string("/") + mesh_name + std::string(".arff");
-			std::string mesh_label_filename = FLAGS_data_root_path + FLAGS_mesh_label_path + std::string("/") + mesh_name + std::string(".seg");
-			std::string snapshot_filename = FLAGS_output_path + std::string("/") + mesh_name + std::string("_in");
-
-			std::string recognition_snapshot_filename = FLAGS_output_path + std::string("/") + mesh_name + std::string("_out");
-			std::string recognition_log_filename = FLAGS_output_path + std::string("/") + mesh_name + std::string(".txt");
-
-			QFileInfo mesh_file(mesh_filename.c_str());
-			QFileInfo sample_file(sample_filename.c_str());
-			QFileInfo sample_label_file(sample_label_filename.c_str());
-			QFileInfo mesh_label_file(mesh_label_filename.c_str());
-
-			if (!mesh_file.exists()
-				|| !sample_file.exists()
-				|| !sample_label_file.exists()
-				|| !mesh_label_file.exists())
-				continue;
-
-
-			cuboid_structure_.clear_cuboids();
-			cuboid_structure_.clear_sample_points();
-
-			open_mesh_gui(mesh_filename.c_str());
-			open_sample_point_file(sample_filename.c_str());
-			open_sample_point_label_file(sample_label_filename.c_str());
-			cuboid_structure_.compute_label_cuboids();
-
-			ret = cuboid_structure_.apply_point_cuboid_label_map(
-				point_cuboid_label_maps, all_cuboid_labels);
-			assert(ret);
-
-			mesh_.clear_colors();
-			updateGL();
-			slotSnapshot(snapshot_filename.c_str());
-
-
-			// Collect all parts.
-			std::vector<MeshCuboid *> cuboids;
-			for (std::vector< std::vector<MeshCuboid *> >::iterator it = cuboid_structure_.label_cuboids_.begin();
-				it != cuboid_structure_.label_cuboids_.end(); ++it)
-				cuboids.insert(cuboids.end(), (*it).begin(), (*it).end());
-
-
-			MeshCuboidCCARelationPredictor predictor(relations);
-			bool ret = recognize_labels_and_axes_configurations(
-				all_cuboid_labels, cuboids, predictor, recognition_log_filename.c_str());
-
-
-			// Put recognized cuboids.
-			cuboid_structure_.label_cuboids_.clear();
-			cuboid_structure_.label_cuboids_.resize(num_labels);
-			for (LabelIndex label_index = 0; label_index < num_labels; ++label_index)
-			{
-				cuboid_structure_.label_cuboids_[label_index].clear();
-				for (std::vector<MeshCuboid *>::iterator it = cuboids.begin(); it != cuboids.end(); ++it)
-				{
-					if ((*it)->get_label_index() == label_index)
-						cuboid_structure_.label_cuboids_[label_index].push_back(*it);
-				}
-			}
-
-			updateGL();
-			slotSnapshot(recognition_snapshot_filename.c_str());
-		}
-	}
-
-	std::cout << " -- Batch Completed. -- " << std::endl;
+	
+	ANNkd_tree* kd_tree = ICP::create_kd_tree(points, _ann_points);
+	return kd_tree;
 }
 */
-

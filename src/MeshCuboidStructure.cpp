@@ -17,7 +17,18 @@ MeshCuboidStructure::~MeshCuboidStructure()
 {
 }
 
+MeshCuboidStructure::MeshCuboidStructure(const MeshCuboidStructure& _other)
+{
+	deep_copy(_other);
+}
+
 MeshCuboidStructure& MeshCuboidStructure::operator=(const MeshCuboidStructure& _other)
+{
+	deep_copy(_other);
+	return (*this);
+}
+
+void MeshCuboidStructure::deep_copy(const MeshCuboidStructure& _other)
 {
 	this->mesh_ = _other.mesh_;
 
@@ -58,8 +69,6 @@ MeshCuboidStructure& MeshCuboidStructure::operator=(const MeshCuboidStructure& _
 			this->label_cuboids_[label_index].push_back(cuboid);
 		}
 	}
-
-	return (*this);
 }
 
 void MeshCuboidStructure::clear()

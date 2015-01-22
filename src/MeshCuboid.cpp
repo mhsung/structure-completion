@@ -29,12 +29,18 @@
 // [7]: + + +
 
 const unsigned int MeshCuboid::k_face_corner_indices[k_num_faces][k_num_face_corners] = {
-		{ 1u, 3u, 7u, 5u }, // POSITIVE_X_AXIS.
-		{ 0u, 4u, 6u, 2u }, // NEGATIVE_X_AXIS.
-		{ 2u, 6u, 7u, 3u }, // POSITIVE_Y_AXIS.
-		{ 0u, 1u, 5u, 4u }, // NEGATIVE_Y_AXIS.
-		{ 4u, 5u, 7u, 6u }, // POSITIVE_Z_AXIS.
-		{ 0u, 2u, 3u, 1u }  // NEGATIVE_Z_AXIS.
+	{ 1u, 3u, 7u, 5u }, // POSITIVE_X_AXIS.
+	{ 0u, 4u, 6u, 2u }, // NEGATIVE_X_AXIS.
+	{ 2u, 6u, 7u, 3u }, // POSITIVE_Y_AXIS.
+	{ 0u, 1u, 5u, 4u }, // NEGATIVE_Y_AXIS.
+	{ 4u, 5u, 7u, 6u }, // POSITIVE_Z_AXIS.
+	{ 0u, 2u, 3u, 1u }  // NEGATIVE_Z_AXIS.
+};
+
+const unsigned int MeshCuboid::k_face_edges[k_num_edges][2] = {
+	{ 0u, 4u }, { 1u, 5u }, { 2u, 6u }, { 3u, 7u },
+	{ 0u, 2u }, { 1u, 3u }, { 4u, 6u }, { 5u, 7u },
+	{ 0u, 1u }, { 2u, 3u }, { 4u, 5u }, { 6u, 7u }
 };
 
 const std::vector < std::pair<MeshCuboid::AXIS_DIRECTION, MeshCuboid::AXIS_DIRECTION> >
@@ -192,35 +198,16 @@ MeshCuboid::MeshCuboid(const LabelIndex _label_index)
 
 MeshCuboid::MeshCuboid(const MeshCuboid& _other)
 {
-	this->label_index_ = _other.label_index_;
-
-	// NOTE:
-	// Do not deep copy sample points.
-	this->sample_points_ = _other.sample_points_;
-
-	this->sample_to_cuboid_surface_correspondence_ = _other.sample_to_cuboid_surface_correspondence_;
-	this->cuboid_surface_to_sample_corresopndence_ = _other.cuboid_surface_to_sample_corresopndence_;
-
-	this->bbox_axes_ = _other.bbox_axes_;
-	this->bbox_center_ = _other.bbox_center_;
-	this->bbox_size_ = _other.bbox_size_;
-	this->bbox_corners_ = _other.bbox_corners_;
-
-	// Deep copy cuboid surface points.
-	assert(_other.cuboid_surface_points_.size() == _other.num_cuboid_surface_points());
-	this->cuboid_surface_points_.clear();
-	this->cuboid_surface_points_.reserve(_other.num_cuboid_surface_points());
-
-	for (std::vector<MeshCuboidSurfacePoint *>::const_iterator it =
-		_other.cuboid_surface_points_.begin();
-		it != _other.cuboid_surface_points_.end(); ++it)
-	{
-		MeshCuboidSurfacePoint *cuboid_surface_point = new MeshCuboidSurfacePoint(**it);
-		this->cuboid_surface_points_.push_back(cuboid_surface_point);
-	}
+	deep_copy(_other);
 }
 
 MeshCuboid& MeshCuboid::operator=(const MeshCuboid& _other)
+{
+	deep_copy(_other);
+	return (*this);
+}
+
+void MeshCuboid::deep_copy(const MeshCuboid& _other)
 {
 	this->label_index_ = _other.label_index_;
 
@@ -248,8 +235,6 @@ MeshCuboid& MeshCuboid::operator=(const MeshCuboid& _other)
 		MeshCuboidSurfacePoint *cuboid_surface_point = new MeshCuboidSurfacePoint(**it);
 		this->cuboid_surface_points_.push_back(cuboid_surface_point);
 	}
-
-	return (*this);
 }
 
 MeshCuboid::~MeshCuboid()
@@ -1617,6 +1602,27 @@ void MeshCuboid::points_to_cuboid_distances(const Eigen::MatrixXd& _points,
 			_distances[point_index] = axis_distance.norm();
 		}
 	}
+}
+
+Real MeshCuboid::distance_between_cuboids(
+	const MeshCuboid *_cuboid_1, const MeshCuboid *_cuboid_2)
+{
+	assert(_cuboid_1);
+	assert(_cuboid_2);
+
+	Real max_distance = 0;
+
+	// Find the longest distance between two cuboid corners.
+	// FIXME:
+	// How to compute Hausdorff distance for cuboids?
+	for (unsigned int corner_index = 0; corner_index < k_num_corners; ++corner_index)
+	{
+		MyMesh::Point corner_1 = _cuboid_1->get_bbox_corner(corner_index);
+		MyMesh::Point corner_2 = _cuboid_2->get_bbox_corner(corner_index);
+		max_distance = std::max(max_distance, (corner_1 - corner_2).norm());
+	}
+
+	return max_distance;
 }
 
 /*
