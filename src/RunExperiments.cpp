@@ -497,20 +497,15 @@ void MeshViewerWidget::run_prediction()
 		return;
 	}
 
-	std::string snapshot_filename_prefix = FLAGS_output_path + std::string("/") + mesh_name + std::string("_");
+	std::string filename_prefix = std::string("/") + mesh_name + std::string("_");
 	std::stringstream snapshot_filename_sstr;
-
-	std::string log_filename_prefix = FLAGS_output_path + std::string("/") + mesh_name + std::string("_log");
 	std::stringstream log_filename_sstr;
-
-	std::string stats_filename_prefix = FLAGS_output_path + std::string("/") + mesh_name + std::string("_stats");
 	std::stringstream stats_filename_sstr;
-
-	std::string cuboid_filename_prefix = FLAGS_output_path + std::string("/") + mesh_name + std::string("_cuboids");
 	std::stringstream cuboid_filename_sstr;
 
 	QDir output_dir;
 	output_dir.mkpath(FLAGS_output_path.c_str());
+	output_dir.mkpath((FLAGS_output_path + std::string("/Temp")).c_str());
 
 
 	// Initialize basic information.
@@ -577,7 +572,8 @@ void MeshViewerWidget::run_prediction()
 
 	updateGL();
 	snapshot_filename_sstr.clear(); snapshot_filename_sstr.str("");
-	snapshot_filename_sstr << snapshot_filename_prefix << std::string("_input");
+	snapshot_filename_sstr << FLAGS_output_path + std::string("/Temp")
+		<< filename_prefix << std::string("_input");
 	slotSnapshot(snapshot_filename_sstr.str().c_str());
 
 
@@ -613,17 +609,17 @@ void MeshViewerWidget::run_prediction()
 
 		unsigned int snapshot_index = 0;
 		log_filename_sstr.clear(); log_filename_sstr.str("");
-		log_filename_sstr << log_filename_prefix << std::string("_c_")
-			<< cuboid_structure_name << std::string(".txt");
+		log_filename_sstr << FLAGS_output_path + std::string("/Temp") << filename_prefix
+			<< std::string("c_") << cuboid_structure_name << std::string("_log.txt");
 		std::ofstream log_file(log_filename_sstr.str());
 		log_file.clear(); log_file.close();
 
 
 		updateGL();
 		snapshot_filename_sstr.clear(); snapshot_filename_sstr.str("");
-		snapshot_filename_sstr << snapshot_filename_prefix
-			<< std::string("_c_") << cuboid_structure_name
-			<< std::string("_s_") << snapshot_index;
+		snapshot_filename_sstr << FLAGS_output_path + std::string("/Temp") << filename_prefix
+			<< std::string("c_") << cuboid_structure_name << std::string("_")
+			<< std::string("s_") << snapshot_index;
 		slotSnapshot(snapshot_filename_sstr.str().c_str());
 		++snapshot_index;
 		draw_cuboid_axes_ = true;
@@ -639,9 +635,9 @@ void MeshViewerWidget::run_prediction()
 
 		updateGL();
 		snapshot_filename_sstr.clear(); snapshot_filename_sstr.str("");
-		snapshot_filename_sstr << snapshot_filename_prefix
-			<< std::string("_c_") << cuboid_structure_name
-			<< std::string("_s_") << snapshot_index;
+		snapshot_filename_sstr << FLAGS_output_path + std::string("/Temp") << filename_prefix
+			<< std::string("c_") << cuboid_structure_name << std::string("_")
+			<< std::string("s_") << snapshot_index;
 		slotSnapshot(snapshot_filename_sstr.str().c_str());
 		++snapshot_index;
 
@@ -651,9 +647,9 @@ void MeshViewerWidget::run_prediction()
 
 		updateGL();
 		snapshot_filename_sstr.clear(); snapshot_filename_sstr.str("");
-		snapshot_filename_sstr << snapshot_filename_prefix
-			<< std::string("_c_") << cuboid_structure_name
-			<< std::string("_s_") << snapshot_index;
+		snapshot_filename_sstr << FLAGS_output_path + std::string("/Temp") << filename_prefix
+			<< std::string("c_") << cuboid_structure_name << std::string("_")
+			<< std::string("s_") << snapshot_index;
 		slotSnapshot(snapshot_filename_sstr.str().c_str());
 		++snapshot_index;
 
@@ -668,9 +664,9 @@ void MeshViewerWidget::run_prediction()
 
 		updateGL();
 		snapshot_filename_sstr.clear(); snapshot_filename_sstr.str("");
-		snapshot_filename_sstr << snapshot_filename_prefix
-			<< std::string("_c_") << cuboid_structure_name
-			<< std::string("_s_") << snapshot_index;
+		snapshot_filename_sstr << FLAGS_output_path + std::string("/Temp") << filename_prefix
+			<< std::string("c_") << cuboid_structure_name << std::string("_")
+			<< std::string("s_") << snapshot_index;
 		slotSnapshot(snapshot_filename_sstr.str().c_str());
 		++snapshot_index;
 
@@ -678,22 +674,28 @@ void MeshViewerWidget::run_prediction()
 		// Escape loop.
 		if (last_iteration)
 		{
-			cuboid_filename_sstr.clear(); cuboid_filename_sstr.str("");
-			cuboid_filename_sstr << cuboid_filename_prefix << std::string("_")
-				<< num_final_cuboid_structure_candidates << std::string(".arff");
+			updateGL();
+			snapshot_filename_sstr.clear(); snapshot_filename_sstr.str("");
+			snapshot_filename_sstr << FLAGS_output_path << filename_prefix
+				<< num_final_cuboid_structure_candidates;
+			slotSnapshot(snapshot_filename_sstr.str().c_str());
 
+			cuboid_filename_sstr.clear(); cuboid_filename_sstr.str("");
+			cuboid_filename_sstr << FLAGS_output_path << filename_prefix
+				<< num_final_cuboid_structure_candidates << std::string("_cuboids.arff");
 			cuboid_structure_.save_cuboids(cuboid_filename_sstr.str());
 
 			if (mesh_label_file.exists())
 			{
 				stats_filename_sstr.clear(); stats_filename_sstr.str("");
-				stats_filename_sstr << stats_filename_prefix << std::string("_")
-					<< num_final_cuboid_structure_candidates << std::string(".csv");
+				stats_filename_sstr << FLAGS_output_path << filename_prefix
+					<< num_final_cuboid_structure_candidates << std::string("_stats.csv");
 
 				MeshCuboidEvaluator evaluator(cuboid_structure_, mesh_name, cuboid_structure_name);
 				evaluator.save_evaluate_results(stats_filename_sstr.str());
 			}
 
+			++num_final_cuboid_structure_candidates;
 			last_iteration = false;
 			continue;
 		}
