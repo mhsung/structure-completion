@@ -298,7 +298,7 @@ std::array<MyMesh::Normal, 3> MeshCuboid::get_bbox_axes() const
 	return bbox_axes_;
 }
 
-MyMesh::Normal MeshCuboid::get_bbox_center() const
+MyMesh::Point MeshCuboid::get_bbox_center() const
 {
 	return bbox_center_;
 }

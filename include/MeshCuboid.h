@@ -161,7 +161,7 @@ public:
 
 	std::array<MyMesh::Normal, 3> get_bbox_axes()const;
 
-	MyMesh::Normal get_bbox_center()const;
+	MyMesh::Point get_bbox_center()const;
 
 	MyMesh::Normal get_bbox_size()const;
 

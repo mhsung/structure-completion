@@ -25,11 +25,13 @@ public:
 	MeshCuboidStructure& operator=(const MeshCuboidStructure& _other);	// Copy assignment.
 	void deep_copy(const MeshCuboidStructure& _other);
 
-
 	void clear();
 	void clear_sample_points();
 	void clear_cuboids();
 	void clear_labels();
+
+	bool load_cuboids(const std::string _filename, bool _verbose = true);
+	bool save_cuboids(const std::string _filename, bool _verbose = true);
 
 	void apply_mesh_transformation();
 

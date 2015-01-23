@@ -25,7 +25,7 @@ void MeshViewerWidget::open_mesh_face_label_file(QString filename)
 	updateGL();
 }
 
-void MeshViewerWidget::update_mesh_cuboids()
+void MeshViewerWidget::create_mesh_cuboids()
 {
 	cuboid_structure_.get_mesh_face_label_cuboids();
 	updateGL();
@@ -654,28 +654,29 @@ void MeshViewerWidget::draw_openmesh(const std::string& _drawmode)
 				it != cuboid_structure_.label_cuboids_[label_index].end(); ++it)
 			{
 				MeshCuboid *cuboid = (*it);
+				assert(cuboid);
 
-				// Draw sample points (Black).
-				if (!draw_all_labels)
-				{
-					for (unsigned int point_index = 0; point_index < cuboid->num_sample_points(); ++point_index)
-					{
-						const MeshSamplePoint *sample_point = cuboid->get_sample_point(point_index);
-						const GLdouble *point = &(sample_point->point_[0]);
+				//// Draw sample points (Black).
+				//if (!draw_all_labels)
+				//{
+				//	for (unsigned int point_index = 0; point_index < cuboid->num_sample_points(); ++point_index)
+				//	{
+				//		const MeshSamplePoint *sample_point = cuboid->get_sample_point(point_index);
+				//		const GLdouble *point = &(sample_point->point_[0]);
 
-						Real radius = (mesh_.get_object_diameter() * 0.005) * point_size_;
-						if (radius > 0)
-						{
-							glPushMatrix();
-							glTranslatef(point[0], point[1], point[2]);
-							black_color();
+				//		Real radius = (mesh_.get_object_diameter() * 0.005) * point_size_;
+				//		if (radius > 0)
+				//		{
+				//			glPushMatrix();
+				//			glTranslatef(point[0], point[1], point[2]);
+				//			black_color();
 
-							glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
-							glutSolidSphere(radius, 20, 20);
-							glPopMatrix();
-						}
-					}
-				}
+				//			glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
+				//			glutSolidSphere(radius, 20, 20);
+				//			glPopMatrix();
+				//		}
+				//	}
+				//}
 
 				// Draw cuboid surface points (Red).
 				for (unsigned int point_index = 0; point_index < cuboid->num_cuboid_surface_points(); ++point_index)

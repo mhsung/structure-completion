@@ -70,6 +70,29 @@ void MeshViewerWidget::run_print_arguments()
 	}
 }
 
+void MeshViewerWidget::open_cuboid_file(QString filename)
+{
+	// Load basic information.
+	bool ret = true;
+
+	ret = ret & cuboid_structure_.load_labels((FLAGS_data_root_path +
+		FLAGS_label_info_path + FLAGS_label_info_filename).c_str());
+	ret = ret & cuboid_structure_.load_label_symmetries((FLAGS_data_root_path +
+		FLAGS_label_info_path + FLAGS_label_symmetry_info_filename).c_str());
+
+	if (!ret)
+	{
+		do {
+			std::cout << "Error: Cannot open label information files.";
+			std::cout << '\n' << "Press the Enter key to continue.";
+		} while (std::cin.get() != '\n');
+	}
+
+	cuboid_structure_.load_cuboids(filename.toStdString());
+	slotDrawMode(findAction(CUSTOM_VIEW));
+	updateGL();
+}
+
 void MeshViewerWidget::set_view_direction()
 {
 	Eigen::Vector3d view_direction;
@@ -483,6 +506,9 @@ void MeshViewerWidget::run_prediction()
 	std::string stats_filename_prefix = FLAGS_output_path + std::string("/") + mesh_name + std::string("_stats");
 	std::stringstream stats_filename_sstr;
 
+	std::string cuboid_filename_prefix = FLAGS_output_path + std::string("/") + mesh_name + std::string("_cuboids");
+	std::stringstream cuboid_filename_sstr;
+
 	QDir output_dir;
 	output_dir.mkpath(FLAGS_output_path.c_str());
 
@@ -571,6 +597,7 @@ void MeshViewerWidget::run_prediction()
 	// Sub-routine.
 	bool first_iteration = true;
 	bool last_iteration = false;
+	unsigned int num_final_cuboid_structure_candidates = 0;
 
 	std::list< std::pair<std::string, MeshCuboidStructure> > cuboid_structure_candidates;
 	cuboid_structure_candidates.push_back(std::make_pair(std::string("0"), cuboid_structure_));
@@ -590,10 +617,6 @@ void MeshViewerWidget::run_prediction()
 			<< cuboid_structure_name << std::string(".txt");
 		std::ofstream log_file(log_filename_sstr.str());
 		log_file.clear(); log_file.close();
-
-		stats_filename_sstr.clear(); stats_filename_sstr.str("");
-		stats_filename_sstr << stats_filename_prefix << std::string("_c_")
-			<< cuboid_structure_name << std::string(".csv");
 
 
 		updateGL();
@@ -655,8 +678,18 @@ void MeshViewerWidget::run_prediction()
 		// Escape loop.
 		if (last_iteration)
 		{
+			cuboid_filename_sstr.clear(); cuboid_filename_sstr.str("");
+			cuboid_filename_sstr << cuboid_filename_prefix << std::string("_")
+				<< num_final_cuboid_structure_candidates << std::string(".arff");
+
+			cuboid_structure_.save_cuboids(cuboid_filename_sstr.str());
+
 			if (mesh_label_file.exists())
 			{
+				stats_filename_sstr.clear(); stats_filename_sstr.str("");
+				stats_filename_sstr << stats_filename_prefix << std::string("_")
+					<< num_final_cuboid_structure_candidates << std::string(".csv");
+
 				MeshCuboidEvaluator evaluator(cuboid_structure_, mesh_name, cuboid_structure_name);
 				evaluator.save_evaluate_results(stats_filename_sstr.str());
 			}

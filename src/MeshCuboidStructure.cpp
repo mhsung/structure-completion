@@ -97,6 +97,7 @@ void MeshCuboidStructure::clear_cuboids()
 		for (std::vector<MeshCuboid *>::iterator jt = (*it).begin(); jt != (*it).end(); ++jt)
 			delete (*jt);
 	}
+
 	label_cuboids_.clear();
 }
 
@@ -107,6 +108,200 @@ void MeshCuboidStructure::clear_labels()
 	label_symmetries_.clear();
 
 	query_label_index_ = 0;
+}
+
+bool MeshCuboidStructure::load_cuboids(const std::string _filename, bool _verbose)
+{
+	if (labels_.empty())
+	{
+		std::cerr << "Error: Load label information first." << std::endl;
+		return false;
+	}
+
+	std::ifstream file(_filename);
+	if (!file)
+	{
+		std::cerr << "Can't open file: \"" << _filename << "\"" << std::endl;
+		return false;
+	}
+
+	if (_verbose)
+		std::cout << "Loading " << _filename << "..." << std::endl;
+
+
+	clear_cuboids();
+	label_cuboids_.resize(num_labels());
+
+	std::string buffer;
+
+	while (!file.eof())
+	{
+		std::getline(file, buffer);
+		if (buffer == "") break;
+
+		std::stringstream strstr(buffer);
+		std::string token;
+		if (strstr.eof())
+		{
+			std::cerr << "Error: Wrong file format: \"" << _filename << "\"" << std::endl;
+			return false;
+		}
+		else std::getline(strstr, token, ' ');
+
+		if (token.compare("@ATTRIBUTE") == 0)
+		{
+			// Skip.
+		}
+		else if (token[0] == '@')
+		{
+			// Skip.
+		}
+		else
+		{
+			std::stringstream strstr(buffer);
+			std::string token;
+			bool is_failed = false;
+
+			LabelIndex label_index;
+			std::array<MyMesh::Normal, 3> bbox_axes;
+			MyMesh::Point bbox_center;
+			MyMesh::Normal bbox_size;
+
+			if (std::getline(strstr, token, ',').fail()) is_failed = true;
+			label_index = std::stoi(token);
+
+			for (unsigned int axis_index = 0; axis_index < 3; ++axis_index)
+			{
+				for (unsigned int i = 0; i < 3; i++)
+				{
+					if (std::getline(strstr, token, ',').fail()) is_failed = true;
+					bbox_axes[axis_index][i] = std::stof(token);
+				}
+			}
+
+			for (unsigned int i = 0; i < 3; i++)
+			{
+				if (std::getline(strstr, token, ',').fail()) is_failed = true;
+				bbox_center[i] = std::stof(token);
+			}
+
+			for (unsigned int i = 0; i < 3; i++)
+			{
+				if (std::getline(strstr, token, ',').fail()) is_failed = true;
+				bbox_size[i] = std::stof(token);
+			}
+
+			if (is_failed)
+			{
+				std::cerr << "Error: Wrong file format: \"" << _filename << "\"" << std::endl;
+				return false;
+			}
+			else if (label_index >= num_labels())
+			{
+				std::cerr << "Error: The label index exceeds the number of labels"
+					<< " (" << label_index << " >= " << num_labels() << ": \"" << _filename << "\"" << std::endl;
+				return false;
+			}
+
+			MeshCuboid *cuboid = new MeshCuboid(label_index);
+			cuboid->set_bbox_axes(bbox_axes);
+			cuboid->set_bbox_center(bbox_center);
+			cuboid->set_bbox_size(bbox_size);
+			cuboid->update_corner_points();
+
+			label_cuboids_[label_index].push_back(cuboid);
+		}
+	}
+	file.close();
+
+
+	// NOTE:
+	// Draws all points.
+	query_label_index_ = num_labels();
+
+
+	std::cout << "Done." << std::endl;
+	return true;
+}
+
+bool MeshCuboidStructure::save_cuboids(const std::string _filename, bool _verbose)
+{
+	std::ofstream file(_filename);
+	if (!file)
+	{
+		std::cerr << "Can't save file: \"" << _filename << "\"" << std::endl;
+		return false;
+	}
+
+	if (_verbose)
+		std::cout << "Saving " << _filename << "..." << std::endl;
+
+
+	file << "@RELATION cuboid_structure" << std::endl;
+
+	file << "@ATTRIBUTE label_index\tNUMERIC" << std::endl;
+
+	file << "@ATTRIBUTE bbox_axis_0_x\tNUMERIC" << std::endl;
+	file << "@ATTRIBUTE bbox_axis_0_y\tNUMERIC" << std::endl;
+	file << "@ATTRIBUTE bbox_axis_0_z\tNUMERIC" << std::endl;
+
+	file << "@ATTRIBUTE bbox_axis_1_x\tNUMERIC" << std::endl;
+	file << "@ATTRIBUTE bbox_axis_1_y\tNUMERIC" << std::endl;
+	file << "@ATTRIBUTE bbox_axis_1_z\tNUMERIC" << std::endl;
+
+	file << "@ATTRIBUTE bbox_axis_2_x\tNUMERIC" << std::endl;
+	file << "@ATTRIBUTE bbox_axis_2_y\tNUMERIC" << std::endl;
+	file << "@ATTRIBUTE bbox_axis_2_z\tNUMERIC" << std::endl;
+
+	file << "@ATTRIBUTE bbox_center_x\tNUMERIC" << std::endl;
+	file << "@ATTRIBUTE bbox_center_y\tNUMERIC" << std::endl;
+	file << "@ATTRIBUTE bbox_center_z\tNUMERIC" << std::endl;
+
+	file << "@ATTRIBUTE bbox_size_x\tNUMERIC" << std::endl;
+	file << "@ATTRIBUTE bbox_size_y\tNUMERIC" << std::endl;
+	file << "@ATTRIBUTE bbox_size_z\tNUMERIC" << std::endl;
+
+	file << "@DATA" << std::endl;
+	
+
+	const std::vector<MeshCuboid *> cuboids = get_all_cuboids();
+
+	for (std::vector<MeshCuboid *>::const_iterator it = cuboids.begin();
+		it != cuboids.end(); ++it)
+	{
+		const MeshCuboid *cuboid = (*it);
+		assert(cuboid);
+		bool first_item = true;
+
+		if (first_item) first_item = false; else file << ",";
+		file << cuboid->get_label_index();
+
+		for (unsigned int axis_index = 0; axis_index < 3; ++axis_index)
+		{
+			for (unsigned int i = 0; i < 3; i++)
+			{
+				if (first_item) first_item = false; else file << ",";
+				file << cuboid->get_bbox_axis(axis_index)[i];
+			}
+		}
+
+		for (unsigned int i = 0; i < 3; i++)
+		{
+			if (first_item) first_item = false; else file << ",";
+			file << cuboid->get_bbox_center()[i];
+		}
+
+		for (unsigned int i = 0; i < 3; i++)
+		{
+			if (first_item) first_item = false; else file << ",";
+			file << cuboid->get_bbox_size()[i];
+		}
+
+		file << std::endl;
+	}
+
+	file.close();
+	return true;
 }
 
 void MeshCuboidStructure::apply_mesh_transformation()
@@ -317,20 +512,20 @@ bool MeshCuboidStructure::load_sample_points(const char *_filename, bool _verbos
 
 		Real bx, by, bz;
 		std::getline(strstr, token, ' ');
-		bx = atof(token.c_str());
+		bx = std::stof(token);
 		std::getline(strstr, token, ' ');
-		by = atof(token.c_str());
+		by = std::stof(token);
 		std::getline(strstr, token, ' ');
-		bz = atof(token.c_str());
+		bz = std::stof(token);
 		MyMesh::Point bary_coord = MyMesh::Point(bx, by, bz);
 
 		Real px, py, pz;
 		std::getline(strstr, token, ' ');
-		px = atof(token.c_str());
+		px = std::stof(token);
 		std::getline(strstr, token, ' ');
-		py = atof(token.c_str());
+		py = std::stof(token);
 		std::getline(strstr, token, ' ');
-		pz = atof(token.c_str());
+		pz = std::stof(token);
 		MyMesh::Point pos = MyMesh::Point(px, py, pz);
 
 		MeshSamplePoint *sample_point = new MeshSamplePoint(sample_point_index, corr_fid, bary_coord, pos);
@@ -401,6 +596,7 @@ bool MeshCuboidStructure::load_sample_point_labels(const char *_filename, bool _
 			std::string token;
 
 			MeshSamplePoint* sample_point = sample_points_[sample_point_index];
+			assert(sample_point);
 			sample_point->label_index_confidence_.resize(num_labels());
 			std::fill(sample_point->label_index_confidence_.begin(), sample_point->label_index_confidence_.end(), 0);
 
@@ -413,7 +609,7 @@ bool MeshCuboidStructure::load_sample_point_labels(const char *_filename, bool _
 					return false;
 				}
 				else std::getline(strstr, token, ',');
-				sample_point->label_index_confidence_[label_index] = atof(token.c_str());
+				sample_point->label_index_confidence_[label_index] = std::stof(token);
 			}
 
 			++sample_point_index;
@@ -467,13 +663,13 @@ bool MeshCuboidStructure::test_load_cuboids(const char *_filename, bool _verbose
 			Real px, py, pz;
 			assert(!strstr.eof());
 			std::getline(strstr, token, ',');
-			px = atof(token.c_str());
+			px = std::stof(token);
 			assert(!strstr.eof());
 			std::getline(strstr, token, ',');
-			py = atof(token.c_str());
+			py = std::stof(token);
 			assert(!strstr.eof());
 			std::getline(strstr, token, ',');
-			pz = atof(token.c_str());
+			pz = std::stof(token);
 			MyMesh::Point pos = MyMesh::Point(px, py, pz);
 
 			bbox_center = bbox_center + pos;

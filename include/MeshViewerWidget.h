@@ -239,7 +239,7 @@ public slots:
 			open_sample_point_label_file(fileName);
 	}
 
-	void query_open_mesh_face_label_file()
+	void query_open_mesh_face_label_file_and_create_cuboids()
 	{
 		QString fileName = QFileDialog::getOpenFileName(this,
 			tr("Open a mesh face label file"),
@@ -247,10 +247,13 @@ public slots:
 			tr("Labels (*.seg);;"
 			"All Files (*)"));
 		if (!fileName.isEmpty())
+		{
 			open_mesh_face_label_file(fileName);
+			create_mesh_cuboids();
+		}
 	}
 
-	void query_open_face_label_file_but_preserve_cuboids()
+	void query_open_face_label_file_and_apply_to_cuboids()
 	{
 		QString fileName = QFileDialog::getOpenFileName(this,
 			tr("Open a mesh face label file"),
@@ -258,7 +261,21 @@ public slots:
 			tr("Labels (*.seg);;"
 			"All Files (*)"));
 		if (!fileName.isEmpty())
+		{
 			open_mesh_face_label_file(fileName);
+			apply_mesh_labels_to_cuboids();
+		}
+	}
+
+	void query_open_cuboid_file()
+	{
+		QString fileName = QFileDialog::getOpenFileName(this,
+			tr("Open a cuboid file"),
+			tr(""),
+			tr("ARFF files (*.arff);;"
+			"All Files (*)"));
+		if (!fileName.isEmpty())
+			open_cuboid_file(fileName);
 	}
 
 	void query_open_modelview_matrix_file()
@@ -297,7 +314,8 @@ public slots:
 	void open_sample_point_file(QString filename);
 	void open_sample_point_label_file(QString filename);
 	void open_mesh_face_label_file(QString filename);
-	void update_mesh_cuboids();
+	void open_cuboid_file(QString filename);
+	void create_mesh_cuboids();
 	void apply_mesh_labels_to_cuboids();
 
 	void open_modelview_matrix_file(QString filename);

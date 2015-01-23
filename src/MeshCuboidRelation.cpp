@@ -346,7 +346,7 @@ bool MeshCuboidFeatures::load_feature_collection(const char* _filename,
 			}
 			else
 			{
-				new_features->features_[feature_index] = atof(token.c_str());;
+				new_features->features_[feature_index] = std::stof(token);
 			}
 		}
 
@@ -630,7 +630,7 @@ bool MeshCuboidTransformation::load_transformation_collection(const char* _filen
 				}
 
 				if (!succeded) break;
-				new_transformation->second_rotation_.col(axis_index)(i) = atof(token.c_str());
+				new_transformation->second_rotation_.col(axis_index)(i) = std::stof(token);
 			}
 		}
 
@@ -644,7 +644,7 @@ bool MeshCuboidTransformation::load_transformation_collection(const char* _filen
 				break;
 			}
 
-			new_transformation->first_translation_(axis_index) = atof(token.c_str());
+			new_transformation->first_translation_(axis_index) = std::stof(token);
 		}
 
 		if (!succeded) break;
@@ -739,7 +739,7 @@ bool MeshCuboidJointNormalRelations::load_joint_normal_csv(const char* _filename
 		std::getline(strstr, token, ',');
 
 		// Transposed.
-		mean_(j) = atof(token.c_str());
+		mean_(j) = std::stof(token);
 	}
 
 	for (int i = 0; i < k_mat_size; ++i)
@@ -764,7 +764,7 @@ bool MeshCuboidJointNormalRelations::load_joint_normal_csv(const char* _filename
 			}
 
 			std::getline(strstr, token, ',');
-			inv_cov_(i, j) = atof(token.c_str());
+			inv_cov_(i, j) = std::stof(token);
 		}
 	}
 
@@ -976,7 +976,7 @@ bool MeshCuboidCondNormalRelations::load_cond_normal_csv(const char* _filename)
 			std::getline(strstr, token, ',');
 
 			// Transposed.
-			mean_A_(j, i) = atof(token.c_str());
+			mean_A_(j, i) = std::stof(token);
 		}
 	}
 
@@ -996,7 +996,7 @@ bool MeshCuboidCondNormalRelations::load_cond_normal_csv(const char* _filename)
 		std::getline(strstr, token, ',');
 
 		// Transposed.
-		mean_b_(j) = atof(token.c_str());
+		mean_b_(j) = std::stof(token);
 	}
 
 	for (int i = 0; i < MeshCuboidFeatures::k_num_features; ++i)
@@ -1021,7 +1021,7 @@ bool MeshCuboidCondNormalRelations::load_cond_normal_csv(const char* _filename)
 			}
 
 			std::getline(strstr, token, ',');
-			inv_cov_(i, j) = atof(token.c_str());
+			inv_cov_(i, j) = std::stof(token);
 		}
 	}
 
@@ -1227,7 +1227,7 @@ bool MeshCuboidPCARelations::load_pca_csv(const char* _filename)
 		}
 
 		std::getline(strstr, token, ',');
-		mean_(j) = atof(token.c_str());
+		mean_(j) = std::stof(token);
 	}
 
 	for (int i = 0; i < k_mat_size; ++i)
@@ -1252,7 +1252,7 @@ bool MeshCuboidPCARelations::load_pca_csv(const char* _filename)
 			}
 
 			std::getline(strstr, token, ',');
-			pca_bases_(i, j) = atof(token.c_str());
+			pca_bases_(i, j) = std::stof(token);
 		}
 	}
 
@@ -1343,7 +1343,7 @@ bool MeshCuboidCCARelations::load_cca_bases(const char* _filename)
 		}
 
 		std::getline(strstr, token, ',');
-		mean_1_(j) = atof(token.c_str());
+		mean_1_(j) = std::stof(token);
 	}
 
 	std::getline(file, buffer);
@@ -1360,7 +1360,7 @@ bool MeshCuboidCCARelations::load_cca_bases(const char* _filename)
 		}
 
 		std::getline(strstr, token, ',');
-		mean_2_(j) = atof(token.c_str());
+		mean_2_(j) = std::stof(token);
 	}
 
 	std::getline(file, buffer);
@@ -1377,7 +1377,7 @@ bool MeshCuboidCCARelations::load_cca_bases(const char* _filename)
 		}
 
 		std::getline(strstr, token, ',');
-		correlations_(j) = atof(token.c_str());
+		correlations_(j) = std::stof(token);
 	}
 
 	for (int i = 0; i < MeshCuboidFeatures::k_num_features; ++i)
@@ -1402,7 +1402,7 @@ bool MeshCuboidCCARelations::load_cca_bases(const char* _filename)
 			}
 
 			std::getline(strstr, token, ',');
-			bases_12_(i, j) = atof(token.c_str());
+			bases_12_(i, j) = std::stof(token);
 		}
 	}
 
@@ -1428,7 +1428,7 @@ bool MeshCuboidCCARelations::load_cca_bases(const char* _filename)
 			}
 
 			std::getline(strstr, token, ',');
-			bases_21_(i, j) = atof(token.c_str());
+			bases_21_(i, j) = std::stof(token);
 		}
 	}
 

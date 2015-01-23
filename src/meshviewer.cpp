@@ -181,19 +181,18 @@ void create_menu(QMainWindow &w)
 	QObject::connect(runAct, SIGNAL(triggered()), w.centralWidget(), SLOT(query_open_sample_point_label_file()));
 	fileMenu->addAction(runAct);
 
-	runAct = new QAction(w.tr("Open mesh face labels..."), &w);
-	runAct->setStatusTip(w.tr("Open a mesh face label file"));
-	QObject::connect(runAct, SIGNAL(triggered()), w.centralWidget(), SLOT(query_open_mesh_face_label_file()));
+	runAct = new QAction(w.tr("Open mesh face labels (Create cuboids)..."), &w);
+	QObject::connect(runAct, SIGNAL(triggered()), w.centralWidget(),
+		SLOT(query_open_mesh_face_label_file_and_create_cuboids()));
 	fileMenu->addAction(runAct);
 
-	fileMenu->addSeparator();
-
-	runAct = new QAction(w.tr("Update mesh cuboids"), &w);
-	QObject::connect(runAct, SIGNAL(triggered()), w.centralWidget(), SLOT(update_mesh_cuboids()));
+	runAct = new QAction(w.tr("Open mesh face labels (Apply to cuboids)..."), &w);
+	QObject::connect(runAct, SIGNAL(triggered()), w.centralWidget(),
+		SLOT(query_open_face_label_file_and_apply_to_cuboids()));
 	fileMenu->addAction(runAct);
 
-	runAct = new QAction(w.tr("Apply mesh labels to cuboids"), &w);
-	QObject::connect(runAct, SIGNAL(triggered()), w.centralWidget(), SLOT(apply_mesh_labels_to_cuboids()));
+	runAct = new QAction(w.tr("Open cuboids..."), &w);
+	QObject::connect(runAct, SIGNAL(triggered()), w.centralWidget(), SLOT(query_open_cuboid_file()));
 	fileMenu->addAction(runAct);
 
 	fileMenu->addSeparator(); 
