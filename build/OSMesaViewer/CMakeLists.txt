@@ -86,7 +86,7 @@ include(FindOSMesa.cmake)
 
 # For the apps, we need qt and opengl to build them
 if (NOT QT4_FOUND)
-  find_package (Qt4 COMPONENTS QtCore)
+  find_package (Qt4 COMPONENTS QtCore QtGui)
   include (${QT_USE_FILE})
 endif ()
 

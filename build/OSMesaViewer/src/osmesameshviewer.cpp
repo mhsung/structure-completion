@@ -273,19 +273,23 @@ void snapshot(const std::string filename)
 	//	fclose(f);
 	//}
 
+	// Save PNG images using Qt library
 	try
 	{
 		QImage image;
 		size_t w(g_Width), h(g_Height);
 		image = QImage(w, h, QImage::Format_RGB32);
 
+                std::vector<GLubyte> fbuffer(4 * w*h);
+                memcpy(&fbuffer[0], g_Buffer, 4 * w*h * sizeof(GLubyte));
+
 		unsigned int x, y, offset;
 		for (y = 0; y < h; ++y) {
 			for (x = 0; x < w; ++x) {
 				offset = 4 * (y*w + x);
-				image.setPixel(x, h - y - 1, qRgb(g_Buffer[offset],
-					g_Buffer[offset + 1],
-					g_Buffer[offset + 2]));
+				image.setPixel(x, h - y - 1, qRgb(fbuffer[offset],
+					fbuffer[offset + 1],
+					fbuffer[offset + 2]));
 			}
 		}
 

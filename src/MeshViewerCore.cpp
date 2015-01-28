@@ -1,5 +1,7 @@
 #include "MeshViewerCore.h"
 
+#include "glut_geometry.h"
+
 
 MeshViewerCore::MeshViewerCore(GLViewerBase &_widget)
 	: MeshViewerCoreT<MyMesh>(_widget)
