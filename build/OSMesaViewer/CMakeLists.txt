@@ -59,6 +59,13 @@ if (WIN32)
     # let bundle generation depend on all targets
     add_dependencies (fixbundle OSMesaViewer)
   endif()
+  
+  # Required for Snow leopard, and the latest qt. Then the resources have to be copied
+  if ( EXISTS "/opt/local/libexec/qt4-mac/lib/QtGui.framework/Versions/4/Resources/qt_menu.nib" )
+      add_custom_command(TARGET OpenMesh POST_BUILD
+         COMMAND ${CMAKE_COMMAND} -E copy_directory "/opt/local/libexec/qt4-mac/lib/QtGui.framework/Versions/4/Resources/qt_menu.nib" "${CMAKE_BINARY_DIR}/Build/Libraries/qt_menu.nib" 
+        )
+  endif ()
 
 endif()
 
@@ -76,12 +83,21 @@ endif ()
 find_package (OpenGL)
 include(FindOSMesa.cmake)
 
+# For the apps, we need qt and opengl to build them
+if (NOT QT4_FOUND)
+  find_package (Qt4 COMPONENTS QtCore QtGui )
+
+  set (QT_USE_QTOPENGL 1)
+
+  include (${QT_USE_FILE})
+endif ()
+
 if ("${CMAKE_GENERATOR}" MATCHES "MinGW Makefiles")
   message(WARNING "GUI Apps are not build with mingw. (TODO)")
 endif()
 
 # check for OpenGL and OSMesa as our required dependencies
-if (OPENGL_FOUND AND OSMESA_FOUND AND NOT "${CMAKE_GENERATOR}" MATCHES "MinGW Makefiles" )
+if (QT4_FOUND AND OPENGL_FOUND AND OSMESA_FOUND AND NOT "${CMAKE_GENERATOR}" MATCHES "MinGW Makefiles" )
   # Add ui apps as dependency before fixbundle 
   if ( WIN32 AND NOT "${CMAKE_GENERATOR}" MATCHES "MinGW Makefiles")
     # let bundle generation depend on all targets
@@ -99,7 +115,11 @@ if (OPENGL_FOUND AND OSMESA_FOUND AND NOT "${CMAKE_GENERATOR}" MATCHES "MinGW Ma
     INSTALL(FILES ${files_install_app_dlls} DESTINATION . )
   endif()
 
-else () # Opengl or OSMesa not found
+else () # Qt, Opengl or OSMesa not found
+  
+  if (NOT QT4_FOUND)
+    message ("QT 4 not found! Skipping some apps.")
+  endif ()
   
   if (NOT OPENGL_FOUND)
     message ("OpengGL not found! Skipping some apps.")
@@ -130,6 +150,7 @@ include_directories (
   ${CMAKE_CURRENT_SOURCE_DIR}/../../src
   ${OPENMESH_INCLUDE_DIR}
   ${OSMESA_INCLUDE_DIR}
+  ${QT_INCLUDE_DIR}
 )
 
 # source code directories
@@ -155,6 +176,7 @@ else ()
 endif ()
 
 target_link_libraries (${targetName}
+  ${QT_LIBRARIES}
   ${OPENGL_LIBRARIES}
   ${OSMESA_LIBRARY}
 )
