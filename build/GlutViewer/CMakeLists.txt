@@ -85,10 +85,7 @@ find_package (GLUT)
 
 # For the apps, we need qt and opengl to build them
 if (NOT QT4_FOUND)
-  find_package (Qt4 COMPONENTS QtCore QtGui )
-
-  set (QT_USE_QTOPENGL 1)
-
+  find_package (Qt4 COMPONENTS QtCore)
   include (${QT_USE_FILE})
 endif ()
 
@@ -170,9 +167,9 @@ acg_drop_templates (sources)
 
 
 if (WIN32)
-  acg_add_executable (${targetName} WIN32 ${uic_targets} ${sources} ${headers})
+  acg_add_executable (${targetName} WIN32 ${sources} ${headers})
 else ()
-  acg_add_executable (${targetName} ${uic_targets} ${sources} ${headers})
+  acg_add_executable (${targetName} ${sources} ${headers})
 endif ()
 
 target_link_libraries (${targetName}

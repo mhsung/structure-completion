@@ -81,14 +81,12 @@ endif ()
 
 # find needed packages for gui applications
 find_package (OpenGL)
+find_package (GLUT)
 include(FindOSMesa.cmake)
 
 # For the apps, we need qt and opengl to build them
 if (NOT QT4_FOUND)
-  find_package (Qt4 COMPONENTS QtCore QtGui )
-
-  set (QT_USE_QTOPENGL 1)
-
+  find_package (Qt4 COMPONENTS QtCore)
   include (${QT_USE_FILE})
 endif ()
 
@@ -97,7 +95,7 @@ if ("${CMAKE_GENERATOR}" MATCHES "MinGW Makefiles")
 endif()
 
 # check for OpenGL and OSMesa as our required dependencies
-if (QT4_FOUND AND OPENGL_FOUND AND OSMESA_FOUND AND NOT "${CMAKE_GENERATOR}" MATCHES "MinGW Makefiles" )
+if (QT4_FOUND AND OPENGL_FOUND AND GLUT_FOUND AND OSMESA_FOUND AND NOT "${CMAKE_GENERATOR}" MATCHES "MinGW Makefiles" )
   # Add ui apps as dependency before fixbundle 
   if ( WIN32 AND NOT "${CMAKE_GENERATOR}" MATCHES "MinGW Makefiles")
     # let bundle generation depend on all targets
@@ -125,6 +123,10 @@ else () # Qt, Opengl or OSMesa not found
     message ("OpengGL not found! Skipping some apps.")
   endif ()
 
+  if (NOT GLUT_FOUND)
+    message ("GLUT not found! Skipping some apps.")
+  endif ()
+
   if (NOT OSMESA_FOUND)
     message ("OSMesa not found! Skipping some apps.")
   endif ()
@@ -150,6 +152,7 @@ include_directories (
   ${CMAKE_CURRENT_SOURCE_DIR}/../../src
   ${OPENMESH_INCLUDE_DIR}
   ${OSMESA_INCLUDE_DIR}
+  ${GLUT_INCLUDE_DIR}
   ${QT_INCLUDE_DIR}
 )
 
@@ -170,14 +173,15 @@ acg_drop_templates (sources)
 
 
 if (WIN32)
-  acg_add_executable (${targetName} WIN32 ${uic_targets} ${sources} ${headers})
+  acg_add_executable (${targetName} WIN32 ${sources} ${headers})
 else ()
-  acg_add_executable (${targetName} ${uic_targets} ${sources} ${headers})
+  acg_add_executable (${targetName} ${sources} ${headers})
 endif ()
 
 target_link_libraries (${targetName}
   ${QT_LIBRARIES}
   ${OPENGL_LIBRARIES}
+  ${GLUT_LIBRARIES}
   ${OSMESA_LIBRARY}
 )
 

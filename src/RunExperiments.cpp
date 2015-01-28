@@ -10,7 +10,7 @@
 #include <sstream>
 #include <Eigen/Core>
 #include <gflags/gflags.h>
-#include <QDIR>
+#include <QDir>
 #include <QFileInfo>
 
 
