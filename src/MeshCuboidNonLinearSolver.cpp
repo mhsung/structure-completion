@@ -7,7 +7,6 @@
 #include "Utilities.h"
 
 #include "ceres/ceres.h"
-
 #include <Eigen/Geometry> 
 
 
@@ -15,7 +14,7 @@ CostFunctor::CostFunctor(
 	std::vector<MeshCuboid *>& _cuboids,
 	const MeshCuboidPredictor& _predictor,
 	const double _quadprog_ratio,
-	QGLWidget *_viewer)
+	GLViewerCore *_viewer)
 	: cuboids_(_cuboids)
 	, predictor_(_predictor)
 	, quadprog_ratio_(_quadprog_ratio)
@@ -137,7 +136,7 @@ void non_linear_optimize_cuboids(
 	std::vector<MeshCuboid *>& _cuboids,
 	const MeshCuboidPredictor& _predictor,
 	const double _quadprog_ratio,
-	QGLWidget *_viewer)
+	GLViewerCore *_viewer)
 {
 	unsigned int num_cuboids = static_cast<unsigned int>(_cuboids.size());
 	const int num_parameters = CostFunctor::k_num_attributes * num_cuboids;

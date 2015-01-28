@@ -1,21 +1,16 @@
 #include "MeshCuboidSolver.h"
+
 #include "Utilities.h"
 
+#include <cstdint>
 #include <fstream>
 #include <iostream>
-
+#include <omp.h>
 #include <Eigen/Core>
 #include <Eigen/Eigenvalues>
 #include <Eigen/SparseCore>
 #include <MRFEnergy.h>
 #include <EigenQP.h>
-
-#include <QDebug>
-#include <QFile>
-#include <QProcess>
-
-#include <cstdint>
-#include <omp.h>
 
 
 const Real k_max_potential = param_max_potential;
@@ -1382,7 +1377,7 @@ void optimize_attributes(
 	const double _quadprog_ratio,
 	const std::string _log_filename,
 	const unsigned int _max_num_iterations,
-	QGLWidget *_viewer)
+	GLViewerCore *_viewer)
 {
 	std::ofstream log_file(_log_filename, std::ofstream::out | std::ofstream::app);
 	assert(log_file);

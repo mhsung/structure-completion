@@ -1,74 +1,85 @@
-#include "MeshViewerWidget.h"
-#include <QInputDialog>		// Added: Minhyuk Sung. 2009-08-24
-#include <QApplication>		// Added: Minhyuk Sung. 2009-10-22
-#include <GL/glut.h>
+#include "MeshViewerCore.h"
 
 
-void MeshViewerWidget::open_sample_point_file(QString filename)
+MeshViewerCore::MeshViewerCore(GLViewerBase &_widget)
+	: MeshViewerCoreT<MyMesh>(_widget)
+	, point_size_(1.0)
+	, selection_mode_(PICK_SEED)
+	, cuboid_structure_(&mesh_)
+	, draw_cuboid_axes_(true)
+	, view_point_(0.0)
+	, view_direction_(0.0)
 {
-	bool ret = cuboid_structure_.load_sample_points(filename.toLocal8Bit());
-	assert(ret);
+	//// NOTE:
+	//// Enable alpha channel.
+	//QGLFormat fmt;
+	//fmt.setAlpha(true);
+	//occlusion_test_widget_ = new QGLOcculsionTestWidget(fmt);
+	//draw_occlusion_test_points_ = false;
+
+	// TEST.
+	test_joint_normal_predictor_ = NULL;
+	//
+}
+
+MeshViewerCore::~MeshViewerCore()
+{
+	//delete occlusion_test_widget_;
+
+	// TEST.
+	for (LabelIndex label_index_1 = 0; label_index_1 < joint_normal_relations_.size(); ++label_index_1)
+		for (LabelIndex label_index_2 = 0; label_index_2 < joint_normal_relations_[label_index_1].size(); ++label_index_2)
+			delete joint_normal_relations_[label_index_1][label_index_2];
+
+	delete test_joint_normal_predictor_;
+	//
+}
+
+bool MeshViewerCore::open_mesh(const char* _filename)
+{
+	bool ret = MeshViewerCoreT<MyMesh>::open_mesh(_filename);
+	if (!ret) return false;
+
+	mesh_.initialize();
+
+	// NOTE:
+	// Change scale so that the object diameter becomes 1.
+	std::cout << "Object diameter: " << mesh_.get_object_diameter() << std::endl;
+	std::cout << "Now scaled to become 1..." << std::endl;
+	double scale = 1 / mesh_.get_object_diameter();
+	mesh_.scale(scale);
+
+	// Move mesh so that the object stands on the z = 0 plane.
+	Vec3d translation = -mesh_.get_bbox_center();
+	translation[2] += 0.5 * mesh_.get_bbox_size()[2];
+	mesh_.translate(translation);
+
+	Vec3f center(static_cast<float>(mesh_.get_bbox_center()[0]),
+		static_cast<float>(mesh_.get_bbox_center()[1]),
+		static_cast<float>(mesh_.get_bbox_center()[2]));
+	float diagonal_size = static_cast<float>(mesh_.get_bbox_size().norm());
+	float min_size = static_cast<float>(mesh_.get_bbox_size().min());
+
+	// set center and radius
+	set_scene_pos(center, diagonal_size * 0.5f);
+
+	// for normal display
+	normal_scale_ = min_size * 0.05f;
+
 	updateGL();
+	return true;
 }
 
-void MeshViewerWidget::open_sample_point_label_file(QString filename)
+void MeshViewerCore::open_modelview_matrix_file(const char* _filename)
 {
-	bool ret = cuboid_structure_.load_sample_point_labels(filename.toLocal8Bit());
-	assert(ret);
-	updateGL();
-}
-
-void MeshViewerWidget::open_mesh_face_label_file(QString filename)
-{
-	bool ret = mesh_.load_face_label_simple(filename.toLocal8Bit());
-	assert(ret);
-	updateGL();
-}
-
-void MeshViewerWidget::create_mesh_cuboids()
-{
-	cuboid_structure_.get_mesh_face_label_cuboids();
-	updateGL();
-}
-
-void MeshViewerWidget::apply_mesh_labels_to_cuboids()
-{
-	cuboid_structure_.apply_mesh_face_labels_to_cuboids();
-	updateGL();
-}
-
-void MeshViewerWidget::query_open_color_map_file()
-{
-	QString fileName = QFileDialog::getOpenFileName(this,
-		tr("Open a color map file"),
-		tr(""),
-		tr("Color maps (*.csv *.txt);;"
-		"All Files (*)"));
-	if (!fileName.isEmpty())
-		mesh_.load_vertex_color_map(fileName.toLocal8Bit());
-}
-
-void MeshViewerWidget::query_save_color_map_file()
-{
-	QString fileName = QFileDialog::getSaveFileName(this,
-		tr("Open a color map file"),
-		tr(""),
-		tr("Color maps (*.csv *.txt);;"
-		"All Files (*)"));
-	if (!fileName.isEmpty())
-		mesh_.save_vertex_color_map(fileName.toLocal8Bit());
-}
-
-void MeshViewerWidget::open_modelview_matrix_file(QString fname)
-{
-	std::string filename(fname.toLocal8Bit());
-	std::ifstream file(filename.c_str());
+	assert(_filename);
+	std::ifstream file(_filename);
 	if (!file)
 	{
-		std::cerr << "Can't open file: \"" << filename << "\"" << std::endl;
+		std::cerr << "Can't open file: \"" << _filename << "\"" << std::endl;
 		return;
 	}
-	std::cout << "Loading " << filename << "..." << std::endl;
+	std::cout << "Loading " << _filename << "..." << std::endl;
 
 	char buffer[256];
 	unsigned int count = 0;
@@ -104,16 +115,16 @@ void MeshViewerWidget::open_modelview_matrix_file(QString fname)
 	std::cout << "Done." << std::endl;
 }
 
-void MeshViewerWidget::save_modelview_matrix_file(QString fname)
+void MeshViewerCore::save_modelview_matrix_file(const char* _filename)
 {
-	std::string filename(fname.toLocal8Bit());
-	std::ofstream file(filename.c_str());
+	assert(_filename);
+	std::ofstream file(_filename);
 	if(!file)
 	{
-		std::cerr << "Can't save file: \"" << filename << "\"" << std::endl;
+		std::cerr << "Can't save file: \"" << _filename << "\"" << std::endl;
 		return;
 	}
-	std::cout << "Saving " << filename << "..." << std::endl;
+	std::cout << "Saving " << _filename << "..." << std::endl;
 
 	unsigned int num_values = 16;
 	const GLdouble* matrix = modelview_matrix();
@@ -126,16 +137,16 @@ void MeshViewerWidget::save_modelview_matrix_file(QString fname)
 	std::cout << "Done." << std::endl;
 }
 
-void MeshViewerWidget::save_projection_matrix_file(QString fname)
+void MeshViewerCore::save_projection_matrix_file(const char* _filename)
 {
-	std::string filename(fname.toLocal8Bit());
-	std::ofstream file(filename.c_str());
+	assert(_filename);
+	std::ofstream file(_filename);
 	if (!file)
 	{
-		std::cerr << "Can't save file: \"" << filename << "\"" << std::endl;
+		std::cerr << "Can't save file: \"" << _filename << "\"" << std::endl;
 		return;
 	}
-	std::cout << "Saving " << filename << "..." << std::endl;
+	std::cout << "Saving " << _filename << "..." << std::endl;
 
 	unsigned int num_values = 16;
 	const GLdouble* matrix = projection_matrix();
@@ -148,7 +159,57 @@ void MeshViewerWidget::save_projection_matrix_file(QString fname)
 	std::cout << "Done." << std::endl;
 }
 
-void MeshViewerWidget::render_selection_mode()
+void MeshViewerCore::open_color_map_file(const char* _filename)
+{
+	assert(_filename);
+	mesh_.load_vertex_color_map(_filename);
+	updateGL();
+}
+
+void MeshViewerCore::save_color_map_file(const char* _filename)
+{
+	assert(_filename);
+	mesh_.save_vertex_color_map(_filename);
+	updateGL();
+}
+
+void MeshViewerCore::open_sample_point_file(const char* _filename)
+{
+	assert(_filename);
+	bool ret = cuboid_structure_.load_sample_points(_filename);
+	assert(ret);
+	updateGL();
+}
+
+void MeshViewerCore::open_sample_point_label_file(const char* _filename)
+{
+	assert(_filename);
+	bool ret = cuboid_structure_.load_sample_point_labels(_filename);
+	assert(ret);
+	updateGL();
+}
+
+void MeshViewerCore::open_mesh_face_label_file(const char* _filename)
+{
+	assert(_filename);
+	bool ret = mesh_.load_face_label_simple(_filename);
+	assert(ret);
+	updateGL();
+}
+
+void MeshViewerCore::create_mesh_cuboids()
+{
+	cuboid_structure_.get_mesh_face_label_cuboids();
+	updateGL();
+}
+
+void MeshViewerCore::apply_mesh_labels_to_cuboids()
+{
+	cuboid_structure_.apply_mesh_face_labels_to_cuboids();
+	updateGL();
+}
+
+void MeshViewerCore::render_selection_mode()
 {
 	MyMesh::ConstVertexIter vit = mesh_.vertices_begin(), vEnd = mesh_.vertices_end();
 	OpenMesh::VPropHandleT<MyMesh::Point> hPos;
@@ -188,7 +249,7 @@ void MeshViewerWidget::render_selection_mode()
 	//}
 }
 
-VertexIndex MeshViewerWidget::select_object(int x, int y)
+VertexIndex MeshViewerCore::select_object(int x, int y)
 {
 	GLuint select_buffer[64];
 	GLint hits, viewport[4];
@@ -228,14 +289,14 @@ VertexIndex MeshViewerWidget::select_object(int x, int y)
 	return object_index;
 }
 
-void MeshViewerWidget::mousePressEvent( QMouseEvent* _event )
+void MeshViewerCore::mousePressEvent(const OpenMesh::Vec2f& _new_point_2d,
+	bool _is_left_button, bool _is_mid_button, bool _is_right_button,
+	bool _is_ctrl_pressed, bool _is_alt_pressed, bool _is_shift_pressed)
 {
-	if (_event->button() == LeftButton && _event->buttons() == LeftButton
-		&& QApplication::keyboardModifiers() & Qt::ShiftModifier )
+	if (_is_left_button && _is_shift_pressed )
 	{
 		// Selection mode.
-		if( current_draw_mode() == CUSTOM_VIEW
-			|| current_draw_mode() == COLORED_RENDERING )
+		if (getDrawMode() == CUSTOM_VIEW || getDrawMode() == COLORED_RENDERING)
 		{
 			VertexIndex selected_vertex_index = -1;
 			bool is_valid = false;
@@ -243,8 +304,7 @@ void MeshViewerWidget::mousePressEvent( QMouseEvent* _event )
 			// Set a seed vertex.
 			if(selection_mode_ == PICK_SEED)
 			{
-				QPoint new_point_2d = _event->pos();
-				selected_vertex_index = select_object(new_point_2d.x(), new_point_2d.y());
+				selected_vertex_index = select_object(_new_point_2d[0], _new_point_2d[1]);
 				if(selected_vertex_index < mesh_.n_vertices())
 				{
 					mesh_.seed_vertex_index_ = selected_vertex_index;
@@ -255,8 +315,7 @@ void MeshViewerWidget::mousePressEvent( QMouseEvent* _event )
 			// Set a query vertex.
 			else if(selection_mode_ == PICK_QUERY)
 			{
-				QPoint newPoint2D = _event->pos();
-				selected_vertex_index = select_object(newPoint2D.x(), newPoint2D.y());
+				selected_vertex_index = select_object(_new_point_2d[0], _new_point_2d[1]);
 				if(selected_vertex_index < mesh_.n_vertices())
 				{
 					mesh_.query_vertex_index_ = selected_vertex_index;
@@ -300,22 +359,25 @@ void MeshViewerWidget::mousePressEvent( QMouseEvent* _event )
 	}
 	else
 	{
-		QGLViewerWidget::mousePressEvent(_event);
+		GLViewerCore::mousePressEvent(_new_point_2d,
+			_is_left_button, _is_mid_button, _is_right_button,
+			_is_ctrl_pressed, _is_alt_pressed, _is_shift_pressed);
 	}
 }
 
-void MeshViewerWidget::keyPressEvent( QKeyEvent* _event)
+void MeshViewerCore::keyPressEvent(const char _new_key,
+	bool _is_ctrl_pressed, bool _is_alt_pressed, bool _is_shift_pressed)
 {
-	this->MeshViewerWidgetT<MyMesh>::keyPressEvent( _event );
-
-	switch( _event->key() )
+	switch (_new_key)
 	{
 	//case Key_I:
 	//	std::cout << std::endl;
 	//	mesh_.show_picked_vertices_info();
 	//	break;
 
-	case Key_Left:
+	// FIXME.
+	// Check whether the Ascii codes of special keys are correct.
+	case 0x1B:	// Left
 		if (cuboid_structure_.query_label_index_ - 1 < 0
 			&& cuboid_structure_.num_labels() > 0)
 		{
@@ -329,7 +391,7 @@ void MeshViewerWidget::keyPressEvent( QKeyEvent* _event)
 		updateGL();
 		break;
 
-	case Key_Right:
+	case 0x1A:	// Right
 		// "mesh_.render_label_idx_ == mesh_.sample_point_num_labels_" draws all parts.
 		if (cuboid_structure_.query_label_index_ + 1 > cuboid_structure_.num_labels())
 		{
@@ -345,7 +407,7 @@ void MeshViewerWidget::keyPressEvent( QKeyEvent* _event)
 
 	/*
 	// TEST.
-	case Key_Left:
+	case 0x1B:	// Left
 		if (_event->modifiers() & ControlModifier)
 			run_test_rotate(-1.0);
 		else if (_event->modifiers() & ShiftModifier)
@@ -354,7 +416,7 @@ void MeshViewerWidget::keyPressEvent( QKeyEvent* _event)
 			run_test_translate(MyMesh::Normal(-1.0, 0.0, 0.0));
 		break;
 
-	case Key_Right:
+	case 0x1A:	// Right
 		if (_event->modifiers() & ControlModifier)
 			run_test_rotate(+1.0);
 		else if (_event->modifiers() & ShiftModifier)
@@ -363,7 +425,7 @@ void MeshViewerWidget::keyPressEvent( QKeyEvent* _event)
 			run_test_translate(MyMesh::Normal(+1.0, 0.0, 0.0));
 		break;
 
-	case Key_Up:
+	case 0x18:	// Up
 		if (_event->modifiers() & ControlModifier);
 		else if (_event->modifiers() & ShiftModifier)
 			run_test_scale(0.0, +1.0);
@@ -371,7 +433,7 @@ void MeshViewerWidget::keyPressEvent( QKeyEvent* _event)
 			run_test_translate(MyMesh::Normal(0.0, +1.0, 0.0));
 		break;
 
-	case Key_Down:
+	case 0x19:	// Down
 		if (_event->modifiers() & ControlModifier);
 		else if (_event->modifiers() & ShiftModifier)
 			run_test_scale(0.0, -1.0);
@@ -381,23 +443,24 @@ void MeshViewerWidget::keyPressEvent( QKeyEvent* _event)
 	//
 	*/
 
-	case Key_F1:
+	case '1':
 		std::cout << "Picking: [Seed]" << std::endl;
 		selection_mode_ = PICK_SEED;
 		break;
 
-	case Key_F2:
+	case '2':
 		std::cout << "Picking: [Query]" << std::endl;
 		selection_mode_ = PICK_QUERY;
 		break;
 
-	case Key_F3:
+	case '3':
 		std::cout << "Picking: [Feature]" << std::endl;
 		selection_mode_ = PICK_FEATURE;
 		break;
 
-
 	default:
+		GLViewerCore::keyPressEvent(_new_key,
+			_is_ctrl_pressed, _is_alt_pressed, _is_shift_pressed);
 		break;
 	}
 }
@@ -498,9 +561,35 @@ void draw_arrow(MyMesh::Point _p1, MyMesh::Point _p2, GLdouble _arrow_size)
 	glPolygonMode(GL_BACK, polygon_mode[1]);
 }
 
-void MeshViewerWidget::draw_openmesh(const std::string& _drawmode)
+void MeshViewerCore::draw_scene(const std::string& _draw_mode)
 {
-	MeshViewerWidgetT<MyMesh>::draw_openmesh(_drawmode);
+	MeshViewerCoreT<MyMesh>::draw_scene(_draw_mode);
+
+	if (_draw_mode == CUSTOM_VIEW)
+	{
+		glDisable(GL_LIGHTING);
+		glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
+		draw_openmesh(_draw_mode);
+		glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
+	}
+	else if (_draw_mode == COLORED_RENDERING)
+	{
+		glEnable(GL_LIGHTING);
+		glShadeModel(GL_SMOOTH);
+		draw_openmesh(_draw_mode);
+		setDefaultMaterial();
+	}
+	else if (_draw_mode == FACE_INDEX_RENDERING)
+	{
+		glDisable(GL_LIGHTING);
+		glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
+		draw_openmesh(_draw_mode);
+	}
+}
+
+void MeshViewerCore::draw_openmesh(const std::string& _drawmode)
+{
+	MeshViewerCoreT<MyMesh>::draw_openmesh(_drawmode);
 
 	if (_drawmode == CUSTOM_VIEW) // -------------------------------------------
 	{
@@ -995,6 +1084,69 @@ void MeshViewerWidget::draw_openmesh(const std::string& _drawmode)
 	}
 }
 
+void MeshViewerCore::remove_occluded_points()
+{
+	std::string curr_draw_mode = getDrawMode();
+	setDrawMode(FACE_INDEX_RENDERING);
+
+	size_t w(width()), h(height());
+	GLenum buffer(GL_BACK);
+
+	std::vector<GLubyte> fbuffer(3 * w*h);
+	std::set<FaceIndex> visible_face_indices;
+
+	//qApp->processEvents();
+	makeCurrent();
+	updateGL();
+	glFinish();
+
+	glReadBuffer(buffer);
+	glPixelStorei(GL_PACK_ALIGNMENT, 1);
+	glPixelStorei(GL_UNPACK_ALIGNMENT, 1);
+
+	updateGL();
+	glReadPixels(0, 0, w, h, GL_RGB, GL_UNSIGNED_BYTE, &fbuffer[0]);
+
+	unsigned int x, y, offset;
+
+	for (y = 0; y < h; ++y) {
+		for (x = 0; x < w; ++x) {
+			offset = 3 * (y*w + x);
+			unsigned int r = static_cast<unsigned int>(fbuffer[offset]);
+			unsigned int g = static_cast<unsigned int>(fbuffer[offset + 1]);
+			unsigned int b = static_cast<unsigned int>(fbuffer[offset + 2]);
+
+			// NOTE:
+			// (255, 255, 255) is background color.
+			if (r >= 255 && g >= 255 && b >= 255)
+				continue;
+
+			FaceIndex face_index = r + 256 * g + 65536 * b;
+			assert(face_index < mesh_.n_faces());
+			visible_face_indices.insert(face_index);
+		}
+	}
+
+	MyMesh::ConstFaceIter f_it, f_start(mesh_.faces_begin()), f_end(mesh_.faces_end());
+	for (f_it = f_start; f_it != f_end; ++f_it)
+		mesh_.set_color(f_it.handle(), MyMesh::Color(0, 255, 255));
+
+	for (std::set<FaceIndex>::iterator it = visible_face_indices.begin();
+		it != visible_face_indices.end(); ++it)
+	{
+		FaceIndex face_index = *it;
+		MyMesh::FaceHandle fh = mesh_.face_handle(face_index);
+		mesh_.set_color(fh, MyMesh::Color(255, 0, 0));
+	}
+
+	setDrawMode(curr_draw_mode);
+
+	// Remove occluded sample points.
+	cuboid_structure_.remove_occluded_sample_points(visible_face_indices);
+
+	updateGL();
+}
+
 bool print_faces_info(const MyMesh &_mesh, const char *_filename)
 {
 	std::ofstream file(_filename);
@@ -1121,72 +1273,10 @@ bool print_neighbors_info(const MyMesh &_mesh, const char *_filename)
 	return true;
 }
 
-void MeshViewerWidget::run_print_mesh_info()
+void MeshViewerCore::print_mesh_info()
 {
+	// Nov. 2012, Minhyuk Sung
 	print_faces_info(mesh_, FACE_INFO_FILENAME);
 	print_vertices_info(mesh_, VERTEX_INFO_FILENAME);
 	print_neighbors_info(mesh_, NEIGHBOR_INFO_FILENAME);
-}
-
-void MeshViewerWidget::remove_occluded_points()
-{
-	unsigned int curr_draw_mode = draw_mode_;
-	slotDrawMode(findAction(FACE_INDEX_RENDERING));
-
-	size_t w(width()), h(height());
-	GLenum buffer(GL_BACK);
-
-	std::vector<GLubyte> fbuffer(3 * w*h);
-	std::set<FaceIndex> visible_face_indices;
-
-	qApp->processEvents();
-	makeCurrent();
-	updateGL();
-	glFinish();
-
-	glReadBuffer(buffer);
-	glPixelStorei(GL_PACK_ALIGNMENT, 1);
-	glPixelStorei(GL_UNPACK_ALIGNMENT, 1);
-
-	updateGL();
-	glReadPixels(0, 0, w, h, GL_RGB, GL_UNSIGNED_BYTE, &fbuffer[0]);
-
-	unsigned int x, y, offset;
-
-	for (y = 0; y < h; ++y) {
-		for (x = 0; x < w; ++x) {
-			offset = 3 * (y*w + x);
-			unsigned int r = static_cast<unsigned int>(fbuffer[offset]);
-			unsigned int g = static_cast<unsigned int>(fbuffer[offset + 1]);
-			unsigned int b = static_cast<unsigned int>(fbuffer[offset + 2]);
-
-			// NOTE:
-			// (255, 255, 255) is background color.
-			if (r >= 255 && g >= 255 && b >= 255)
-				continue;
-
-			FaceIndex face_index = r + 256 * g + 65536 * b;
-			assert(face_index < mesh_.n_faces());
-			visible_face_indices.insert(face_index);
-		}
-	}
-
-	MyMesh::ConstFaceIter f_it, f_start(mesh_.faces_begin()), f_end(mesh_.faces_end());
-	for (f_it = f_start; f_it != f_end; ++f_it)
-		mesh_.set_color(f_it.handle(), MyMesh::Color(0, 255, 255));
-
-	for (std::set<FaceIndex>::iterator it = visible_face_indices.begin();
-		it != visible_face_indices.end(); ++it)
-	{
-		FaceIndex face_index = *it;
-		MyMesh::FaceHandle fh = mesh_.face_handle(face_index);
-		mesh_.set_color(fh, MyMesh::Color(255, 0, 0));
-	}
-
-	draw_mode_ = curr_draw_mode;
-
-	// Remove occluded sample points.
-	cuboid_structure_.remove_occluded_sample_points(visible_face_indices);
-
-	updateGL();
 }

@@ -1,7 +1,7 @@
 /*===========================================================================*\
 *                                                                           *
 *                               OpenMesh                                    *
-*      Copyright (C) 2001-2009 by Computer Graphics Group, RWTH Aachen      *
+*      Copyright (C) 2001-2014 by Computer Graphics Group, RWTH Aachen      *
 *                           www.openmesh.org                                *
 *                                                                           *
 *---------------------------------------------------------------------------*
@@ -34,17 +34,14 @@
 
 /*===========================================================================*\
 *                                                                           *
-*   $Revision: 137 $                                                         *
-*   $Date: 2009-06-04 10:46:29 +0200 (Do, 04. Jun 2009) $                   *
+*   $Revision: 990 $                                                         *
+*   $Date: 2014-02-05 10:01:07 +0100 (Mi, 05 Feb 2014) $                   *
 *                                                                           *
 \*===========================================================================*/
 
 
 #ifndef OPENMESHAPPS_QGLVIEWERWIDGET_HH
 #define OPENMESHAPPS_QGLVIEWERWIDGET_HH
-
-// If defined, both A, B objects move together
-#define MOVE_BOTH_TOGETHER
 
 
 //== INCLUDES =================================================================
@@ -56,6 +53,8 @@
 #include <vector>
 #include <map>
 
+#include "GLViewerCore.h"
+
 
 //== FORWARD DECLARATIONS =====================================================
 
@@ -66,9 +65,8 @@ class QAction;
 //== CLASS DEFINITION =========================================================
 
 
-class QGLViewerWidget : public QGLWidget
+class QGLViewerWidget : public QGLWidget, public GLViewerBase
 {
-
 	Q_OBJECT
 
 public:
@@ -89,57 +87,37 @@ private:
 
 public:
 
-	typedef enum
+	// GLViewerWidget functions
+	virtual float GLViewerBaseWidth() { return width(); }
+
+	virtual float GLViewerBaseHeight() { return height(); }
+
+	virtual void GLViewerBasemakeCurrent() { makeCurrent(); }
+
+	virtual void GLViewerBaseSwapBuffers() { swapBuffers(); }
+
+	virtual void GLViewerBaseUpdateGL() { updateGL(); };
+
+	virtual void GLViewerBaseSnapshot(const std::string &_filename) { slotSnapshot(_filename); }
+
+	virtual void GLViewerBaseSetWindowTitle(const std::string &_title) { setWindowTitle(_title.c_str()); }
+
+	virtual std::string GLViewerBaseGetDrawMode()
 	{
-		VIEW_A,
-		VIEW_B
-	} View;
+		std::string draw_mode("");
+		if (draw_mode_)
+		{
+			assert(draw_mode_ <= n_draw_modes_);
+			draw_mode = draw_mode_names_[draw_mode_ - 1];
+		}
+		return draw_mode;
+	}
 
-	View get_current_view()
+	virtual void GLViewerBaseSetDrawMode(const std::string &_draw_mode)
 	{
-		return view_;
-	};
+		slotDrawMode(findAction(_draw_mode.c_str()));
+	}
 
-	virtual void set_current_view(View v)
-	{
-		view_ = v;
-		if (view_ == VIEW_A) modelview_matrix_ = modelview_matrix_A;
-		if (view_ == VIEW_B) modelview_matrix_ = modelview_matrix_B;
-	};
-
-	public slots:
-
-	virtual void set_render_view_A()
-	{
-		render_modelview_matrix_ = modelview_matrix_A;
-	};
-
-	virtual void set_render_view_B()
-	{
-		render_modelview_matrix_ = modelview_matrix_B;
-	};
-
-	void toggle_view()
-	{
-		if (get_current_view() == VIEW_A)		set_current_view(VIEW_B);
-		else if (get_current_view() == VIEW_B)	set_current_view(VIEW_A);
-	};
-
-	// Added: Minhyuk Sung. 2013-11-11
-	void toggle_hide_A() { hide_A_ ^= 1; };
-	void toggle_hide_B() { hide_B_ ^= 1; };
-
-
-public:
-
-	/* Sets the center and size of the whole scene.
-	The _center is used as fixpoint for rotations and for adjusting
-	the camera/viewer (see view_all()). */
-	void set_scene_pos(const OpenMesh::Vec3f& _center, float _radius);
-
-	/* view the whole scene: the eye point is moved far enough from the
-	center so that the whole scene is visible. */
-	void view_all();
 
 	/// add draw mode to popup menu, and return the QAction created
 	QAction *add_draw_mode(const std::string& _s);
@@ -152,12 +130,6 @@ public:
 		return draw_mode_ ? draw_mode_names_[draw_mode_ - 1] : nomode_;
 	}
 
-	float radius() const { return radius_; }
-	const OpenMesh::Vec3f& center() const { return center_; }
-
-	const GLdouble* modelview_matrix() const  { return modelview_matrix_; }
-	const GLdouble* projection_matrix() const { return projection_matrix_; }
-
 	float fovy() const { return 45.0f; }
 
 	QAction* findAction(const char *name);
@@ -165,38 +137,30 @@ public:
 	void removeAction(const char* name);
 	void removeAction(QAction* action);
 
+
 protected:
 
-	// draw the scene: will be called by the painGL() method.
-	virtual void draw_scene(const std::string& _draw_mode);
+	//double performance(void);
 
-	double performance(void);
 
-	void setDefaultMaterial(void);
-	void setDefaultLight(void);
-
-	// Modified: Minhyuk Sung. 2013-11-07
-	// private -> protected
-	// void slotSnapshot( void ) -> void slotSnapshot( const char *_filename = NULL )
-	protected slots:
+	private slots:
 
 	// popup menu clicked
 	void slotDrawMode(QAction *_mode);
-	void slotSnapshot(const char *_filename = NULL);
+	void slotSnapshot(const std::string _filename);
 
 
-private: // inherited
+protected: // inherited
 
 	// initialize OpenGL states (triggered by Qt)
-	void initializeGL();
+	virtual void initializeGL();
 
 	// draw the scene (triggered by Qt)
-	void paintGL();
+	virtual void paintGL();
 
 	// handle resize events (triggered by Qt)
-	void resizeGL(int w, int h);
+	virtual void resizeGL(int w, int h);
 
-protected:
 
 	// Qt mouse events
 	virtual void mousePressEvent(QMouseEvent*);
@@ -205,37 +169,8 @@ protected:
 	virtual void wheelEvent(QWheelEvent*);
 	virtual void keyPressEvent(QKeyEvent*);
 
-	// Added: Minhyuk Sung. 2009-11-24
-	void set_modelview_matrix(GLdouble *matrix);
 
-	static void getTransformedCoord(const GLdouble *matrix,
-		const GLdouble *_coord, GLdouble output[3]);
-
-	// Modified: Minhyuk Sung. 2013-11-07
-	// private -> protected
-protected:
-
-	// updates projection matrix
-	void update_projection_matrix();
-
-	// translate the scene and update modelview matrix
-	void translate(const OpenMesh::Vec3f& _trans);
-
-	// rotate the scene (around its center) and update modelview matrix
-	void rotate(const OpenMesh::Vec3f& _axis, float _angle);
-
-	OpenMesh::Vec3f  center_;
-	float            radius_;
-
-	GLdouble    projection_matrix_[16];
-	GLdouble    *modelview_matrix_;
-	GLdouble    *render_modelview_matrix_;
-
-protected:
-	View view_;
-	GLdouble    modelview_matrix_A[16];
-	GLdouble    modelview_matrix_B[16];
-
+private:
 
 	// popup menu for draw mode selection
 	QMenu*               popup_menu_;
@@ -246,18 +181,6 @@ protected:
 	unsigned int              n_draw_modes_;
 	std::vector<std::string>  draw_mode_names_;
 	static std::string        nomode_;
-
-	// Added: Minhyuk Sung. 2013-11-11
-	bool hide_A_;
-	bool hide_B_;
-
-
-	// virtual trackball: map 2D screen point to unit sphere
-	bool map_to_sphere(const QPoint& _point, OpenMesh::Vec3f& _result);
-
-	QPoint           last_point_2D_;
-	OpenMesh::Vec3f  last_point_3D_;
-	bool             last_point_ok_;
 
 };
 

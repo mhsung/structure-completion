@@ -1,4 +1,4 @@
-#include "MeshViewerWidget.h"
+#include "MeshViewerCore.h"
 #include "MeshCuboidEvaluator.h"
 #include "MeshCuboidNonLinearSolver.h"
 #include "MeshCuboidPredictor.h"
@@ -7,10 +7,11 @@
 #include "MeshCuboidSolver.h"
 //#include "QGLOcculsionTestWidget.h"
 
+#include <sstream>
 #include <Eigen/Core>
 #include <gflags/gflags.h>
-
-#include <sstream>
+#include <QDIR>
+#include <QFileInfo>
 
 
 DEFINE_bool(run_training, false, "");
@@ -47,7 +48,7 @@ const bool run_ground_truth = true;
 
 
 
-void MeshViewerWidget::run_print_arguments()
+void MeshViewerCore::parse_arguments()
 {
 	std::cout << "data_root_path = " << FLAGS_data_root_path << std::endl;
 	std::cout << "label_info_path = " << FLAGS_data_root_path + FLAGS_label_info_path << std::endl;
@@ -59,19 +60,21 @@ void MeshViewerWidget::run_print_arguments()
 
 	if (FLAGS_run_training)
 	{
-		run_training();
+		train();
 		exit(EXIT_FAILURE);
 	}
 	else if (FLAGS_run_prediction)
 	{
 		std::cout << "mesh_filename = " << FLAGS_mesh_filename << std::endl;
-		run_prediction();
+		predict();
 		exit(EXIT_FAILURE);
 	}
 }
 
-void MeshViewerWidget::open_cuboid_file(QString filename)
+void MeshViewerCore::open_cuboid_file(const char *_filename)
 {
+	assert(_filename);
+
 	// Load basic information.
 	bool ret = true;
 
@@ -88,12 +91,12 @@ void MeshViewerWidget::open_cuboid_file(QString filename)
 		} while (std::cin.get() != '\n');
 	}
 
-	cuboid_structure_.load_cuboids(filename.toStdString());
-	slotDrawMode(findAction(CUSTOM_VIEW));
+	cuboid_structure_.load_cuboids(_filename);
+	setDrawMode(CUSTOM_VIEW);
 	updateGL();
 }
 
-void MeshViewerWidget::set_view_direction()
+void MeshViewerCore::set_view_direction()
 {
 	Eigen::Vector3d view_direction;
 	// -Z direction.
@@ -116,7 +119,7 @@ void MeshViewerWidget::set_view_direction()
 	updateGL();
 }
 
-void MeshViewerWidget::run_training()
+void MeshViewerCore::train()
 {
 	bool ret = true;
 	ret = ret & cuboid_structure_.load_labels((FLAGS_data_root_path +
@@ -147,7 +150,7 @@ void MeshViewerWidget::run_training()
 	//	manual_pair_feature_list[label_index].resize(num_labels);
 	
 
-	slotDrawMode(findAction(CUSTOM_VIEW));
+	setDrawMode(CUSTOM_VIEW);
 	open_modelview_matrix_file(FLAGS_pose_filename.c_str());
 
 	// For every file in the base path.
@@ -192,7 +195,7 @@ void MeshViewerWidget::run_training()
 			cuboid_structure_.clear_cuboids();
 			cuboid_structure_.clear_sample_points();
 
-			open_mesh_gui(mesh_filepath.c_str());
+			open_mesh(mesh_filepath.c_str());
 			open_sample_point_file(sample_filepath.c_str());
 			open_mesh_face_label_file(mesh_label_filepath.c_str());
 
@@ -216,7 +219,7 @@ void MeshViewerWidget::run_training()
 
 			mesh_.clear_colors();
 			updateGL();
-			slotSnapshot(snapshot_filepath.c_str());
+			snapshot(snapshot_filepath.c_str());
 
 			
 			assert(cuboid_structure_.num_labels() == num_labels);
@@ -355,7 +358,7 @@ void MeshViewerWidget::run_training()
 	std::cout << " -- Batch Completed. -- " << std::endl;
 }
 
-void MeshViewerWidget::run_training_from_files()
+void MeshViewerCore::train_file_files()
 {
 	unsigned int num_cuboids = 0;
 
@@ -415,7 +418,7 @@ void MeshViewerWidget::run_training_from_files()
 	////
 }
 
-void MeshViewerWidget::run_batch_prediction()
+void MeshViewerCore::batch_predict()
 {
 	// For every file in the base path.
 	QDir input_dir((FLAGS_data_root_path + FLAGS_mesh_path).c_str());
@@ -433,14 +436,14 @@ void MeshViewerWidget::run_batch_prediction()
 		{
 			FLAGS_mesh_filename = std::string(file_info.fileName().toLocal8Bit());
 			std::cout << "mesh_filename = " << FLAGS_mesh_filename << std::endl;
-			run_prediction();
+			predict();
 		}
 	}
 
 	std::cout << " -- Batch Completed. -- " << std::endl;
 }
 
-void MeshViewerWidget::run_prediction()
+void MeshViewerCore::predict()
 {
 	// Load basic information.
 	bool ret = true;
@@ -528,9 +531,9 @@ void MeshViewerWidget::run_prediction()
 
 
 	// Load files.
-	slotDrawMode(findAction(CUSTOM_VIEW));
+	setDrawMode(CUSTOM_VIEW);
 
-	open_mesh_gui(mesh_filepath.c_str());
+	open_mesh(mesh_filepath.c_str());
 
 	if (mesh_label_file.exists())
 	{
@@ -551,11 +554,11 @@ void MeshViewerWidget::run_prediction()
 	std::cout << "\n - Remove occluded points." << std::endl;
 	open_modelview_matrix_file(FLAGS_occlusion_pose_filename.c_str());
 	remove_occluded_points();
-	//run_occlusion_test();
+	//do_occlusion_test();
 	set_view_direction();
 
 	double occlusion_modelview_matrix[16];
-	memcpy(occlusion_modelview_matrix, modelview_matrix_, 16 * sizeof(double));
+	memcpy(occlusion_modelview_matrix, modelview_matrix(), 16 * sizeof(double));
 
 	//Eigen::VectorXd occlusion_test_values;
 	//ANNpointArray occlusion_test_ann_points;
@@ -574,7 +577,7 @@ void MeshViewerWidget::run_prediction()
 	snapshot_filename_sstr.clear(); snapshot_filename_sstr.str("");
 	snapshot_filename_sstr << FLAGS_output_path + std::string("/Temp")
 		<< filename_prefix << std::string("_input");
-	slotSnapshot(snapshot_filename_sstr.str().c_str());
+	snapshot(snapshot_filename_sstr.str().c_str());
 
 
 	std::cout << "\n - Cluster points and construct initial cuboids." << std::endl;
@@ -620,7 +623,7 @@ void MeshViewerWidget::run_prediction()
 		snapshot_filename_sstr << FLAGS_output_path + std::string("/Temp") << filename_prefix
 			<< std::string("c_") << cuboid_structure_name << std::string("_")
 			<< std::string("s_") << snapshot_index;
-		slotSnapshot(snapshot_filename_sstr.str().c_str());
+		snapshot(snapshot_filename_sstr.str().c_str());
 		++snapshot_index;
 		draw_cuboid_axes_ = true;
 		
@@ -638,7 +641,7 @@ void MeshViewerWidget::run_prediction()
 		snapshot_filename_sstr << FLAGS_output_path + std::string("/Temp") << filename_prefix
 			<< std::string("c_") << cuboid_structure_name << std::string("_")
 			<< std::string("s_") << snapshot_index;
-		slotSnapshot(snapshot_filename_sstr.str().c_str());
+		snapshot(snapshot_filename_sstr.str().c_str());
 		++snapshot_index;
 
 
@@ -650,7 +653,7 @@ void MeshViewerWidget::run_prediction()
 		snapshot_filename_sstr << FLAGS_output_path + std::string("/Temp") << filename_prefix
 			<< std::string("c_") << cuboid_structure_name << std::string("_")
 			<< std::string("s_") << snapshot_index;
-		slotSnapshot(snapshot_filename_sstr.str().c_str());
+		snapshot(snapshot_filename_sstr.str().c_str());
 		++snapshot_index;
 
 
@@ -667,7 +670,7 @@ void MeshViewerWidget::run_prediction()
 		snapshot_filename_sstr << FLAGS_output_path + std::string("/Temp") << filename_prefix
 			<< std::string("c_") << cuboid_structure_name << std::string("_")
 			<< std::string("s_") << snapshot_index;
-		slotSnapshot(snapshot_filename_sstr.str().c_str());
+		snapshot(snapshot_filename_sstr.str().c_str());
 		++snapshot_index;
 
 
@@ -678,7 +681,7 @@ void MeshViewerWidget::run_prediction()
 			snapshot_filename_sstr.clear(); snapshot_filename_sstr.str("");
 			snapshot_filename_sstr << FLAGS_output_path << filename_prefix
 				<< num_final_cuboid_structure_candidates;
-			slotSnapshot(snapshot_filename_sstr.str().c_str());
+			snapshot(snapshot_filename_sstr.str().c_str());
 
 			cuboid_filename_sstr.clear(); cuboid_filename_sstr.str("");
 			cuboid_filename_sstr << FLAGS_output_path << filename_prefix
@@ -757,7 +760,7 @@ void MeshViewerWidget::run_prediction()
 	//		delete cond_normal_relations[label_index_1][label_index_2];
 }
 
-void MeshViewerWidget::run_rendering_point_clusters()
+void MeshViewerCore::batch_render_point_clusters()
 {
 	bool ret = true;
 	ret = ret & cuboid_structure_.load_labels((FLAGS_data_root_path +
@@ -775,7 +778,7 @@ void MeshViewerWidget::run_rendering_point_clusters()
 	unsigned int num_labels = cuboid_structure_.num_labels();
 
 
-	slotDrawMode(findAction(CUSTOM_VIEW));
+	setDrawMode(CUSTOM_VIEW);
 	open_modelview_matrix_file(FLAGS_pose_filename.c_str());
 
 	// For every file in the base path.
@@ -819,7 +822,7 @@ void MeshViewerWidget::run_rendering_point_clusters()
 			cuboid_structure_.clear_cuboids();
 			cuboid_structure_.clear_sample_points();
 
-			open_mesh_gui(mesh_filename.c_str());
+			open_mesh(mesh_filename.c_str());
 			open_sample_point_file(sample_filename.c_str());
 			open_sample_point_label_file(sample_label_filename.c_str());
 
@@ -828,7 +831,7 @@ void MeshViewerWidget::run_rendering_point_clusters()
 			mesh_.clear_colors();
 			draw_cuboid_axes_ = false;
 			updateGL();
-			slotSnapshot(snapshot_filename.c_str());
+			snapshot(snapshot_filename.c_str());
 		}
 	}
 
@@ -836,7 +839,7 @@ void MeshViewerWidget::run_rendering_point_clusters()
 }
 
 /*
-void MeshViewerWidget::run_occlusion_test()
+void MeshViewerCore::do_occlusion_test()
 {
 	assert(occlusion_test_widget_);
 

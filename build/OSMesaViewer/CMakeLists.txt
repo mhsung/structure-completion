@@ -1,0 +1,186 @@
+cmake_minimum_required (VERSION 2.6)
+project (OSMesaViewer)
+
+# add our macro directory to cmake search path
+set (OPENMESH_DIR "C:/OpenMesh" CACHE PATH "The directory where the OpenMesh files can be found.")
+set (CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} ${CMAKE_SOURCE_DIR}/cmake ${CMAKE_CURRENT_SOURCE_DIR}/cmake ${OPENMESH_DIR}/cmake)
+set (CMAKE_DEBUG_POSTFIX "d")
+
+# include our cmake files
+include (ACGCommon)
+include (ACGOutput)
+
+if (WIN32)
+  add_definitions(
+      -D_USE_MATH_DEFINES -DNOMINMAX
+      -D_CRT_SECURE_NO_WARNINGS
+  )
+endif ()
+
+
+include(CheckCXXCompilerFlag)
+CHECK_CXX_COMPILER_FLAG("-std=c++11" COMPILER_SUPPORTS_CXX11)
+CHECK_CXX_COMPILER_FLAG("-std=c++0x" COMPILER_SUPPORTS_CXX0X)
+if(COMPILER_SUPPORTS_CXX11)
+  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++11")
+elseif(COMPILER_SUPPORTS_CXX0X)
+  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++0x")
+else()
+  message(STATUS "The compiler ${CMAKE_CXX_COMPILER} has no C++11
+support. Please use a different C++ compiler.")
+endif()
+
+
+# ========================================================================
+# Add bundle targets here
+# ========================================================================
+if (WIN32)
+  if ( NOT "${CMAKE_GENERATOR}" MATCHES "MinGW Makefiles" )
+    add_custom_target (fixbundle ALL
+      COMMAND ${CMAKE_COMMAND} -P "${CMAKE_BINARY_DIR}/fixbundle.win.cmake" )
+  endif()
+endif()
+
+if (APPLE)
+  add_custom_target (fixbundle ALL
+    COMMAND ${CMAKE_COMMAND} -P "${CMAKE_BINARY_DIR}/fixbundle.cmake"
+  )
+endif()
+
+# ========================================================================
+# Bundle generation (Targets exist, now configure them)
+# ========================================================================
+if (WIN32)
+  # prepare bundle generation cmake file and add a build target for it
+  configure_file ("${OPENMESH_DIR}/cmake/fixbundle.cmake.win.in"
+     "${CMAKE_BINARY_DIR}/fixbundle.win.cmake" @ONLY IMMEDIATE)
+
+  if ( NOT "${CMAKE_GENERATOR}" MATCHES "MinGW Makefiles" )
+    # let bundle generation depend on all targets
+    add_dependencies (fixbundle OSMesaViewer)
+  endif()
+
+endif()
+
+
+if (APPLE)
+  # prepare bundle generation cmake file and add a build target for it
+  configure_file ("${OPENMESH_DIR}/cmake/fixbundle.cmake.in"
+     "${CMAKE_BINARY_DIR}/fixbundle.cmake" @ONLY IMMEDIATE)
+
+  # let bundle generation depend on all targets
+  add_dependencies (fixbundle OSMesaViewer) 
+endif ()
+
+# find needed packages for gui applications
+find_package (OpenGL)
+include(FindOSMesa.cmake)
+
+if ("${CMAKE_GENERATOR}" MATCHES "MinGW Makefiles")
+  message(WARNING "GUI Apps are not build with mingw. (TODO)")
+endif()
+
+# check for OpenGL and OSMesa as our required dependencies
+if (OPENGL_FOUND AND OSMESA_FOUND AND NOT "${CMAKE_GENERATOR}" MATCHES "MinGW Makefiles" )
+  # Add ui apps as dependency before fixbundle 
+  if ( WIN32 AND NOT "${CMAKE_GENERATOR}" MATCHES "MinGW Makefiles")
+    # let bundle generation depend on all targets
+    add_dependencies (fixbundle OSMesaViewer)
+  endif()
+
+  # Add ui apps as dependency before fixbundle 
+  if (APPLE)
+    # let bundle generation depend on all targets
+    add_dependencies (fixbundle OSMesaViewer)
+  endif()
+
+  if (WIN32)
+    FILE(GLOB files_install_app_dlls "${CMAKE_BINARY_DIR}/Build/*.dll" )
+    INSTALL(FILES ${files_install_app_dlls} DESTINATION . )
+  endif()
+
+else () # Opengl or OSMesa not found
+  
+  if (NOT OPENGL_FOUND)
+    message ("OpengGL not found! Skipping some apps.")
+  endif ()
+
+  if (NOT OSMESA_FOUND)
+    message ("OSMesa not found! Skipping some apps.")
+  endif ()
+  
+endif ()
+
+find_package(OpenMP)
+if (OPENMP_FOUND)
+    set (CMAKE_C_FLAGS "${CMAKE_C_FLAGS} ${OpenMP_C_FLAGS}")
+    set (CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${OpenMP_CXX_FLAGS}")
+endif()
+
+
+set (targetName OSMesaViewer)
+set (OPENMESH_INCLUDE_DIR "${OPENMESH_DIR}/src")
+set (OPENMESH_LIBRARY_DIR "${OPENMESH_DIR}/build/Build/lib")
+
+include(${CMAKE_CURRENT_SOURCE_DIR}/../../cmake/AddIncludes.cmake)
+
+include_directories (
+  ${CMAKE_CURRENT_SOURCE_DIR}/src
+  ${CMAKE_CURRENT_SOURCE_DIR}/../../include
+  ${CMAKE_CURRENT_SOURCE_DIR}/../../src
+  ${OPENMESH_INCLUDE_DIR}
+  ${OSMESA_INCLUDE_DIR}
+)
+
+# source code directories
+set (directories
+  ${directories}
+  ${CMAKE_CURRENT_SOURCE_DIR}/src
+  ${CMAKE_CURRENT_SOURCE_DIR}/../../include
+  ${CMAKE_CURRENT_SOURCE_DIR}/../../src
+)
+
+# collect all header and source files
+acg_append_files (headers "*.h" ${directories})
+acg_append_files (sources "*.cpp" ${directories})
+
+# remove template cc files from source file list
+acg_drop_templates (sources)
+
+
+if (WIN32)
+  acg_add_executable (${targetName} WIN32 ${uic_targets} ${sources} ${headers})
+else ()
+  acg_add_executable (${targetName} ${uic_targets} ${sources} ${headers})
+endif ()
+
+target_link_libraries (${targetName}
+  ${OPENGL_LIBRARIES}
+  ${OSMESA_LIBRARY}
+)
+
+if (UNIX)
+target_link_libraries (${targetName}
+  debug ${OPENMESH_LIBRARY_DIR}/OpenMesh/libOpenMeshCore${CMAKE_DEBUG_POSTFIX}.so
+  debug ${OPENMESH_LIBRARY_DIR}/OpenMesh/libOpenMeshTools${CMAKE_DEBUG_POSTFIX}.so
+)
+  
+target_link_libraries (${targetName}
+  ${OPENMESH_LIBRARY_DIR}/OpenMesh/libOpenMeshCore.so
+  ${OPENMESH_LIBRARY_DIR}/OpenMesh/libOpenMeshTools.so
+)
+endif()
+
+if (WIN32)
+target_link_libraries (${targetName}
+  debug ${OPENMESH_LIBRARY_DIR}/OpenMeshCore${CMAKE_DEBUG_POSTFIX}.lib
+  debug ${OPENMESH_LIBRARY_DIR}/OpenMeshTools${CMAKE_DEBUG_POSTFIX}.lib
+)
+  
+target_link_libraries (${targetName}
+  optimized ${OPENMESH_LIBRARY_DIR}/OpenMeshCore.lib
+  optimized ${OPENMESH_LIBRARY_DIR}/OpenMeshTools.lib
+)
+endif()
+
+include(${CMAKE_CURRENT_SOURCE_DIR}/../../cmake/AddLibraries.cmake)

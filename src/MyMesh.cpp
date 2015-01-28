@@ -1,10 +1,11 @@
 #include "MyMesh.h"
 
+//#include "ConvertFromOpenMesh.h"
+
 #include <fstream>
 #include <iostream>
 #include <limits>
 
-//#include "ConvertFromOpenMesh.h"
 
 MyMesh::MyMesh()
 : prop_curvatures_(false)

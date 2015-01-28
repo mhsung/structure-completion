@@ -4,15 +4,15 @@
 //#define AXIS_ALIGNED_INITIAL_CUBOID
 #define MIN_CUBOID_SIZE		1.0E-12
 
-#include "MyMesh.h"
 #include "ICP.h"
+#include "MyMesh.h"
 #include "Parameters.h"
-
-#include <ANN/ANN.h>
-#include <Eigen/Core>
 
 #include <array>
 #include <map>
+#include <ANN/ANN.h>
+#include <Eigen/Core>
+
 
 // NOTE:
 // Each label has a label index.

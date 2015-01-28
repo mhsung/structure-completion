@@ -17,9 +17,11 @@
 #define NEXT(i) ((i)<2 ? (i)+1 : (i)-2)		// Trimesh
 #define PREV(i) ((i)>0 ? (i)-1 : (i)+2)
 
+
+#include <OpenMesh/Core/Mesh/TriMesh_ArrayKernelT.hh>
 #include <list>
 #include <vector>
-#include <OpenMesh/Core/Mesh/TriMesh_ArrayKernelT.hh>
+
 
 typedef double Real;
 typedef std::vector<Real> RealArray;

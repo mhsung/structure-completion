@@ -1,14 +1,15 @@
 #include "MeshCuboidTrainer.h"
-#include "Utilities.h"
 
-#include <Eigen/Core>
-#include <Eigen/LU>
-#include <QFileInfo>
+#include "Utilities.h"
 
 #include <deque>
 #include <fstream>
 #include <iostream>
 #include <sstream>
+#include <Eigen/Core>
+#include <Eigen/LU>
+#include <QFileInfo>
+
 
 Eigen::MatrixXd regularized_inverse(const Eigen::MatrixXd& _mat)
 {

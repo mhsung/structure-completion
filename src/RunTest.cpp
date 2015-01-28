@@ -1,14 +1,15 @@
-#include "MeshViewerWidget.h"
+#include "MeshViewerCore.h"
 #include "MeshCuboidSolver.h"
 #include "MeshCuboidNonLinearSolver.h"
 
-#include <Eigen/Geometry>
-
 #include <sstream>
+#include <Eigen/Geometry>
+#include <QFileInfo>
 
-void MeshViewerWidget::run_test_initialize()
+
+void MeshViewerCore::test_initialize()
 {
-	slotDrawMode(findAction(CUSTOM_VIEW));
+	setDrawMode(CUSTOM_VIEW);
 	draw_cuboid_axes_ = true;
 
 	cuboid_structure_.test_load_cuboids("cuboids.csv");
@@ -60,14 +61,14 @@ void MeshViewerWidget::run_test_initialize()
 
 	open_modelview_matrix_file("occlusion_pose.txt");
 	set_view_direction();
-	memcpy(test_occlusion_modelview_matrix_, modelview_matrix_, 16 * sizeof(double));
+	memcpy(test_occlusion_modelview_matrix_, modelview_matrix(), 16 * sizeof(double));
 	open_modelview_matrix_file("pose.txt");
 
 	update_cuboid_surface_points(cuboid_structure_, test_occlusion_modelview_matrix_);
 	updateGL();
 }
 
-void MeshViewerWidget::run_test_translate(const MyMesh::Normal _translation)
+void MeshViewerCore::test_translate(const MyMesh::Normal _translation)
 {
 	Eigen::Vector3d translation_vec;
 	for (unsigned int i = 0; i < 3; ++i)
@@ -86,7 +87,7 @@ void MeshViewerWidget::run_test_translate(const MyMesh::Normal _translation)
 	updateGL();
 }
 
-void MeshViewerWidget::run_test_rotate(const Real _angle)
+void MeshViewerCore::test_rotate(const Real _angle)
 {
 	Eigen::AngleAxisd rotation(_angle / 180.0 * M_PI, Eigen::Vector3d::UnitZ());
 
@@ -112,7 +113,7 @@ void MeshViewerWidget::run_test_rotate(const Real _angle)
 	updateGL();
 }
 
-void MeshViewerWidget::run_test_scale(const Real _scale_x, const Real _scale_y)
+void MeshViewerCore::test_scale(const Real _scale_x, const Real _scale_y)
 {
 	assert(!all_cuboids_.empty());
 
@@ -138,7 +139,7 @@ void MeshViewerWidget::run_test_scale(const Real _scale_x, const Real _scale_y)
 	updateGL();
 }
 
-void MeshViewerWidget::run_test_optimize()
+void MeshViewerCore::test_optimize()
 {
 	const double quadprog_ratio = 1E4;
 	const unsigned int max_num_iterations = 30;

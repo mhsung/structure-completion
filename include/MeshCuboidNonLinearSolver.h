@@ -3,12 +3,13 @@
 
 #define GLOG_NO_ABBREVIATED_SEVERITIES
 
+#include "GLViewerCore.h"
 #include "MeshCuboid.h"
 #include "MeshCuboidRelation.h"
 #include "MeshCuboidPredictor.h"
 
 #include <vector>
-#include <QtOpenGL/qgl.h>
+
 
 class CostFunctor {
 public:
@@ -20,7 +21,7 @@ public:
 	CostFunctor(std::vector<MeshCuboid *>& _cuboids,
 		const MeshCuboidPredictor& _predictor,
 		const double _quadprog_ratio,
-		QGLWidget *_viewer);
+		GLViewerCore *_viewer);
 
 	static double *get_cuboid_attributes(
 		const std::vector<MeshCuboid *>& _cuboids);
@@ -34,13 +35,13 @@ private:
 	std::vector<MeshCuboid *>& cuboids_;
 	const MeshCuboidPredictor& predictor_;
 	const double quadprog_ratio_;
-	QGLWidget *viewer_;
+	GLViewerCore *viewer_;
 };
 
 void non_linear_optimize_cuboids(
 	std::vector<MeshCuboid *>& _cuboids,
 	const MeshCuboidPredictor &_predictor,
 	const double _quadprog_ratio = 1.0,
-	QGLWidget *_viewer = NULL);
+	GLViewerCore *_viewer = NULL);
 
 #endif	// _MESH_CUBOID_SOLVER_H_

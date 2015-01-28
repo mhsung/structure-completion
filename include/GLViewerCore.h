@@ -1,0 +1,224 @@
+/*===========================================================================*\
+*                                                                           *
+*                               OpenMesh                                    *
+*      Copyright (C) 2001-2014 by Computer Graphics Group, RWTH Aachen      *
+*                           www.openmesh.org                                *
+*                                                                           *
+*---------------------------------------------------------------------------*
+*  This file is part of OpenMesh.                                           *
+*                                                                           *
+*  OpenMesh is free software: you can redistribute it and/or modify         *
+*  it under the terms of the GNU Lesser General Public License as           *
+*  published by the Free Software Foundation, either version 3 of           *
+*  the License, or (at your option) any later version with the              *
+*  following exceptions:                                                    *
+*                                                                           *
+*  If other files instantiate templates or use macros                       *
+*  or inline functions from this file, or you compile this file and         *
+*  link it with other files to produce an executable, this file does        *
+*  not by itself cause the resulting executable to be covered by the        *
+*  GNU Lesser General Public License. This exception does not however       *
+*  invalidate any other reasons why the executable file might be            *
+*  covered by the GNU Lesser General Public License.                        *
+*                                                                           *
+*  OpenMesh is distributed in the hope that it will be useful,              *
+*  but WITHOUT ANY WARRANTY; without even the implied warranty of           *
+*  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the            *
+*  GNU Lesser General Public License for more details.                      *
+*                                                                           *
+*  You should have received a copy of the GNU LesserGeneral Public          *
+*  License along with OpenMesh.  If not,                                    *
+*  see <http://www.gnu.org/licenses/>.                                      *
+*                                                                           *
+\*===========================================================================*/
+
+/*===========================================================================*\
+*                                                                           *
+*   $Revision: 990 $                                                         *
+*   $Date: 2014-02-05 10:01:07 +0100 (Mi, 05 Feb 2014) $                   *
+*                                                                           *
+\*===========================================================================*/
+
+
+#ifndef OPENMESHAPPS_QGLVIEWERCORE_HH
+#define OPENMESHAPPS_QGLVIEWERCORE_HH
+
+
+//== INCLUDES =================================================================
+
+#ifdef ARCH_DARWIN
+#  include <glut.h>
+#else
+#  include <GL/glut.h>
+#endif
+
+#include <OpenMesh/Core/Geometry/VectorT.hh>
+#include <string>
+#include <vector>
+#include <map>
+
+
+//== FORWARD DECLARATIONS =====================================================
+
+//class QMenu;
+//class QActionGroup;
+//class QAction;
+
+//== CLASS DEFINITION =========================================================
+
+class GLViewerBase
+{
+public:
+	GLViewerBase() {};
+
+	// pure virtual functions
+	virtual float GLViewerBaseWidth() = 0;
+
+	virtual float GLViewerBaseHeight() = 0;
+
+	virtual void GLViewerBasemakeCurrent() = 0;
+
+	virtual void GLViewerBaseSwapBuffers() = 0;
+
+	virtual void GLViewerBaseUpdateGL() = 0;
+
+	virtual void GLViewerBaseSnapshot(const std::string &_filename) = 0;
+
+	virtual void GLViewerBaseSetWindowTitle(const std::string &_title) = 0;
+
+	virtual std::string GLViewerBaseGetDrawMode() = 0;
+
+	virtual void GLViewerBaseSetDrawMode(const std::string &_draw_mode) = 0;
+};
+
+
+
+class GLViewerCore
+{
+public:
+	// Default constructor.
+	GLViewerCore(GLViewerBase &_widget);
+
+	// Destructor.
+	virtual ~GLViewerCore();
+
+private:
+
+	void init(void);
+
+
+protected:
+
+	/* Sets the center and size of the whole scene.
+	The _center is used as fixpoint for rotations and for adjusting
+	the camera/viewer (see view_all()). */
+	void set_scene_pos(const OpenMesh::Vec3f& _center, float _radius);
+
+	/* view the whole scene: the eye point is moved far enough from the
+	center so that the whole scene is visible. */
+	void view_all();
+
+	float radius() const { return radius_; }
+	const OpenMesh::Vec3f& center() const { return center_; }
+
+	const GLdouble* modelview_matrix() const  { return modelview_matrix_; }
+	const GLdouble* projection_matrix() const { return projection_matrix_; }
+
+	void set_modelview_matrix(GLdouble *matrix);
+
+	float fovy() const { return 45.0f; }
+
+
+protected:
+
+	// draw the scene: will be called by the painGL() method.
+	virtual void draw_scene(const std::string& _draw_mode);
+
+	void setDefaultMaterial(void);
+
+	void setDefaultLight(void);
+
+	//virtual double performance(void);
+
+
+public:
+
+	virtual void initializeGL();
+
+	virtual void paintGL();
+
+	virtual void resizeGL(int w, int h);
+
+
+	float width() { return base_.GLViewerBaseWidth(); }
+
+	float height() { return base_.GLViewerBaseHeight(); }
+
+	void makeCurrent() { return base_.GLViewerBasemakeCurrent(); }
+
+	void swapBuffers() { return base_.GLViewerBaseSwapBuffers(); }
+
+	void updateGL() { base_.GLViewerBaseUpdateGL(); }
+
+	void snapshot(const std::string _filename) { base_.GLViewerBaseSnapshot(_filename); }
+
+	void setWindowTitle(const std::string &_title) { base_.GLViewerBaseSetWindowTitle(_title); };
+
+	std::string getDrawMode()const { return base_.GLViewerBaseGetDrawMode(); }
+
+	void setDrawMode(const std::string &_draw_mode) { return base_.GLViewerBaseSetDrawMode(_draw_mode); }
+
+
+	virtual void mousePressEvent(const OpenMesh::Vec2f& _new_point_2d,
+		bool _is_left_button, bool _is_mid_button, bool _is_right_button,
+		bool _is_ctrl_pressed, bool _is_alt_pressed, bool _is_shift_pressed);
+
+	virtual void mouseReleaseEvent(const OpenMesh::Vec2f& _new_point_2d,
+		bool _is_left_button, bool _is_mid_button, bool _is_right_button,
+		bool _is_ctrl_pressed, bool _is_alt_pressed, bool _is_shift_pressed);
+
+	virtual void mouseMoveEvent(const OpenMesh::Vec2f& _new_point_2d,
+		bool _is_left_button, bool _is_mid_button, bool _is_right_button,
+		bool _is_ctrl_pressed, bool _is_alt_pressed, bool _is_shift_pressed);
+
+	virtual void wheelEvent(const float _new_delta,
+		bool _is_ctrl_pressed, bool _is_alt_pressed, bool _is_shift_pressed);
+
+	virtual void keyPressEvent(const char _new_key,
+		bool _is_ctrl_pressed, bool _is_alt_pressed, bool _is_shift_pressed);
+
+
+private:
+
+	GLViewerBase &base_;
+
+	// updates projection matrix
+	void update_projection_matrix();
+
+	// translate the scene and update modelview matrix
+	void translate(const OpenMesh::Vec3f& _trans);
+
+	// rotate the scene (around its center) and update modelview matrix
+	void rotate(const OpenMesh::Vec3f& _axis, float _angle);
+
+
+	OpenMesh::Vec3f  center_;
+	float            radius_;
+
+	GLdouble    projection_matrix_[16];
+	GLdouble    modelview_matrix_[16];
+
+
+	// virtual trackball: map 2D screen point to unit sphere
+	bool map_to_sphere(const OpenMesh::Vec2f& _point, OpenMesh::Vec3f& _result);
+
+	OpenMesh::Vec2f  last_point_2D_;
+	OpenMesh::Vec3f  last_point_3D_;
+	bool             last_point_ok_;
+
+};
+
+
+//=============================================================================
+#endif // OPENMESHAPPS_QGLVIEWERCORE_HH
+//=============================================================================

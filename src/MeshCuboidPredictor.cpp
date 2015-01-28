@@ -1,16 +1,15 @@
 #include "MeshCuboidPredictor.h"
+
+#include "ICP.h"
 #include "Parameters.h"
 #include "Utilities.h"
 
 #include <iostream>
 #include <fstream>
 #include <sstream>
-
 #include <ANN/ANN.h>
 #include <Eigen/Core>
 #include <Eigen/Eigenvalues>
-
-#include "ICP.h"
 
 
 const Real k_max_potential = param_max_potential;

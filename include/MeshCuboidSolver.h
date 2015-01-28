@@ -1,13 +1,14 @@
 #ifndef _MESH_CUBOID_SOLVER_H_
 #define _MESH_CUBOID_SOLVER_H_
 
+#include "GLViewerCore.h"
 #include "MeshCuboid.h"
 #include "MeshCuboidRelation.h"
 #include "MeshCuboidPredictor.h"
 
 #include <vector>
 #include <string>
-#include <QtOpenGL/qgl.h>
+
 
 void update_cuboid_surface_points(
 	MeshCuboidStructure &_cuboid_structure,
@@ -62,7 +63,7 @@ void optimize_attributes(
 	const double _quadprog_ratio,
 	const std::string _log_filename,
 	const unsigned int _max_num_iterations = 10,
-	QGLWidget *_viewer = NULL);
+	GLViewerCore *_viewer = NULL);
 
 void add_missing_cuboids_once(
 	const std::vector<MeshCuboid *>& _given_cuboids,

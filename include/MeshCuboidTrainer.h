@@ -8,6 +8,7 @@
 #include <vector>
 #include <string>
 
+
 class MeshCuboidTrainer {
 public:
 	MeshCuboidTrainer();

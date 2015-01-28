@@ -4,6 +4,7 @@
 #include <fstream>
 #include <iostream>
 
+
 MeshCuboidStructure::MeshCuboidStructure(const MyMesh* _mesh)
 	: mesh_(_mesh)
 	, query_label_index_(0)

@@ -1,12 +1,6 @@
 #include "MeshCuboid.h"
+
 #include "Utilities.h"
-
-#include <Eigen/Core>
-#include <Eigen/Eigenvalues>
-#include <Eigen/SVD>
-#include <Eigen/Geometry>
-
-#include <GL/glut.h>
 
 #include <bitset>
 #include <deque>
@@ -16,6 +10,11 @@
 #include <queue>
 #include <time.h>
 #include <vector>
+#include <Eigen/Core>
+#include <Eigen/Eigenvalues>
+#include <Eigen/SVD>
+#include <Eigen/Geometry>
+#include <GL/glut.h>
 
 
 // Corners.
