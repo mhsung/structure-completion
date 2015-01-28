@@ -11,6 +11,7 @@
 
 #include <gflags/gflags.h>
 #include <glog/logging.h>
+#include <QImage>
 
 #include "MeshViewerCore.h"
 
@@ -229,54 +230,77 @@ void display(void)
 
 void snapshot(const std::string filename)
 {
-	// Save binary image
-	const int binary = 1;
+	//// Save binary image
+	//const int binary = 1;
 
-	FILE *f = fopen((filename + std::string(".ppm")).c_str(), "w");
-	if (f) {
-		int i, x, y;
-		const GLubyte *ptr = static_cast<GLubyte *>(g_Buffer);
-		if (binary) {
-			fprintf(f, "P6\n");
-			fprintf(f, "# ppm-file created by osdemo.c\n");
-			fprintf(f, "%i %i\n", g_Width, g_Height);
-			fprintf(f, "255\n");
-			fclose(f);
-			f = fopen((filename + std::string(".ppm")).c_str(), "ab");  /* reopen in binary append mode */
-			for (y = g_Height - 1; y >= 0; y--) {
-				for (x = 0; x < g_Width; x++) {
-					i = (y*g_Width + x) * 4;
-					fputc(ptr[i], f);   /* write red */
-					fputc(ptr[i + 1], f); /* write green */
-					fputc(ptr[i + 2], f); /* write blue */
-				}
+	//FILE *f = fopen((filename + std::string(".ppm")).c_str(), "w");
+	//if (f) {
+	//	int i, x, y;
+	//	const GLubyte *ptr = static_cast<GLubyte *>(g_Buffer);
+	//	if (binary) {
+	//		fprintf(f, "P6\n");
+	//		fprintf(f, "# ppm-file created by osdemo.c\n");
+	//		fprintf(f, "%i %i\n", g_Width, g_Height);
+	//		fprintf(f, "255\n");
+	//		fclose(f);
+	//		f = fopen((filename + std::string(".ppm")).c_str(), "ab");  /* reopen in binary append mode */
+	//		for (y = g_Height - 1; y >= 0; y--) {
+	//			for (x = 0; x < g_Width; x++) {
+	//				i = (y*g_Width + x) * 4;
+	//				fputc(ptr[i], f);   /* write red */
+	//				fputc(ptr[i + 1], f); /* write green */
+	//				fputc(ptr[i + 2], f); /* write blue */
+	//			}
+	//		}
+	//	}
+	//	else {
+	//		/*ASCII*/
+	//		int counter = 0;
+	//		fprintf(f, "P3\n");
+	//		fprintf(f, "# ascii ppm file created by osdemo.c\n");
+	//		fprintf(f, "%i %i\n", g_Width, g_Height);
+	//		fprintf(f, "255\n");
+	//		for (y = g_Height - 1; y >= 0; y--) {
+	//			for (x = 0; x < g_Width; x++) {
+	//				i = (y*g_Width + x) * 4;
+	//				fprintf(f, " %3d %3d %3d", ptr[i], ptr[i + 1], ptr[i + 2]);
+	//				counter++;
+	//				if (counter % 5 == 0)
+	//					fprintf(f, "\n");
+	//			}
+	//		}
+	//	}
+	//	fclose(f);
+	//}
+
+	try
+	{
+		QImage image;
+		size_t w(g_Width), h(g_Height);
+		image = QImage(w, h, QImage::Format_RGB32);
+
+		unsigned int x, y, offset;
+		for (y = 0; y < h; ++y) {
+			for (x = 0; x < w; ++x) {
+				offset = 4 * (y*w + x);
+				image.setPixel(x, h - y - 1, qRgb(g_Buffer[offset],
+					g_Buffer[offset + 1],
+					g_Buffer[offset + 2]));
 			}
 		}
-		else {
-			/*ASCII*/
-			int counter = 0;
-			fprintf(f, "P3\n");
-			fprintf(f, "# ascii ppm file created by osdemo.c\n");
-			fprintf(f, "%i %i\n", g_Width, g_Height);
-			fprintf(f, "255\n");
-			for (y = g_Height - 1; y >= 0; y--) {
-				for (x = 0; x < g_Width; x++) {
-					i = (y*g_Width + x) * 4;
-					fprintf(f, " %3d %3d %3d", ptr[i], ptr[i + 1], ptr[i + 2]);
-					counter++;
-					if (counter % 5 == 0)
-						fprintf(f, "\n");
-				}
-			}
-		}
-		fclose(f);
+
+		image.save((filename + std::string(".png")).c_str(), "PNG");
+	}
+	catch (std::bad_alloc&)
+	{
+		qWarning("Mem Alloc Error");
 	}
 }
 
 int main(int argc, char** argv)
 {
-  gflags::ParseCommandLineFlags(&argc, &argv, true);
-  google::InitGoogleLogging(argv[0]);
+	gflags::ParseCommandLineFlags(&argc, &argv, true);
+	google::InitGoogleLogging(argv[0]);
 
 	// GLUT Window Initialization:
 	osmesaInitWindowSize(640, 480);

@@ -576,7 +576,7 @@ void MeshViewerCore::predict()
 	updateGL();
 	snapshot_filename_sstr.clear(); snapshot_filename_sstr.str("");
 	snapshot_filename_sstr << FLAGS_output_path + std::string("/Temp")
-		<< filename_prefix << std::string("_input");
+		<< filename_prefix << std::string("input");
 	snapshot(snapshot_filename_sstr.str().c_str());
 
 

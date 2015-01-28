@@ -224,8 +224,8 @@ void snapshot(const std::string filename)
 
 int main(int argc, char** argv)
 {
-  gflags::ParseCommandLineFlags(&argc, &argv, true);
-  google::InitGoogleLogging(argv[0]);
+	gflags::ParseCommandLineFlags(&argc, &argv, true);
+	google::InitGoogleLogging(argv[0]);
 
 	// GLUT Window Initialization:
 	glutInit(&argc, argv);
