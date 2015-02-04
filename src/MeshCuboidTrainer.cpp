@@ -240,36 +240,23 @@ void MeshCuboidTrainer::get_joint_normal_relations(
 			// NOTE:
 			// Since the center point is always the origin in the local coordinates,
 			// it is not used as the feature values.
-			Eigen::MatrixXd X_1(num_objects, num_features - MeshCuboidFeatures::k_corner_index);
-			Eigen::MatrixXd X_2(num_objects, num_features);
+			Eigen::MatrixXd X(num_objects, MeshCuboidJointNormalRelations::k_mat_size);
 
 			for (int object_index = 0; object_index < num_objects; ++object_index)
 			{
 				assert(feature_1[object_index]);
 				assert(feature_2[object_index]);
 				assert(transformation_1[object_index]);
-				//assert(transformation_2[object_index]);
+				assert(transformation_2[object_index]);
 
-				Eigen::VectorXd transformed_feature_vec_11 = transformation_1[object_index]->get_transformed_features(
-					(*feature_1[object_index]));
-				assert(std::abs(transformed_feature_vec_11[0]) < NUMERIAL_ERROR_THRESHOLD);
-				assert(std::abs(transformed_feature_vec_11[1]) < NUMERIAL_ERROR_THRESHOLD);
-				assert(std::abs(transformed_feature_vec_11[2]) < NUMERIAL_ERROR_THRESHOLD);
+				Eigen::VectorXd pairwise_feature_vec;
+				MeshCuboidJointNormalRelations::get_pairwise_cuboid_features(
+					(*feature_1[object_index]), (*feature_2[object_index]),
+					transformation_1[object_index], transformation_2[object_index],
+					pairwise_feature_vec);
 
-				Eigen::VectorXd transformed_feature_vec_12 = transformation_1[object_index]->get_transformed_features(
-					(*feature_2[object_index]));
-
-				assert(transformed_feature_vec_11.size() == MeshCuboidFeatures::k_num_features);
-				assert(transformed_feature_vec_12.size() == MeshCuboidFeatures::k_num_features);
-				
-				X_1.row(object_index) = transformed_feature_vec_11.bottomRows(
-					num_features - MeshCuboidFeatures::k_corner_index).transpose();
-				X_2.row(object_index) = transformed_feature_vec_12.transpose();
+				X.row(object_index) = pairwise_feature_vec;
 			}
-
-			Eigen::MatrixXd X(num_objects, X_1.cols() + X_2.cols());
-			X.leftCols(X_1.cols()) = X_1;
-			X.rightCols(X_2.cols()) = X_2;
 
 			Eigen::RowVectorXd mean = X.colwise().mean();
 			Eigen::MatrixXd centered_X = X.rowwise() - mean;
@@ -326,22 +313,26 @@ void MeshCuboidTrainer::get_cond_normal_relations(
 			std::vector<MeshCuboidFeatures *> feature_1;
 			std::vector<MeshCuboidFeatures *> feature_2;
 			std::vector<MeshCuboidTransformation *> transformation_1;
+			std::vector<MeshCuboidTransformation *> transformation_2;
 
 			feature_1.reserve(feature_list_[label_index_1].size());
 			feature_2.reserve(feature_list_[label_index_2].size());
 			transformation_1.reserve(transformation_list_[label_index_1].size());
+			transformation_2.reserve(transformation_list_[label_index_2].size());
 
 			std::list<std::string>::const_iterator o_it = object_list_.begin();
 			std::list<MeshCuboidFeatures *>::const_iterator f_it_1 = feature_list_[label_index_1].begin();
 			std::list<MeshCuboidFeatures *>::const_iterator f_it_2 = feature_list_[label_index_2].begin();
 			std::list<MeshCuboidTransformation *>::const_iterator t_it_1 = transformation_list_[label_index_1].begin();
+			std::list<MeshCuboidTransformation *>::const_iterator t_it_2 = transformation_list_[label_index_2].begin();
 
 			int num_objects = 0;
 			while (true)
 			{
 				if (f_it_1 == feature_list_[label_index_1].end()
 					|| f_it_2 == feature_list_[label_index_2].end()
-					|| t_it_1 == transformation_list_[label_index_1].end())
+					|| t_it_1 == transformation_list_[label_index_1].end()
+					|| t_it_2 == transformation_list_[label_index_2].end())
 					break;
 
 				bool has_values = (!(*f_it_1)->has_nan() && !(*f_it_2)->has_nan());
@@ -366,6 +357,7 @@ void MeshCuboidTrainer::get_cond_normal_relations(
 					feature_1.push_back(*f_it_1);
 					feature_2.push_back(*f_it_2);
 					transformation_1.push_back(*t_it_1);
+					transformation_2.push_back(*t_it_2);
 					++num_objects;
 				}
 
@@ -373,6 +365,7 @@ void MeshCuboidTrainer::get_cond_normal_relations(
 				++f_it_1;
 				++f_it_2;
 				++t_it_1;
+				++t_it_2;
 			}
 
 			if (num_objects == 0) continue;
@@ -394,15 +387,16 @@ void MeshCuboidTrainer::get_cond_normal_relations(
 				assert(feature_1[object_index]);
 				assert(feature_2[object_index]);
 				assert(transformation_1[object_index]);
+				assert(transformation_2[object_index]);
 
-				X_1.row(object_index) = feature_1[object_index]->get_features().bottomRows(num_global_feature_values);
+				Eigen::VectorXd global_features_vec_1, transformed_features_vec_12;
+				MeshCuboidCondNormalRelations::get_pairwise_cuboid_features(
+					(*feature_1[object_index]), (*feature_2[object_index]),
+					transformation_1[object_index], transformation_2[object_index],
+					global_features_vec_1, transformed_features_vec_12);
 
-				Eigen::VectorXd transformed_feature_2 = transformation_1[object_index]->get_transformed_features(
-					(*feature_2[object_index]));
-
-				assert(transformed_feature_2.size() == MeshCuboidFeatures::k_num_features);
-
-				X_2.row(object_index) = transformed_feature_2.transpose();
+				X_1.row(object_index) = global_features_vec_1;
+				X_2.row(object_index) = transformed_features_vec_12;
 			}
 
 			Eigen::RowVectorXd mean_1 = X_1.colwise().mean();

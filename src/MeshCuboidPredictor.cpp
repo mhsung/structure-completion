@@ -316,8 +316,8 @@ Real MeshCuboidJointNormalRelationPredictor::get_pair_potential(
 
 	if (relation_12 && relation_21)
 	{
-		Real potential_12 = relation_12->compute_error(_cuboid_1, _cuboid_2, _transformation_1);
-		Real potential_21 = relation_21->compute_error(_cuboid_2, _cuboid_1, _transformation_2);
+		Real potential_12 = relation_12->compute_error(_cuboid_1, _cuboid_2, _transformation_1, _transformation_2);
+		Real potential_21 = relation_21->compute_error(_cuboid_2, _cuboid_1, _transformation_2, _transformation_1);
 		potential = potential_12 + potential_21;
 	}
 
@@ -372,6 +372,9 @@ Real MeshCuboidJointNormalRelationPredictor::get_pair_quadratic_form(
 	Eigen::MatrixXd rotation_1;
 	Eigen::MatrixXd translation_1;
 	transformation_1.get_linear_map_transformation(rotation_1, translation_1);
+
+	MeshCuboidTransformation transformation_2;
+	transformation_2.compute_transformation(_cuboid_2);
 
 
 	// (Ax + b)'C(Ax + b) = x'(A'CA)x + 2*(b'CA)x.
@@ -435,7 +438,7 @@ Real MeshCuboidJointNormalRelationPredictor::get_pair_quadratic_form(
 
 
 #ifdef DEBUG_TEST
-	Real same_potential = relation_12->compute_error(_cuboid_1, _cuboid_2, &transformation_1);
+	Real same_potential = relation_12->compute_error(_cuboid_1, _cuboid_2, &transformation_1, &transformation_2);
 	CHECK_NUMERICAL_ERROR(__FUNCTION__, potential, same_potential);
 #endif
 
@@ -529,8 +532,8 @@ Real MeshCuboidCondNormalRelationPredictor::get_pair_potential(
 
 	if (relation_12 && relation_21)
 	{
-		Real potential_12 = relation_12->compute_error(_cuboid_1, _cuboid_2, _transformation_1);
-		Real potential_21 = relation_21->compute_error(_cuboid_2, _cuboid_1, _transformation_2);
+		Real potential_12 = relation_12->compute_error(_cuboid_1, _cuboid_2, _transformation_1, _transformation_2);
+		Real potential_21 = relation_21->compute_error(_cuboid_2, _cuboid_1, _transformation_2, _transformation_1);
 		potential = potential_12 + potential_21;
 	}
 
@@ -584,6 +587,9 @@ Real MeshCuboidCondNormalRelationPredictor::get_pair_quadratic_form(
 	Eigen::MatrixXd rotation_1;
 	Eigen::MatrixXd translation_1;
 	transformation_1.get_linear_map_transformation(rotation_1, translation_1);
+
+	MeshCuboidTransformation transformation_2;
+	transformation_2.compute_transformation(_cuboid_2);
 
 
 	const MeshCuboidCondNormalRelations *relation_12 = relations_[_label_index_1][_label_index_2];
@@ -639,7 +645,7 @@ Real MeshCuboidCondNormalRelationPredictor::get_pair_quadratic_form(
 
 
 #ifdef DEBUG_TEST
-	Real same_potential = relation_12->compute_error(_cuboid_1, _cuboid_2, &transformation_1);
+	Real same_potential = relation_12->compute_error(_cuboid_1, _cuboid_2, &transformation_1, &transformation_2);
 	CHECK_NUMERICAL_ERROR(__FUNCTION__, potential, same_potential);
 #endif
 	

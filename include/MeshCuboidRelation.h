@@ -139,8 +139,18 @@ public:
 
 	bool load_joint_normal_dat(const char* _filename);
 
+	static void get_pairwise_cuboid_features(
+		const MeshCuboid *_cuboid_1, const MeshCuboid *_cuboid_2,
+		const MeshCuboidTransformation *_transformation_1, const MeshCuboidTransformation *_transformation_2,
+		Eigen::VectorXd &_pairwise_features_vec);
+
+	static void get_pairwise_cuboid_features(
+		const MeshCuboidFeatures &_features_1, const MeshCuboidFeatures &_features_2,
+		const MeshCuboidTransformation *_transformation_1, const MeshCuboidTransformation *_transformation_2,
+		Eigen::VectorXd &_pairwise_features_vec);
+
 	double compute_error(const MeshCuboid *_cuboid_1, const MeshCuboid *_cuboid_2,
-		const MeshCuboidTransformation *_transformation_1)const;
+		const MeshCuboidTransformation *_transformation_1, const MeshCuboidTransformation *_transformation_2)const;
 
 	const Eigen::VectorXd &get_mean()const { return mean_; }
 	const Eigen::MatrixXd &get_inv_cov()const { return inv_cov_; }
@@ -163,8 +173,18 @@ public:
 
 	bool load_cond_normal_dat(const char* _filename);
 
+	static void get_pairwise_cuboid_features(
+		const MeshCuboid *_cuboid_1, const MeshCuboid *_cuboid_2,
+		const MeshCuboidTransformation *_transformation_1, const MeshCuboidTransformation *_transformation_2,
+		Eigen::VectorXd &_global_features_vec_1, Eigen::VectorXd &_transformed_features_vec_12);
+
+	static void get_pairwise_cuboid_features(
+		const MeshCuboidFeatures &_features_1, const MeshCuboidFeatures &_features_2,
+		const MeshCuboidTransformation *_transformation_1, const MeshCuboidTransformation *_transformation_2,
+		Eigen::VectorXd &_global_features_vec_1, Eigen::VectorXd &_transformed_features_vec_12);
+
 	double compute_error(const MeshCuboid *_cuboid_1, const MeshCuboid *_cuboid_2,
-		const MeshCuboidTransformation *_transformation_1)const;
+		const MeshCuboidTransformation *_transformation_1, const MeshCuboidTransformation *_transformation_2)const;
 
 	const Eigen::MatrixXd &get_mean_A()const { return mean_A_; }
 	const Eigen::VectorXd &get_mean_b()const { return mean_b_; }
