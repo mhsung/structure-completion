@@ -841,17 +841,22 @@ void MeshCuboidStructure::apply_mesh_face_labels_to_sample_points()
 		MyMesh::FaceHandle fh = mesh_->face_handle(fid);
 		Label label = mesh_->property(mesh_->face_label_, fh);
 
-		LabelIndex label_index;
-		bool ret = exist_label(label, &label_index);
-		assert(ret);
-		assert(label_index < num_labels());
-
 		sample_point->label_index_confidence_.clear();
 		sample_point->label_index_confidence_.resize(num_labels(), 0.0);
 
-		// Note:
-		// The confidence of the given label becomes '1.0'.
-		sample_point->label_index_confidence_[label_index] = 1.0;
+		LabelIndex label_index;
+		bool ret = exist_label(label, &label_index);
+
+		// NOTE:
+		// If the mesh face label does not exist, ignore this sample point.
+		if (ret)
+		{
+			assert(label_index < num_labels());
+
+			// Note:
+			// The confidence of the given label becomes '1.0'.
+			sample_point->label_index_confidence_[label_index] = 1.0;
+		}
 	}
 }
 
