@@ -1,5 +1,6 @@
 #include "MeshCuboidSolver.h"
 
+#include "MeshCuboidParameters.h"
 #include "Utilities.h"
 
 #include <cstdint>
@@ -12,8 +13,6 @@
 #include <MRFEnergy.h>
 #include <EigenQP.h>
 
-
-const Real k_max_potential = param_max_potential;
 
 bool write_eigen_matrix_binary(const char* filename, const Eigen::MatrixXd& _matrix){
 	std::ofstream out(filename, std::ios::out | std::ios::binary | std::ios::trunc);
@@ -400,14 +399,14 @@ void update_cuboid_surface_points(
 	MeshCuboidStructure &_cuboid_structure,
 	const Real _modelview_matrix[16])
 {
-	const Real radius = param_observed_point_radius * _cuboid_structure.mesh_->get_object_diameter();
+	const Real radius = FLAGS_param_observed_point_radius * _cuboid_structure.mesh_->get_object_diameter();
 
 	std::vector<MeshCuboid *> all_cuboids = _cuboid_structure.get_all_cuboids();
 	for (std::vector<MeshCuboid *>::iterator it = all_cuboids.begin(); it != all_cuboids.end(); ++it)
 	{
 		MeshCuboid *cuboid = (*it);
 		cuboid->create_grid_points_on_cuboid_surface(
-			param_num_cuboid_surface_points);
+			FLAGS_param_num_cuboid_surface_points);
 
 		cuboid->compute_cuboid_surface_point_visibility(
 			_modelview_matrix, radius, _cuboid_structure.sample_points_);
@@ -421,14 +420,14 @@ void segment_sample_points(
 	const double null_cuboid_probability = 0.1;
 	
 	assert(_cuboid_structure.mesh_);
-	double neighbor_distance = param_neighbor_distance *
+	double neighbor_distance = FLAGS_param_sample_point_neighbor_distance *
 		_cuboid_structure.mesh_->get_object_diameter();
 	double lambda = -(neighbor_distance * neighbor_distance)
 		/ std::log(null_cuboid_probability);
-	double min_probability = 1 / k_max_potential;
+	double min_probability = 1 / FLAGS_param_max_potential;
 
 	unsigned int num_sample_points = _cuboid_structure.num_sample_points();
-	const int num_neighbors = std::min(param_num_neighbors,
+	const int num_neighbors = std::min(FLAGS_param_num_sample_point_neighbors,
 		static_cast<int>(num_sample_points));
 
 	std::vector<MeshCuboid *> all_cuboids = _cuboid_structure.get_all_cuboids();
@@ -495,7 +494,7 @@ void segment_sample_points(
 		}
 
 		// For null cuboid.
-		double energy = k_max_potential;
+		double energy = FLAGS_param_max_potential;
 		single_potentials(point_index, num_cuboids) = energy;
 	}
 
@@ -762,7 +761,7 @@ void compute_labels_and_axes_configuration_potentials(
 
 			Real potential = 0.0;
 			if (_cuboids[cuboid_index]->get_label_index() != label_index)
-				potential = param_max_potential;
+				potential = FLAGS_param_max_potential;
 
 			// NOTE:
 			// If label symmetry information is given, symmetric labels have zero potential value.
@@ -841,8 +840,8 @@ void compute_labels_and_axes_configuration_potentials(
 					{
 						// NOTE:
 						// Currently, it is NOT allowed that multiple parts have the same label.
-						_potential_mat(mat_index_1, mat_index_2) = k_max_potential;
-						_potential_mat(mat_index_2, mat_index_1) = k_max_potential;
+						_potential_mat(mat_index_1, mat_index_2) = FLAGS_param_max_potential;
+						_potential_mat(mat_index_2, mat_index_1) = FLAGS_param_max_potential;
 						continue;
 					}
 					assert(label_1 != label_2);
@@ -865,7 +864,7 @@ void compute_labels_and_axes_configuration_potentials(
 	if (_add_dummy_label)
 	{
 		const unsigned int dummy_case_index = num_cases - 1;
-		const Real dummy_potential = param_dummy_potential;
+		const Real dummy_potential = FLAGS_param_dummy_potential;
 
 		for (unsigned int cuboid_index = 0; cuboid_index < num_cuboids; ++cuboid_index)
 		{
@@ -1696,7 +1695,7 @@ void add_missing_cuboids(
 	if (_missing_label_indices.empty())
 		return;
 
-	const Real radius = param_observed_point_radius * _cuboid_structure.mesh_->get_object_diameter();
+	const Real radius = FLAGS_param_observed_point_radius * _cuboid_structure.mesh_->get_object_diameter();
 
 	// NOTE:
 	// Each existing cuboid creates candidates of missing cuboids.
@@ -1717,7 +1716,7 @@ void add_missing_cuboids(
 			assert(cuboid);
 
 			cuboid->create_grid_points_on_cuboid_surface(
-				param_num_cuboid_surface_points);
+				FLAGS_param_num_cuboid_surface_points);
 
 			cuboid->compute_cuboid_surface_point_visibility(
 				_modelview_matrix, radius, _cuboid_structure.sample_points_);

@@ -1,5 +1,7 @@
 #include "MeshCuboidStructure.h"
 
+#include "MeshCuboidParameters.h"
+
 #include <deque>
 #include <fstream>
 #include <iostream>
@@ -928,7 +930,7 @@ void MeshCuboidStructure::compute_label_cuboids()
 			assert(sample_point);
 
 			// Select sample points which has sufficient confidence for the given label.
-			if (sample_point->label_index_confidence_[label_index] >= param_confidence_tol)
+			if (sample_point->label_index_confidence_[label_index] >= FLAGS_param_sample_point_confidence_tol)
 				label_sample_points.push_back(sample_point);
 		}
 

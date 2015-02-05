@@ -6,7 +6,6 @@
 
 #include "ICP.h"
 #include "MyMesh.h"
-#include "Parameters.h"
 
 #include <array>
 #include <map>

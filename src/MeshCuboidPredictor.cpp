@@ -1,7 +1,7 @@
 #include "MeshCuboidPredictor.h"
 
 #include "ICP.h"
-#include "Parameters.h"
+#include "MeshCuboidParameters.h"
 #include "Utilities.h"
 
 #include <iostream>
@@ -11,8 +11,6 @@
 #include <Eigen/Core>
 #include <Eigen/Eigenvalues>
 
-
-const Real k_max_potential = param_max_potential;
 
 MeshCuboidPredictor::MeshCuboidPredictor(unsigned int _num_labels)
 	: num_labels_(_num_labels)
@@ -39,14 +37,14 @@ Real MeshCuboidPredictor::get_single_potential(
 		sample_it != _cuboid->get_sample_points().end(); ++sample_it)
 	{
 		assert(_label_index < (*sample_it)->label_index_confidence_.size());
-		if ((*sample_it)->label_index_confidence_[_label_index] >= param_confidence_tol)
+		if ((*sample_it)->label_index_confidence_[_label_index] >= FLAGS_param_sample_point_confidence_tol)
 			++num_confidence_tol_sample_point;
 	}
 
 	if (num_confidence_tol_sample_point <
-		param_min_num_confidence_tol_sample_points * _cuboid->get_sample_points().size())
+		FLAGS_param_min_num_confidence_tol_sample_points * _cuboid->get_sample_points().size())
 	{
-		potential = k_max_potential;
+		potential = FLAGS_param_max_potential;
 	}
 
 	return potential;
@@ -310,7 +308,7 @@ Real MeshCuboidJointNormalRelationPredictor::get_pair_potential(
 	// Now considering only different label pairs.
 	assert(_label_index_1 != _label_index_2);
 
-	Real potential = k_max_potential;
+	Real potential = FLAGS_param_max_potential;
 
 	//const MeshCuboidJointNormalRelations *relation_12 = relations_[_label_index_1][_label_index_2];
 	//const MeshCuboidJointNormalRelations *relation_21 = relations_[_label_index_2][_label_index_1];
@@ -575,7 +573,7 @@ Real MeshCuboidCondNormalRelationPredictor::get_pair_potential(
 	// Now considering only different label pairs.
 	assert(_label_index_1 != _label_index_2);
 
-	Real potential = k_max_potential;
+	Real potential = FLAGS_param_max_potential;
 
 	const MeshCuboidCondNormalRelations *relation_12 = relations_[_label_index_1][_label_index_2];
 	const MeshCuboidCondNormalRelations *relation_21 = relations_[_label_index_2][_label_index_1];

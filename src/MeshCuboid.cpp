@@ -1,5 +1,6 @@
 #include "MeshCuboid.h"
 
+#include "MeshCuboidParameters.h"
 #include "Utilities.h"
 
 #include <bitset>
@@ -515,7 +516,7 @@ void MeshCuboid::rotate(const Eigen::Matrix3d _rotation_mat, bool _update_center
 
 	if (_update_center_size)
 	{
-		assert(num_sample_points() >= param_min_num_cuboid_sample_points);
+		assert(num_sample_points() >= FLAGS_param_min_num_cuboid_sample_points);
 
 		Eigen::Matrix3d local_coord_rotation_mat;
 		for (unsigned int axis_index = 0; axis_index < 3; ++axis_index)
@@ -1090,7 +1091,7 @@ void MeshCuboid::update_corner_points()
 
 bool MeshCuboid::compute_bbox()
 {
-	if (num_sample_points() < param_min_num_cuboid_sample_points)
+	if (num_sample_points() < FLAGS_param_min_num_cuboid_sample_points)
 		return false;
 
 #ifdef AXIS_ALIGNED_INITIAL_CUBOID
@@ -1107,7 +1108,7 @@ bool MeshCuboid::compute_bbox()
 
 void MeshCuboid::compute_oriented_bbox()
 {
-	assert(num_sample_points() >= param_min_num_cuboid_sample_points);
+	assert(num_sample_points() >= FLAGS_param_min_num_cuboid_sample_points);
 
 	Eigen::MatrixXd sample_points_mat(3, num_sample_points());
 	for (SamplePointIndex sapmle_point_index = 0; sapmle_point_index < num_sample_points();
@@ -1244,7 +1245,7 @@ void MeshCuboid::compute_oriented_bbox()
 
 void MeshCuboid::compute_axis_aligned_bbox()
 {
-	assert(num_sample_points() >= param_min_num_cuboid_sample_points);
+	assert(num_sample_points() >= FLAGS_param_min_num_cuboid_sample_points);
 
 	bbox_axes_[0] = MyMesh::Normal(1.0, 0.0, 0.0);
 	bbox_axes_[1] = MyMesh::Normal(0.0, 1.0, 0.0);
@@ -1337,7 +1338,7 @@ void MeshCuboid::create_sub_cuboids(const Real _object_diameter,
 	ANNkd_tree* _kd_tree, std::vector<MeshCuboid *> &_sub_cuboids)
 {
 	const int dim = 3;
-	const int num_neighbors = std::min(param_num_neighbors,
+	const int num_neighbors = std::min(FLAGS_param_num_sample_point_neighbors,
 		static_cast<int>(num_sample_points()));
 	
 	ANNpoint q = annAllocPt(dim);
@@ -1393,7 +1394,7 @@ void MeshCuboid::create_sub_cuboids(const Real _object_diameter,
 		if (seed_sample_point_index < 0) break;
 		assert(!is_sample_visited[seed_sample_point_index]);
 		assert(sample_points_[seed_sample_point_index]->label_index_confidence_[label_index_]
-			>= param_confidence_tol);
+			>= FLAGS_param_sample_point_confidence_tol);
 
 
 		// 2. Propagate to close points.
@@ -1413,7 +1414,7 @@ void MeshCuboid::create_sub_cuboids(const Real _object_diameter,
 			q[0] = curr_pos[0]; q[1] = curr_pos[1]; q[2] = curr_pos[2];
 
 			int num_searched_neighbors = _kd_tree->annkFRSearch(q,
-				param_neighbor_distance * _object_diameter, num_neighbors, nn_idx, dd);
+				FLAGS_param_sample_point_neighbor_distance * _object_diameter, num_neighbors, nn_idx, dd);
 
 			for (int i = 0; i < std::min(num_neighbors, num_searched_neighbors); i++)
 			{
@@ -1426,7 +1427,7 @@ void MeshCuboid::create_sub_cuboids(const Real _object_diameter,
 			}
 		}
 
-		if (sub_cuboid_sample_points.size() < param_min_num_cuboid_sample_points)
+		if (sub_cuboid_sample_points.size() < FLAGS_param_min_num_cuboid_sample_points)
 			continue;
 
 		MeshCuboid *cuboid = new MeshCuboid(label_index_);
@@ -1436,9 +1437,9 @@ void MeshCuboid::create_sub_cuboids(const Real _object_diameter,
 
 		// Delete too small parts.
 		MyMesh::Normal bb_size = cuboid->get_bbox_size();
-		if (bb_size[0] < param_min_cuboid_bbox_size * _object_diameter
-			&& bb_size[1] < param_min_cuboid_bbox_size * _object_diameter
-			&& bb_size[2] < param_min_cuboid_bbox_size * _object_diameter)
+		if (bb_size[0] < FLAGS_param_min_cuboid_bbox_size * _object_diameter
+			&& bb_size[1] < FLAGS_param_min_cuboid_bbox_size * _object_diameter
+			&& bb_size[2] < FLAGS_param_min_cuboid_bbox_size * _object_diameter)
 		{
 			delete cuboid;
 			continue;
@@ -1486,7 +1487,7 @@ void MeshCuboid::remove_small_sub_cuboids(std::vector<MeshCuboid *> &_sub_cuboid
 	{
 		Real bb_diag_size = (*it)->get_bbox_diag_length();
 		//assert(bb_diag_size <= seed_cuboid->get_bb_diag_size());
-		if (bb_diag_size < (1 - param_min_cuboid_bbox_diag_length) * seed_cuboid->get_bbox_diag_length())
+		if (bb_diag_size < (1 - FLAGS_param_min_cuboid_bbox_diag_length) * seed_cuboid->get_bbox_diag_length())
 		{
 			it = _sub_cuboids.erase(it);
 		}
