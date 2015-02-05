@@ -891,25 +891,38 @@ void MeshCuboidJointNormalRelations::get_pairwise_cuboid_features(
 	Eigen::VectorXd &_pairwise_features_vec)
 {
 	assert(_transformation_1);
+	assert(_transformation_2);
 
 	Eigen::VectorXd transformed_features_vec_11 = _transformation_1->get_transformed_features(_features_1);
 	assert(std::abs(transformed_features_vec_11[0]) < NUMERIAL_ERROR_THRESHOLD);
 	assert(std::abs(transformed_features_vec_11[1]) < NUMERIAL_ERROR_THRESHOLD);
 	assert(std::abs(transformed_features_vec_11[2]) < NUMERIAL_ERROR_THRESHOLD);
+	assert(transformed_features_vec_11.rows() == MeshCuboidFeatures::k_num_features);
 
 	Eigen::VectorXd transformed_features_vec_12 = _transformation_1->get_transformed_features(_features_2);
-
-	assert(transformed_features_vec_11.rows() == MeshCuboidFeatures::k_num_features);
 	assert(transformed_features_vec_12.rows() == MeshCuboidFeatures::k_num_features);
+
+
+	Eigen::VectorXd transformed_features_vec_22 = _transformation_2->get_transformed_features(_features_2);
+	assert(std::abs(transformed_features_vec_22[0]) < NUMERIAL_ERROR_THRESHOLD);
+	assert(std::abs(transformed_features_vec_22[1]) < NUMERIAL_ERROR_THRESHOLD);
+	assert(std::abs(transformed_features_vec_22[2]) < NUMERIAL_ERROR_THRESHOLD);
+	assert(transformed_features_vec_22.rows() == MeshCuboidFeatures::k_num_features);
+
+	Eigen::VectorXd transformed_features_vec_21 = _transformation_2->get_transformed_features(_features_1);
+	assert(transformed_features_vec_21.rows() == MeshCuboidFeatures::k_num_features);
+
 
 	// NOTE:
 	// Since the center point is always the origin in the local coordinates,
 	// it is not used as the feature values.
-	assert(k_mat_size == 2 * MeshCuboidFeatures::k_num_features - MeshCuboidFeatures::k_corner_index);
+	assert(k_mat_size == 2 * (2 * MeshCuboidFeatures::k_num_features - MeshCuboidFeatures::k_corner_index));
 	_pairwise_features_vec.resize(k_mat_size);
-	_pairwise_features_vec << transformed_features_vec_11.bottomRows(
-		MeshCuboidFeatures::k_num_features - MeshCuboidFeatures::k_corner_index),
-		transformed_features_vec_12;
+	_pairwise_features_vec <<
+		transformed_features_vec_11.bottomRows(MeshCuboidFeatures::k_num_features - MeshCuboidFeatures::k_corner_index),
+		transformed_features_vec_12,
+		transformed_features_vec_22.bottomRows(MeshCuboidFeatures::k_num_features - MeshCuboidFeatures::k_corner_index),
+		transformed_features_vec_21;
 }
 
 double MeshCuboidJointNormalRelations::compute_error(const MeshCuboid *_cuboid_1, const MeshCuboid *_cuboid_2,
@@ -1189,11 +1202,12 @@ void MeshCuboidCondNormalRelations::get_pairwise_cuboid_features(
 	Eigen::VectorXd &_global_features_vec_1, Eigen::VectorXd &_transformed_features_vec_12)
 {
 	assert(_transformation_1);
+	assert(_transformation_2);
 
 	Eigen::VectorXd features_vec_1 = _features_1.get_features();
-	_transformed_features_vec_12 = _transformation_1->get_transformed_features(_features_2);
-
 	assert(features_vec_1.rows() == MeshCuboidFeatures::k_num_features);
+
+	_transformed_features_vec_12 = _transformation_1->get_transformed_features(_features_2);
 	assert(_transformed_features_vec_12.rows() == MeshCuboidFeatures::k_num_features);
 
 	_global_features_vec_1 = features_vec_1.bottomRows(MeshCuboidFeatures::k_num_global_feature_values);

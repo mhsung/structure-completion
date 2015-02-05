@@ -132,7 +132,7 @@ public:
 	~MeshCuboidJointNormalRelations();
 
 	static const unsigned int k_mat_size =
-		2 * MeshCuboidFeatures::k_num_features - MeshCuboidFeatures::k_corner_index;
+		2 * (2 * MeshCuboidFeatures::k_num_features - MeshCuboidFeatures::k_corner_index);
 
 	bool load_joint_normal_csv(const char* _filename);
 	bool save_joint_normal_csv(const char* _filename)const;

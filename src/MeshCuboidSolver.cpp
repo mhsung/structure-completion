@@ -1242,11 +1242,15 @@ void get_optimization_formulation(
 		MeshCuboid *cuboid_1 = _cuboids[cuboid_index_1];
 		LabelIndex label_index_1 = cuboid_1->get_label_index();
 
-		for (unsigned int cuboid_index_2 = 0; cuboid_index_2 < num_cuboids; ++cuboid_index_2)
-		{
-			if (cuboid_index_1 == cuboid_index_2)
-				continue;
+		//for (unsigned int cuboid_index_2 = 0; cuboid_index_2 < num_cuboids; ++cuboid_index_2)
+		//{
+		//	if (cuboid_index_1 == cuboid_index_2)
+		//		continue;
 
+		// Using bilateral relations.
+		// (A, B) and (B, A) pairs are the same.
+		for (unsigned int cuboid_index_2 = cuboid_index_1 + 1; cuboid_index_2 < num_cuboids; ++cuboid_index_2)
+		{
 			MeshCuboid *cuboid_2 = _cuboids[cuboid_index_2];
 			LabelIndex label_index_2 = cuboid_2->get_label_index();
 
@@ -1569,10 +1573,14 @@ void add_missing_cuboids_once(
 		assert(cuboid_1);
 		LabelIndex label_index_1 = cuboid_1->get_label_index();
 
-		for (unsigned int cuboid_index_2 = 0; cuboid_index_2 < num_cuboids; ++cuboid_index_2)
-		{
-			if (cuboid_index_1 == cuboid_index_2) continue;
+		//for (unsigned int cuboid_index_2 = 0; cuboid_index_2 < num_cuboids; ++cuboid_index_2)
+		//{
+		//	if (cuboid_index_1 == cuboid_index_2) continue;
 
+		// Using bilateral relations.
+		// (A, B) and (B, A) pairs are the same.
+		for (unsigned int cuboid_index_2 = cuboid_index_1 + 1; cuboid_index_2 < num_cuboids; ++cuboid_index_2)
+		{
 			MeshCuboid *cuboid_2 = all_cuboids[cuboid_index_2];
 			assert(cuboid_2);
 			LabelIndex label_index_2 = cuboid_2->get_label_index();

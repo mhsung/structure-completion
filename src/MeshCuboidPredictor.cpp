@@ -311,15 +311,34 @@ Real MeshCuboidJointNormalRelationPredictor::get_pair_potential(
 	assert(_label_index_1 != _label_index_2);
 
 	Real potential = k_max_potential;
-	const MeshCuboidJointNormalRelations *relation_12 = relations_[_label_index_1][_label_index_2];
-	const MeshCuboidJointNormalRelations *relation_21 = relations_[_label_index_2][_label_index_1];
 
-	if (relation_12 && relation_21)
+	//const MeshCuboidJointNormalRelations *relation_12 = relations_[_label_index_1][_label_index_2];
+	//const MeshCuboidJointNormalRelations *relation_21 = relations_[_label_index_2][_label_index_1];
+
+	//if (relation_12 && relation_21)
+	//{
+	//	Real potential_12 = relation_12->compute_error(_cuboid_1, _cuboid_2, _transformation_1, _transformation_2);
+	//	Real potential_21 = relation_21->compute_error(_cuboid_2, _cuboid_1, _transformation_2, _transformation_1);
+	//	potential = potential_12 + potential_21;
+	//}
+
+	const MeshCuboidJointNormalRelations *relation_12 = relations_[_label_index_1][_label_index_2];
+	if (relation_12)
 	{
 		Real potential_12 = relation_12->compute_error(_cuboid_1, _cuboid_2, _transformation_1, _transformation_2);
-		Real potential_21 = relation_21->compute_error(_cuboid_2, _cuboid_1, _transformation_2, _transformation_1);
-		potential = potential_12 + potential_21;
+		potential = potential_12;
+
+		// Using bilateral relations.
+		// (A, B) and (B, A) pairs are the same.
+#ifdef DEBUG_TEST
+		const MeshCuboidJointNormalRelations *relation_21 = relations_[_label_index_2][_label_index_1];
+		if (relation_21)
+		{
+			Real potential_21 = relation_12->compute_error(_cuboid_1, _cuboid_2, _transformation_1, _transformation_2);
+			CHECK_NUMERICAL_ERROR(__FUNCTION__, potential_12, potential_21);
+		}
 	}
+#endif
 
 	return potential;
 }
@@ -375,45 +394,76 @@ Real MeshCuboidJointNormalRelationPredictor::get_pair_quadratic_form(
 
 	MeshCuboidTransformation transformation_2;
 	transformation_2.compute_transformation(_cuboid_2);
+	Eigen::MatrixXd rotation_2;
+	Eigen::MatrixXd translation_2;
+	transformation_2.get_linear_map_transformation(rotation_2, translation_2);
 
 
 	// (Ax + b)'C(Ax + b) = x'(A'CA)x + 2*(b'CA)x.
-	Eigen::MatrixXd A_orig = Eigen::MatrixXd::Zero(2 * num_features, mat_size);
 	unsigned int start_index_1 = (_cuboid_index_1 * num_attributes);
 	unsigned int start_index_2 = (_cuboid_index_2 * num_attributes);
 
+	Eigen::MatrixXd A1_orig = Eigen::MatrixXd::Zero(2 * num_features, mat_size);
+	Eigen::MatrixXd A2_orig = Eigen::MatrixXd::Zero(2 * num_features, mat_size);
+
+
 	// The rotation is fixed, and attribute-to-feature map is a function of 'cuboid_1' attributes.
-	A_orig.block<num_features, num_attributes>(0, start_index_1)
-		= A_orig.block<num_features, num_attributes>(0, start_index_1)
+	A1_orig.block<num_features, num_attributes>(0, start_index_1)
+		= A1_orig.block<num_features, num_attributes>(0, start_index_1)
 		+ rotation_1 * attributes_to_features_map_1;
 
 	// The translation is a function of 'cuboid_1' attributes.
-	A_orig.block<num_features, num_attributes>(0, start_index_1)
-		= A_orig.block<num_features, num_attributes>(0, start_index_1)
+	A1_orig.block<num_features, num_attributes>(0, start_index_1)
+		= A1_orig.block<num_features, num_attributes>(0, start_index_1)
 		+ translation_1;
 
 	// The rotation is fixed, and attribute-to-feature map is a function of 'cuboid_2' attributes.
-	A_orig.block<num_features, num_attributes>(num_features, start_index_2)
-		= A_orig.block<num_features, num_attributes>(num_features, start_index_2)
+	A1_orig.block<num_features, num_attributes>(num_features, start_index_2)
+		= A1_orig.block<num_features, num_attributes>(num_features, start_index_2)
 		+ rotation_1 * attributes_to_features_map_2;
 
 	// The translation is a function of 'cuboid_1' attributes.
-	A_orig.block<num_features, num_attributes>(num_features, start_index_1)
-		= A_orig.block<num_features, num_attributes>(num_features, start_index_1)
+	A1_orig.block<num_features, num_attributes>(num_features, start_index_1)
+		= A1_orig.block<num_features, num_attributes>(num_features, start_index_1)
 		+ translation_1;
+	
+
+	// The rotation is fixed, and attribute-to-feature map is a function of 'cuboid_2' attributes.
+	A2_orig.block<num_features, num_attributes>(0, start_index_2)
+		= A2_orig.block<num_features, num_attributes>(0, start_index_2)
+		+ rotation_2 * attributes_to_features_map_2;
+
+	// The translation is a function of 'cuboid_2' attributes.
+	A2_orig.block<num_features, num_attributes>(0, start_index_2)
+		= A2_orig.block<num_features, num_attributes>(0, start_index_2)
+		+ translation_2;
+
+	// The rotation is fixed, and attribute-to-feature map is a function of 'cuboid_1' attributes.
+	A2_orig.block<num_features, num_attributes>(num_features, start_index_1)
+		= A2_orig.block<num_features, num_attributes>(num_features, start_index_1)
+		+ rotation_2 * attributes_to_features_map_1;
+
+	// The translation is a function of 'cuboid_2' attributes.
+	A2_orig.block<num_features, num_attributes>(num_features, start_index_2)
+		= A2_orig.block<num_features, num_attributes>(num_features, start_index_2)
+		+ translation_2;
+
 
 	// NOTE:
 	// Since the center point is always the origin in the local coordinates,
 	// it is not used as the feature values.
-	Eigen::MatrixXd A = A_orig.bottomRows(2 * num_features - MeshCuboidFeatures::k_corner_index);
-	assert(A.rows() == 2 * num_features - MeshCuboidFeatures::k_corner_index);
+	Eigen::MatrixXd A(MeshCuboidJointNormalRelations::k_mat_size, mat_size);
+	A.topRows(2 * num_features - MeshCuboidFeatures::k_corner_index)
+		= A1_orig.bottomRows(2 * num_features - MeshCuboidFeatures::k_corner_index);
+	A.bottomRows(2 * num_features - MeshCuboidFeatures::k_corner_index)
+		= A2_orig.bottomRows(2 * num_features - MeshCuboidFeatures::k_corner_index);
 
 	Eigen::VectorXd b = -relation_12->get_mean();
-	assert(b.rows() == 2 * num_features - MeshCuboidFeatures::k_corner_index);
+	assert(b.rows() == MeshCuboidJointNormalRelations::k_mat_size);
 
 	Eigen::MatrixXd C = relation_12->get_inv_cov();
-	assert(C.rows() == 2 * num_features - MeshCuboidFeatures::k_corner_index);
-	assert(C.cols() == 2 * num_features - MeshCuboidFeatures::k_corner_index);
+	assert(C.rows() == MeshCuboidJointNormalRelations::k_mat_size);
+	assert(C.cols() == MeshCuboidJointNormalRelations::k_mat_size);
 
 
 	_quadratic_term = A.transpose() * C * A;

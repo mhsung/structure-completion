@@ -635,7 +635,6 @@ void MeshViewerCore::draw_openmesh(const std::string& _drawmode)
 			}
 			glEnd();
 		}
-		*/
 
 		// Draw edges (Black).
 		glPolygonMode( GL_FRONT_AND_BACK, GL_LINE);
@@ -644,7 +643,6 @@ void MeshViewerCore::draw_openmesh(const std::string& _drawmode)
 		glDepthRange( 0.0, 1.0 );
 		draw_openmesh( "Wireframe" );
 
-		/*
 		// Draw a seed (Red).
 		if( mesh_.seed_vertex_index_ < mesh_.n_vertices() )
 		{
