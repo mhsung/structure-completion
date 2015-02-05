@@ -187,6 +187,7 @@ MeshCuboid::MeshCuboid(const LabelIndex _label_index)
 	: label_index_(_label_index)
 	, bbox_center_(0.0)
 	, bbox_size_(0.0)
+	, is_group_cuboid_(false)
 {
 	bbox_axes_[0] = MyMesh::Normal(1.0, 0.0, 0.0);
 	bbox_axes_[1] = MyMesh::Normal(0.0, 1.0, 0.0);
@@ -209,6 +210,7 @@ MeshCuboid& MeshCuboid::operator=(const MeshCuboid& _other)
 
 void MeshCuboid::deep_copy(const MeshCuboid& _other)
 {
+	this->is_group_cuboid_ = _other.is_group_cuboid_;
 	this->label_index_ = _other.label_index_;
 
 	// NOTE:

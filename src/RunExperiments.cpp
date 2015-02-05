@@ -16,6 +16,7 @@
 
 DEFINE_bool(run_training, false, "");
 DEFINE_bool(run_prediction, false, "");
+DEFINE_bool(use_symmetric_group_cuboids, true, "");
 
 DEFINE_string(data_root_path, "D:/Data/shape2pose/", "");
 DEFINE_string(label_info_path, "data/0_body/coseg_chairs/", "");
@@ -126,12 +127,18 @@ void MeshViewerCore::train()
 		FLAGS_label_info_path + FLAGS_label_info_filename).c_str());
 	ret = ret & cuboid_structure_.load_label_symmetries((FLAGS_data_root_path +
 		FLAGS_label_info_path + FLAGS_label_symmetry_info_filename).c_str());
+
 	if (!ret)
 	{
 		do {
 			std::cout << "Error: Cannot open label information files.";
 			std::cout << '\n' << "Press the Enter key to continue.";
 		} while (std::cin.get() != '\n');
+	}
+
+	if (FLAGS_use_symmetric_group_cuboids)
+	{
+		cuboid_structure_.add_symmetric_group_labels();
 	}
 
 	unsigned int num_labels = cuboid_structure_.num_labels();
@@ -196,12 +203,12 @@ void MeshViewerCore::train()
 			cuboid_structure_.clear_sample_points();
 
 			open_mesh(mesh_filepath.c_str());
-			open_sample_point_file(sample_filepath.c_str());
 			open_mesh_face_label_file(mesh_label_filepath.c_str());
+			open_sample_point_file(sample_filepath.c_str());
 
 			if (run_ground_truth)
 			{
-				//cuboid_structure_.make_mesh_vertices_as_sample_points();
+				//cuboid_structure_.add_sample_points_from_mesh_vertices();
 				cuboid_structure_.get_mesh_face_label_cuboids();
 			}
 			else
@@ -214,6 +221,10 @@ void MeshViewerCore::train()
 			// Find the largest part for each part.
 			cuboid_structure_.find_the_largest_label_cuboids();
 
+			if (FLAGS_use_symmetric_group_cuboids)
+			{
+				cuboid_structure_.create_symmetric_group_cuboids();
+			}
 
 			open_modelview_matrix_file(FLAGS_pose_filename.c_str());
 
@@ -453,6 +464,20 @@ void MeshViewerCore::predict()
 	ret = ret & cuboid_structure_.load_label_symmetries((FLAGS_data_root_path +
 		FLAGS_label_info_path + FLAGS_label_symmetry_info_filename).c_str());
 
+	if (!ret)
+	{
+		do {
+			std::cout << "Error: Cannot open label information files.";
+			std::cout << '\n' << "Press the Enter key to continue.";
+		} while (std::cin.get() != '\n');
+	}
+
+	if (FLAGS_use_symmetric_group_cuboids)
+	{
+		cuboid_structure_.add_symmetric_group_labels();
+	}
+
+	ret = true;
 	MeshCuboidTrainer trainer;
 	ret = ret & trainer.load_object_list(FLAGS_object_list_filename);
 	ret = ret & trainer.load_features(FLAGS_feature_filename_prefix);
@@ -461,7 +486,7 @@ void MeshViewerCore::predict()
 	if (!ret)
 	{
 		do {
-			std::cout << "Error: Cannot open label information files.";
+			std::cout << "Error: Cannot open training files.";
 			std::cout << '\n' << "Press the Enter key to continue.";
 		} while (std::cin.get() != '\n');
 	}

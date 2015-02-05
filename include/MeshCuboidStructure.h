@@ -61,10 +61,10 @@ public:
 
 	std::vector<MeshCuboid *> get_all_cuboids()const;
 
-	void make_mesh_vertices_as_sample_points();
-
 	// Get sample point labels from the label confidence values.
 	std::vector<LabelIndex> get_sample_point_label_indices();
+
+	void add_sample_points_from_mesh_vertices();
 
 	void compute_label_cuboids();
 
@@ -74,7 +74,7 @@ public:
 
 	// Apple mesh face labels to sample points,
 	// and re-create parts based on sample point labels.
-	void get_mesh_face_label_cuboids();
+	void get_mesh_face_label_cuboids(bool _add_sample_points_from_mesh_vertices = false);
 
 	// Find the largest part for each label.
 	void find_the_largest_label_cuboids();
@@ -87,6 +87,14 @@ public:
 
 	// Remove cuboids in symmetric labels (when the same cuboids are duplicated for symmetric labels).
 	void remove_symmetric_cuboids();
+
+	bool is_label_group(LabelIndex _label_index);
+
+	void clear_symmetric_group_labels();
+
+	void add_symmetric_group_labels();
+
+	void create_symmetric_group_cuboids();
 
 	// TEST.
 	bool test_load_cuboids(const char *_filename, bool _verbose = true);
@@ -107,7 +115,7 @@ public:
 
 
 private:
-	//inline Label get_new_label()const;
+	inline Label get_new_label()const;
 
 	// Apple mesh face labels to sample points
 	void apply_mesh_face_labels_to_sample_points();
@@ -121,6 +129,7 @@ public:
 	std::vector<std::string> label_names_;
 	std::vector< std::list<LabelIndex> > label_symmetries_;
 	std::vector< std::vector<MeshCuboid *> > label_cuboids_;
+	std::vector< std::list<LabelIndex> > label_children_;
 
 	MyMesh::Normal translation_;
 	Real scale_;

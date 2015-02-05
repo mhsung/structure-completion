@@ -139,6 +139,9 @@ public:
 		return static_cast<unsigned int>(cuboid_surface_points_.size());
 	}
 
+	bool is_group_cuboid()const { return is_group_cuboid_;  }
+
+	void set_group_cuboid(bool _is_group_cuboid) { is_group_cuboid_ = _is_group_cuboid; }
 
 	LabelIndex get_label_index()const { return label_index_; }
 
@@ -243,6 +246,8 @@ public:
 
 
 protected:
+	bool is_group_cuboid_;
+
 	LabelIndex label_index_;
 	std::vector<MeshSamplePoint *> sample_points_;
 	std::vector<MeshCuboidSurfacePoint *> cuboid_surface_points_;

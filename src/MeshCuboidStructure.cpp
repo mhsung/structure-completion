@@ -38,6 +38,7 @@ void MeshCuboidStructure::deep_copy(const MeshCuboidStructure& _other)
 	this->labels_ = _other.labels_;
 	this->label_names_ = _other.label_names_;
 	this->label_symmetries_ = _other.label_symmetries_;
+	this->label_children_ = _other.label_children_;
 
 	this->translation_ = _other.translation_;
 	this->scale_ = _other.scale_;
@@ -77,7 +78,6 @@ void MeshCuboidStructure::deep_copy(const MeshCuboidStructure& _other)
 void MeshCuboidStructure::clear()
 {
 	clear_sample_points();
-	clear_cuboids();
 	clear_labels();
 }
 
@@ -102,13 +102,17 @@ void MeshCuboidStructure::clear_cuboids()
 	}
 
 	label_cuboids_.clear();
+	label_cuboids_.resize(num_labels());
 }
 
 void MeshCuboidStructure::clear_labels()
 {
+	clear_cuboids();
+
 	labels_.clear();
 	label_names_.clear();
 	label_symmetries_.clear();
+	label_children_.clear();
 
 	query_label_index_ = 0;
 }
@@ -133,7 +137,6 @@ bool MeshCuboidStructure::load_cuboids(const std::string _filename, bool _verbos
 
 
 	clear_cuboids();
-	label_cuboids_.resize(num_labels());
 
 	std::string buffer;
 
@@ -367,8 +370,7 @@ bool MeshCuboidStructure::load_labels(const char *_filename, bool _verbose)
 
 
 	// NOTE:
-	// All cuboids are deleted.
-	clear_cuboids();
+	// All cuboids are also deleted.
 	clear_labels();
 
 
@@ -407,6 +409,8 @@ bool MeshCuboidStructure::load_labels(const char *_filename, bool _verbose)
 		labels_.push_back(new_label);
 		label_names_.push_back(tokens[0]);
 		label_symmetries_.push_back(std::list<LabelIndex>());
+		label_children_.push_back(std::list<LabelIndex>());
+		label_cuboids_.push_back(std::vector<MeshCuboid *>());
 		++new_label;
 	}
 
@@ -600,16 +604,16 @@ bool MeshCuboidStructure::load_sample_point_labels(const char *_filename, bool _
 
 			MeshSamplePoint* sample_point = sample_points_[sample_point_index];
 			assert(sample_point);
+			sample_point->label_index_confidence_.clear();
 			sample_point->label_index_confidence_.resize(num_labels());
-			std::fill(sample_point->label_index_confidence_.begin(), sample_point->label_index_confidence_.end(), 0);
-
 
 			for (LabelIndex label_index = 0; label_index < num_labels(); ++label_index)
 			{
 				if (strstr.eof())
 				{
-					std::cerr << "Error: Wrong file format: \"" << _filename << "\"" << std::endl;
-					return false;
+					//std::cerr << "Error: Wrong file format: \"" << _filename << "\"" << std::endl;
+					//return false;
+					break;
 				}
 				else std::getline(strstr, token, ',');
 				sample_point->label_index_confidence_[label_index] = std::stof(token);
@@ -794,23 +798,26 @@ std::vector<MeshCuboid *> MeshCuboidStructure::get_all_cuboids() const
 	return all_cuboids;
 }
 
-void MeshCuboidStructure::make_mesh_vertices_as_sample_points()
+void MeshCuboidStructure::add_sample_points_from_mesh_vertices()
 {
 	assert(mesh_);
-	clear();
 
-	// NOTE:
-	// Since now the sample points are generated from mesh, 
-	// the transformation of mesh is applied first.
-	apply_mesh_transformation();
-
-	sample_points_.reserve(3 * mesh_->n_faces());
-	SamplePointIndex sample_point_index = 0;
+	sample_points_.reserve(sample_points_.size() + 3 * mesh_->n_faces());
+	SamplePointIndex sample_point_index = sample_points_.size();
 
 	for (MyMesh::FaceIter f_it = mesh_->faces_begin(); f_it != mesh_->faces_end(); ++f_it)
 	{
 		MyMesh::FaceHandle fh = f_it.handle();
 		FaceIndex corr_fid = fh.idx();
+		Label label = mesh_->property(mesh_->face_label_, fh);
+
+		LabelIndex label_index;
+		bool ret = exist_label(label, &label_index);
+
+		// NOTE:
+		// If the mesh face label does not exist, ignore this mesh face.
+		if (!ret) continue;
+		assert(label_index < num_labels());
 
 		unsigned int i = 0;
 		for (MyMesh::ConstFaceVertexIter fv_it = mesh_->cfv_iter(fh); fv_it; ++fv_it, ++i)
@@ -823,10 +830,20 @@ void MeshCuboidStructure::make_mesh_vertices_as_sample_points()
 
 			MyMesh::Point pos = mesh_->point(vh);
 
-			sample_points_.push_back(new MeshSamplePoint(sample_point_index, corr_fid, bary_coord, pos));
+			MeshSamplePoint *sample_point = new MeshSamplePoint(sample_point_index, corr_fid, bary_coord, pos);
+
+			sample_point->label_index_confidence_.clear();
+			sample_point->label_index_confidence_.resize(num_labels(), 0.0);
+			// Note:
+			// The confidence of the given label becomes '1.0'.
+			sample_point->label_index_confidence_[label_index] = 1.0;
+
+			sample_points_.push_back(sample_point);
 			++sample_point_index;
 		}
 	}
+
+	assert(sample_point_index == num_sample_points());
 }
 
 void MeshCuboidStructure::apply_mesh_face_labels_to_sample_points()
@@ -896,7 +913,7 @@ void MeshCuboidStructure::apply_mesh_face_labels_to_cuboids()
 	query_label_index_ = num_labels();
 }
 
-void MeshCuboidStructure::get_mesh_face_label_cuboids()
+void MeshCuboidStructure::get_mesh_face_label_cuboids(bool _add_sample_points_from_mesh_vertices)
 {
 	// Apple mesh face labels to sample points.
 	apply_mesh_face_labels_to_sample_points();
@@ -906,16 +923,7 @@ void MeshCuboidStructure::get_mesh_face_label_cuboids()
 
 void MeshCuboidStructure::compute_label_cuboids()
 {
-	// Initialize.
-	for (std::vector< std::vector<MeshCuboid *> >::iterator it = label_cuboids_.begin();
-		it != label_cuboids_.end(); ++it)
-	{
-		for (std::vector<MeshCuboid *>::iterator jt = (*it).begin(); jt != (*it).end(); ++jt)
-			delete (*jt);
-		(*it).clear();
-	}
-	label_cuboids_.clear();
-	label_cuboids_.resize(num_labels());
+	clear_cuboids();
 
 	for (LabelIndex label_index = 0; label_index < num_labels(); ++label_index)
 	{
@@ -1179,7 +1187,133 @@ void MeshCuboidStructure::remove_symmetric_cuboids()
 	delete[] is_label_visited;
 }
 
-/*
+bool MeshCuboidStructure::is_label_group(LabelIndex _label_index)
+{
+	assert(_label_index < label_children_.size());
+	bool ret = (!label_children_[_label_index].empty());
+	return ret;
+}
+
+void MeshCuboidStructure::clear_symmetric_group_labels()
+{
+	std::vector<Label> new_labels;
+	std::vector<std::string> new_label_names;
+	std::vector< std::list<LabelIndex> > new_label_symmetries;
+	std::vector< std::vector<MeshCuboid *> > new_label_cuboids;
+	std::vector< std::list<LabelIndex> > new_label_children;
+
+	new_labels.reserve(num_labels());
+	new_label_names.reserve(num_labels());
+	new_label_symmetries.reserve(num_labels());
+	new_label_cuboids.reserve(num_labels());
+	new_label_children.reserve(num_labels());
+
+	for (unsigned int label_index = 0; label_index < num_labels(); ++label_index)
+	{
+		if (!is_label_group(label_index))
+		{
+			new_labels.push_back(labels_[label_index]);
+			new_label_names.push_back(label_names_[label_index]);
+			new_label_symmetries.push_back(label_symmetries_[label_index]);
+			new_label_children.push_back(label_children_[label_index]);
+			new_label_cuboids.push_back(label_cuboids_[label_index]);
+		}
+		else
+		{
+			for (std::vector<MeshCuboid *>::iterator it = label_cuboids_[label_index].begin();
+				it != label_cuboids_[label_index].end(); ++it)
+				delete (*it);
+		}
+	}
+
+	labels_.swap(new_labels);
+	label_names_.swap(new_label_names);
+	label_symmetries_.swap(new_label_symmetries);
+	label_cuboids_.swap(new_label_cuboids);
+	label_children_.swap(new_label_children);
+}
+
+void MeshCuboidStructure::add_symmetric_group_labels()
+{
+	clear_symmetric_group_labels();
+
+	const unsigned int num_given_labels = num_labels();
+	assert(label_symmetries_.size() == num_given_labels);
+
+	unsigned int num_new_labels = 0;
+
+	bool *is_label_added = new bool[num_given_labels];
+	memset(is_label_added, false, num_given_labels * sizeof(bool));
+
+	for (LabelIndex label_index = 0; label_index < num_given_labels; ++label_index)
+	{
+		if (is_label_added[label_index])
+			continue;
+
+		std::list<LabelIndex> children_label_indices = label_symmetries_[label_index];
+		if (children_label_indices.empty())
+			continue;
+		
+		children_label_indices.push_front(label_index);
+
+		for (std::list<LabelIndex>::const_iterator it = children_label_indices.begin();
+			it != children_label_indices.end(); ++it)
+		{
+			LabelIndex n_label_index = (*it);
+			assert(n_label_index < num_given_labels);
+			is_label_added[n_label_index] = true;
+		}
+
+
+		std::stringstream new_label_name;
+		new_label_name << "symmetry_group_" << num_new_labels;
+
+		labels_.push_back(get_new_label());
+		label_names_.push_back(new_label_name.str());
+		label_symmetries_.push_back(std::list<LabelIndex>());
+		label_cuboids_.push_back(std::vector<MeshCuboid*>());
+		label_children_.push_back(children_label_indices);
+
+		++num_new_labels;
+	}
+
+	delete[] is_label_added;
+}
+
+void MeshCuboidStructure::create_symmetric_group_cuboids()
+{
+	for (unsigned int label_index = 0; label_index < num_labels(); ++label_index)
+	{
+		if (!is_label_group(label_index))
+			continue;
+
+		std::vector<MeshCuboid *> children_cuboids;
+
+		for (std::list<LabelIndex>::const_iterator it = label_children_[label_index].begin();
+			it != label_children_[label_index].end(); ++it)
+		{
+			LabelIndex n_label_index = (*it);
+			assert(n_label_index < num_labels());
+
+			children_cuboids.insert(children_cuboids.end(),
+				label_cuboids_[n_label_index].begin(), label_cuboids_[n_label_index].end());
+		}
+
+		if (!children_cuboids.empty())
+		{
+			MeshCuboid* merged_cuboid = MeshCuboid::merge_cuboids(label_index, children_cuboids);
+			assert(merged_cuboid);
+			merged_cuboid->set_group_cuboid(true);
+
+			// Clear sample points.
+			merged_cuboid->clear_sample_points();
+
+			label_cuboids_[label_index].clear();
+			label_cuboids_[label_index].push_back(merged_cuboid);
+		}
+	}
+}
+
 Label MeshCuboidStructure::get_new_label()const
 {
 	Label max_label = 0;
@@ -1191,6 +1325,7 @@ Label MeshCuboidStructure::get_new_label()const
 	return max_label + 1;
 }
 
+/*
 bool MeshCuboidStructure::apply_point_cuboid_label_map(
 	const std::vector<PointCuboidLabelMap>& _point_cuboid_label_maps,
 	const std::vector<Label>& _all_cuboid_labels)

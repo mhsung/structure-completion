@@ -1220,11 +1220,11 @@ double MeshCuboidCondNormalRelations::compute_error(const MeshCuboid *_cuboid_1,
 	get_pairwise_cuboid_features(_cuboid_1, _cuboid_2, _transformation_1, _transformation_2,
 		global_features_vec_1, transformed_features_vec_12);
 
-	assert(mean_A_.rows() == features_vec_1.rows());
-	assert(mean_A_.cols() == _global_features_vec_1.rows());
-	assert(mean_b_.rows() == features_vec_1.rows());
-	assert(inv_cov_.rows() == features_vec_1.rows());
-	assert(inv_cov_.cols() == features_vec_1.rows());
+	assert(mean_A_.rows() == transformed_features_vec_12.rows());
+	assert(mean_A_.cols() == global_features_vec_1.rows());
+	assert(mean_b_.rows() == transformed_features_vec_12.rows());
+	assert(inv_cov_.rows() == transformed_features_vec_12.rows());
+	assert(inv_cov_.cols() == transformed_features_vec_12.rows());
 
 	const Eigen::VectorXd mean_2 = mean_A_ * global_features_vec_1 + mean_b_;
 	Eigen::VectorXd diff = transformed_features_vec_12 - mean_2;
