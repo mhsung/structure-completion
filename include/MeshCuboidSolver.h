@@ -77,6 +77,9 @@ void add_missing_cuboids(
 	const std::list<LabelIndex> &_missing_label_indices,
 	const MeshCuboidPredictor &_predictor);
 
+void add_reflection_planes(
+	MeshCuboidStructure &_cuboid_structure);
+
 /*
 MeshCuboid *test_joint_normal_training(
 	const MeshCuboid *_cuboid_1, const MeshCuboid *_cuboid_2,

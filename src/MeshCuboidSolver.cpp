@@ -1730,6 +1730,208 @@ void add_missing_cuboids(
 	}
 }
 
+void add_reflection_planes(MeshCuboidStructure &_cuboid_structure)
+{
+	unsigned int num_given_labels = _cuboid_structure.num_labels();
+
+	for (LabelIndex label_index_1 = 0; label_index_1 < num_given_labels; ++label_index_1)
+	{
+		if (_cuboid_structure.label_symmetries_[label_index_1].empty())
+			continue;
+
+		Label label_1 = _cuboid_structure.labels_[label_index_1];
+		MeshCuboid *cuboid_1 = NULL;
+
+		// NOTE:
+		// The current implementation assumes that there is only one part for each label.
+		assert(_cuboid_structure.label_cuboids_[label_index_1].size() <= 1);
+		if (!_cuboid_structure.label_cuboids_[label_index_1].empty())
+			cuboid_1 = _cuboid_structure.label_cuboids_[label_index_1].front();
+
+
+		for (std::list<LabelIndex>::const_iterator it = _cuboid_structure.label_symmetries_[label_index_1].begin();
+			it != _cuboid_structure.label_symmetries_[label_index_1].end(); ++it)
+		{
+			LabelIndex label_index_2 = (*it);
+			assert(label_index_2 < num_given_labels);
+
+			if (label_index_1 > label_index_2)
+				continue;
+
+			Label label_2 = _cuboid_structure.labels_[label_index_2];
+			MeshCuboid *cuboid_2 = NULL;
+				
+			// NOTE:
+			// The current implementation assumes that there is only one part for each label.
+			assert(_cuboid_structure.label_cuboids_[label_index_2].size() <= 1);
+			if (!_cuboid_structure.label_cuboids_[label_index_2].empty())
+				cuboid_2 = _cuboid_structure.label_cuboids_[label_index_2].front();
+
+			if (!cuboid_1 || !cuboid_2)
+				continue;
+
+
+			// NOTE:
+			// Assume that all symmetric cases are reflectional symmetry.
+
+			// Find the cuboid flipping axis.
+			// Use heuristic. Just check the distance between corresponding cuboid corners.
+			Eigen::Vector3d sum_axis_distances(0.0);
+			for (unsigned int corner_index = 0; corner_index < MeshCuboid::k_num_corners; ++corner_index)
+			{
+				MyMesh::Normal diff = cuboid_1->get_bbox_corner(corner_index) - cuboid_2->get_bbox_corner(corner_index);
+				for (unsigned int axis_index = 0; axis_index < 3; ++axis_index)
+					sum_axis_distances[axis_index] += std::abs(diff[axis_index]);
+			}
+
+			int flip_axis_index = 0;
+			sum_axis_distances.maxCoeff(&flip_axis_index);
+
+			// Temporarily flip the axis of one cuboid.
+			cuboid_2->flip_axis(flip_axis_index);
+
+			
+			// Find the accurate reflection plane,
+			// which might not be perfectly perpendicular with one of x, y, or z axis.
+			Eigen::Vector3d reflection_plane_point(0.0);
+			Eigen::Vector3d reflection_plane_normal(0.0);
+
+			for (unsigned int corner_index = 0; corner_index < MeshCuboid::k_num_corners; ++corner_index)
+			{
+				MyMesh::Point p = cuboid_1->get_bbox_corner(corner_index) + cuboid_2->get_bbox_corner(corner_index);
+				for (unsigned int i = 0; i < 3; ++i)
+					reflection_plane_point[i] += p[i];
+			}
+			reflection_plane_point /= static_cast<Real>(MeshCuboid::k_num_corners);
+
+			Eigen::MatrixXd A(MeshCuboid::k_num_corners, 3);
+			for (unsigned int corner_index = 0; corner_index < MeshCuboid::k_num_corners; ++corner_index)
+			{
+				MyMesh::Point p = cuboid_1->get_bbox_corner(corner_index) - cuboid_2->get_bbox_corner(corner_index);
+				for (unsigned int i = 0; i < 3; ++i)
+					A.row(corner_index)[i] = p[i];
+			}
+
+			// The first column of matrix V in SVD is the vector maximizing
+			// cos(angle) with all columns in the given matrix A.
+			Eigen::JacobiSVD<Eigen::MatrixXd> svd(A, Eigen::ComputeFullU | Eigen::ComputeFullV);
+			reflection_plane_normal = svd.matrixV().col(0);
+			reflection_plane_normal.normalize();
+
+
+			// Define symmetry transformation matrix (' = transpose, n'n = 1).
+			// p = reflection_plane_point
+			// n = reflection_plane_normal
+			// x - 2{n'(x - p)}n
+			// = x - 2n{n'(x - p)}
+			// = x - 2nn'x + 2nn'p
+			// = (I - 2nn')x + 2nn'p
+			// R = (I - 2nn'), t = 2nn'p.
+
+			// The inverse transformation is the same.
+			// RR = (I - 2nn')(I - 2nn') = I - 4nn' + 4nn'nn'
+			// = I - 4nn' + 4nn' = I (since n'n = 1). R^(-1) = R.
+			// -R^(-1)t = -Rt = -(I - 2nn')2nn'p = -2nn'p + 4nn'nn'p
+			// = -2nn'p + 4nn'p = 2nn'p = t (since n'n = 1).
+
+			Eigen::Matrix3d R = Eigen::Matrix3d::Identity()
+				- 2 * (reflection_plane_normal * reflection_plane_normal.transpose());
+			Eigen::Vector3d t = 2 * (reflection_plane_normal * reflection_plane_normal.transpose())
+				* reflection_plane_point;
+
+			CHECK_NUMERICAL_ERROR(__FUNCTION__, (R * R - Eigen::Matrix3d::Identity()).norm());
+			CHECK_NUMERICAL_ERROR(__FUNCTION__, (t + R * t).norm());
+
+
+			// Fit cuboid corners to become perfect symmetry.
+			MyMesh::Point new_bbox_center_1(0.0);
+			MyMesh::Point new_bbox_center_2(0.0);
+			std::array<MyMesh::Point, MeshCuboid::k_num_corners> new_bbox_corners_1;
+			std::array<MyMesh::Point, MeshCuboid::k_num_corners> new_bbox_corners_2;
+			for (unsigned int corner_index = 0; corner_index < MeshCuboid::k_num_corners; ++corner_index)
+			{
+				Eigen::Vector3d p1(0.0), p2(0.0);
+				for (unsigned int i = 0; i < 3; ++i)
+				{
+					p1[i] = cuboid_1->get_bbox_corner(corner_index)[i];
+					p2[i] = cuboid_2->get_bbox_corner(corner_index)[i];
+				}
+
+				Eigen::Vector3d transformed_p2 = R * p2 + t;
+
+				Eigen::Vector3d average_p1 = 0.5 * (p1 + transformed_p2);
+				// The inverse transformation is the same.
+				Eigen::Vector3d average_p2 = R * average_p1 + t;
+
+				for (unsigned int i = 0; i < 3; ++i)
+				{
+					new_bbox_center_1[i] += average_p1[i];
+					new_bbox_center_2[i] += average_p2[i];
+					new_bbox_corners_1[corner_index][i] = average_p1[i];
+					new_bbox_corners_2[corner_index][i] = average_p2[i];
+				}
+			}
+
+			new_bbox_center_1 /= static_cast<Real>(MeshCuboid::k_num_corners);
+			new_bbox_center_2 /= static_cast<Real>(MeshCuboid::k_num_corners);
+
+			cuboid_1->set_bbox_center(new_bbox_center_1);
+			cuboid_1->set_bbox_corners(new_bbox_corners_1);
+			cuboid_1->cuboidize();
+
+			cuboid_2->set_bbox_center(new_bbox_center_2);
+			cuboid_2->set_bbox_corners(new_bbox_corners_2);
+			cuboid_2->cuboidize();
+
+			
+			// Copy sample points.
+			// 1 -> 2.
+			std::vector<MeshSamplePoint *>cuboid_sample_points_1, cuboid_sample_points_2;
+			cuboid_sample_points_1.insert(cuboid_sample_points_1.end(),
+				cuboid_1->get_sample_points().begin(), cuboid_1->get_sample_points().end());
+			cuboid_sample_points_2.insert(cuboid_sample_points_2.end(),
+				cuboid_2->get_sample_points().begin(), cuboid_2->get_sample_points().end());
+
+			for (std::vector<MeshSamplePoint *>::const_iterator it = cuboid_sample_points_1.begin();
+				it != cuboid_sample_points_1.end(); ++it)
+			{
+				MeshSamplePoint *new_sample_point = new MeshSamplePoint(**it);
+
+				Eigen::Vector3d p(0.0);
+				for (unsigned int i = 0; i < 3; ++i)
+					p[i] = new_sample_point->point_[i];
+				Eigen::Vector3d transformed_p = R * p + t;
+				for (unsigned int i = 0; i < 3; ++i)
+					new_sample_point->point_[i] = transformed_p[i];
+
+				cuboid_2->add_sample_point(new_sample_point);
+				_cuboid_structure.sample_points_.push_back(new_sample_point);
+			}
+
+			// 2 -> 1.
+			for (std::vector<MeshSamplePoint *>::const_iterator it = cuboid_sample_points_2.begin();
+				it != cuboid_sample_points_2.end(); ++it)
+			{
+				MeshSamplePoint *new_sample_point = new MeshSamplePoint(**it);
+
+				Eigen::Vector3d p(0.0);
+				for (unsigned int i = 0; i < 3; ++i)
+					p[i] = new_sample_point->point_[i];
+				Eigen::Vector3d transformed_p = R * p + t;
+				for (unsigned int i = 0; i < 3; ++i)
+					new_sample_point->point_[i] = transformed_p[i];
+
+				cuboid_1->add_sample_point(new_sample_point);
+				_cuboid_structure.sample_points_.push_back(new_sample_point);
+			}
+
+
+			// Recover the flipped axis.
+			cuboid_2->flip_axis(flip_axis_index);
+		}
+	}
+}
+
 /*
 MeshCuboid *test_joint_normal_training(
 	const MeshCuboid *_cuboid_1, const MeshCuboid *_cuboid_2,

@@ -550,6 +550,26 @@ void MeshCuboid::rotate(const Eigen::Matrix3d _rotation_mat, bool _update_center
 	}
 }
 
+void MeshCuboid::flip_axis(const unsigned int _axis_index)
+{
+	// Bounding box center and sizes are not changed.
+	assert(_axis_index < 3);
+
+	bbox_axes_[_axis_index] = -bbox_axes_[_axis_index];
+
+	// Flip corner points.
+	std::array<MyMesh::Point, k_num_corners> new_bbox_corners;
+	for (unsigned int corner_index = 0; corner_index < k_num_corners; ++corner_index)
+	{
+		std::bitset<3> bits(corner_index);
+		bits.flip(_axis_index);
+		unsigned int new_corner_index = static_cast<unsigned int>(bits.to_ulong());
+		new_bbox_corners[new_corner_index] = bbox_corners_[corner_index];
+	}
+
+	bbox_corners_.swap(new_bbox_corners);
+}
+
 void MeshCuboid::cuboidize()
 {
 	//std::vector<MyMesh::Point> face_center_points(k_num_faces, MyMesh::Point(0.0));
@@ -688,11 +708,16 @@ void MeshCuboid::clear_sample_points()
 
 void MeshCuboid::add_sample_point(MeshSamplePoint *_point)
 {
+	if (sample_points_.size() == sample_to_cuboid_surface_correspondence_.size())
+		sample_to_cuboid_surface_correspondence_.push_back(-1);
 	sample_points_.push_back(_point);
 }
 
 void MeshCuboid::add_sample_points(const std::vector<MeshSamplePoint *> _points)
 {
+	if (sample_points_.size() == sample_to_cuboid_surface_correspondence_.size())
+		sample_to_cuboid_surface_correspondence_.resize(
+		sample_points_.size() + _points.size(), - 1);
 	sample_points_.insert(sample_points_.end(), _points.begin(), _points.end());
 }
 

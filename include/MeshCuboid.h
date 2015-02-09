@@ -203,6 +203,8 @@ public:
 	void translate(const Eigen::Vector3d _translation_vec);
 
 	void rotate(const Eigen::Matrix3d _rotation_mat, bool _update_center_size = true);
+
+	void flip_axis(const unsigned int _axis_index);
 	
 	void update_corner_points();
 
