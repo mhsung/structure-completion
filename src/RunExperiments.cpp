@@ -16,7 +16,7 @@
 
 DEFINE_bool(run_training, false, "");
 DEFINE_bool(run_prediction, false, "");
-DEFINE_bool(use_symmetric_group_cuboids, false, "");
+DEFINE_bool(use_symmetric_group_cuboids, true, "");
 
 DEFINE_string(data_root_path, "D:/Data/shape2pose/", "");
 DEFINE_string(label_info_path, "data/0_body/coseg_chairs/", "");
@@ -98,6 +98,7 @@ void MeshViewerCore::open_cuboid_file(const char *_filename)
 	}
 
 	cuboid_structure_.load_cuboids(_filename);
+	draw_cuboid_axes_ = true;
 	setDrawMode(CUSTOM_VIEW);
 	updateGL();
 }
@@ -658,13 +659,18 @@ void MeshViewerCore::predict()
 		draw_cuboid_axes_ = true;
 		
 
-		std::cout << "\n1. Recognize labels and axes configurations." << std::endl;
 		// NOTE:
-		// Use symmetric label information only at the first time of the iteration.
-		recognize_labels_and_axes_configurations(cuboid_structure_,
-			joint_normal_predictor, log_filename_sstr.str(), first_iteration,
-			true);
-		first_iteration = false;
+		// If this iteration is last, do not perform label recognition (for efficiency).
+		if (!last_iteration)
+		{
+			std::cout << "\n1. Recognize labels and axes configurations." << std::endl;
+			// NOTE:
+			// Use symmetric label information only at the first time of the iteration.
+			recognize_labels_and_axes_configurations(cuboid_structure_,
+				joint_normal_predictor, log_filename_sstr.str(), first_iteration,
+				true);
+			first_iteration = false;
+		}
 
 		updateGL();
 		snapshot_filename_sstr.clear(); snapshot_filename_sstr.str("");
@@ -718,8 +724,9 @@ void MeshViewerCore::predict()
 				<< num_final_cuboid_structure_candidates << std::string(".arff");
 			cuboid_structure_.save_cuboids(cuboid_filename_sstr.str());
 
+
 			//
-			add_reflection_planes(cuboid_structure_);
+			symmetrize_cuboids(cuboid_structure_);
 
 			updateGL();
 			snapshot_filename_sstr.clear(); snapshot_filename_sstr.str("");
@@ -731,16 +738,8 @@ void MeshViewerCore::predict()
 			cuboid_filename_sstr << FLAGS_output_path << filename_prefix
 				<< num_final_cuboid_structure_candidates << std::string("_symmetrized.arff");
 			cuboid_structure_.save_cuboids(cuboid_filename_sstr.str());
+			//
 
-
-			cuboid_structure_.clear_cuboids();
-
-			updateGL();
-			snapshot_filename_sstr.clear(); snapshot_filename_sstr.str("");
-			snapshot_filename_sstr << FLAGS_output_path << filename_prefix
-				<< num_final_cuboid_structure_candidates << std::string("_reconstructed");
-			snapshot(snapshot_filename_sstr.str().c_str());
-			
 
 			if (mesh_label_file.exists())
 			{
@@ -751,6 +750,21 @@ void MeshViewerCore::predict()
 				MeshCuboidEvaluator evaluator(cuboid_structure_, mesh_name, cuboid_structure_name);
 				evaluator.save_evaluate_results(stats_filename_sstr.str());
 			}
+
+
+			//
+			cuboid_structure_.clear_cuboids();
+
+			updateGL();
+			snapshot_filename_sstr.clear(); snapshot_filename_sstr.str("");
+			snapshot_filename_sstr << FLAGS_output_path << filename_prefix
+				<< num_final_cuboid_structure_candidates << std::string("_reconstructed");
+			snapshot(snapshot_filename_sstr.str().c_str());
+
+			snapshot_filename_sstr << std::string(".pts");
+			cuboid_structure_.save_sample_points(snapshot_filename_sstr.str().c_str());
+			//
+
 
 			++num_final_cuboid_structure_candidates;
 			last_iteration = false;

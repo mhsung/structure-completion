@@ -56,6 +56,7 @@ public:
 	bool load_label_symmetries(const char *_filename, bool _verbose = true);
 
 	bool load_sample_points(const char *_filename, bool _verbose = true);
+	bool save_sample_points(const char *_filename, bool _verbose = true);
 
 	bool load_sample_point_labels(const char *_filename, bool _verbose = true);
 
@@ -95,6 +96,8 @@ public:
 	void add_symmetric_group_labels();
 
 	void create_symmetric_group_cuboids();
+
+	int find_parent_label_index(const LabelIndex _label_index_1, const LabelIndex _label_index_2);
 
 	// TEST.
 	bool test_load_cuboids(const char *_filename, bool _verbose = true);

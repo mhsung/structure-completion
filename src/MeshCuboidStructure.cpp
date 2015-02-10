@@ -350,6 +350,9 @@ void MeshCuboidStructure::reset_transformation()
 	{
 		scale(1.0 / scale_);
 		translate(-translation_);
+
+		scale_ = 1.0;
+		translation_ = MyMesh::Point(0.0);
 	}
 
 	assert(translation_ == MyMesh::Point(0.0));
@@ -538,6 +541,49 @@ bool MeshCuboidStructure::load_sample_points(const char *_filename, bool _verbos
 		MeshSamplePoint *sample_point = new MeshSamplePoint(sample_point_index, corr_fid, bary_coord, pos);
 		sample_points_.push_back(sample_point);
 		assert(sample_points_[sample_point_index] == sample_point);
+	}
+
+	file.close();
+
+	apply_mesh_transformation();
+
+	std::cout << "Done." << std::endl;
+
+	return true;
+}
+
+bool MeshCuboidStructure::save_sample_points(const char *_filename, bool _verbose)
+{
+	std::ofstream file(_filename);
+	if (!file)
+	{
+		std::cerr << "Can't save file: \"" << _filename << "\"" << std::endl;
+		return false;
+	}
+
+	if (_verbose)
+		std::cout << "Saving " << _filename << "..." << std::endl;
+
+	// Note:
+	// Save the original position of sample points.
+	reset_transformation();
+
+	for (SamplePointIndex sample_point_index = 0; sample_point_index < num_sample_points();
+		++sample_point_index)
+	{
+		MeshSamplePoint *sample_point = sample_points_[sample_point_index];
+		assert(sample_point);
+
+		std::stringstream sstr;
+		sstr << sample_point->corr_fid_ << " ";
+		sstr << sample_point->bary_coord_[0] << " "
+			<< sample_point->bary_coord_[1] << " "
+			<< sample_point->bary_coord_[2] << " ";
+		sstr << sample_point->point_[0] << " "
+			<< sample_point->point_[1] << " "
+			<< sample_point->point_[2] << " ";
+
+		file << sstr.str() << std::endl;
 	}
 
 	file.close();
@@ -1312,6 +1358,30 @@ void MeshCuboidStructure::create_symmetric_group_cuboids()
 			label_cuboids_[label_index].push_back(merged_cuboid);
 		}
 	}
+}
+
+int MeshCuboidStructure::find_parent_label_index(
+	const LabelIndex _label_index_1, const LabelIndex _label_index_2)
+{
+	assert(label_children_.size() == num_labels());
+
+	for (LabelIndex label_index = 0; label_index < num_labels(); ++label_index)
+	{
+		bool is_child_label_index[2];
+		memset(is_child_label_index, false, 2 * sizeof(bool));
+
+		for (std::list<LabelIndex>::iterator it = label_children_[label_index].begin();
+			it != label_children_[label_index].end(); ++it)
+		{
+			if ((*it) == _label_index_1) is_child_label_index[0] = true;
+			if ((*it) == _label_index_2) is_child_label_index[1] = true;
+		}
+
+		if (is_child_label_index[0] && is_child_label_index[1])
+			return label_index;
+	}
+
+	return -1;
 }
 
 Label MeshCuboidStructure::get_new_label()const

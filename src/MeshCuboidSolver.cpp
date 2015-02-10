@@ -1730,7 +1730,7 @@ void add_missing_cuboids(
 	}
 }
 
-void add_reflection_planes(MeshCuboidStructure &_cuboid_structure)
+void symmetrize_cuboids(MeshCuboidStructure &_cuboid_structure)
 {
 	unsigned int num_given_labels = _cuboid_structure.num_labels();
 
@@ -1796,27 +1796,63 @@ void add_reflection_planes(MeshCuboidStructure &_cuboid_structure)
 			Eigen::Vector3d reflection_plane_point(0.0);
 			Eigen::Vector3d reflection_plane_normal(0.0);
 
-			for (unsigned int corner_index = 0; corner_index < MeshCuboid::k_num_corners; ++corner_index)
-			{
-				MyMesh::Point p = cuboid_1->get_bbox_corner(corner_index) + cuboid_2->get_bbox_corner(corner_index);
-				for (unsigned int i = 0; i < 3; ++i)
-					reflection_plane_point[i] += p[i];
-			}
-			reflection_plane_point /= static_cast<Real>(MeshCuboid::k_num_corners);
+			MeshCuboid *group_cuboid = NULL;
 
-			Eigen::MatrixXd A(MeshCuboid::k_num_corners, 3);
-			for (unsigned int corner_index = 0; corner_index < MeshCuboid::k_num_corners; ++corner_index)
+			int group_label_index = _cuboid_structure.find_parent_label_index(label_index_1, label_index_2);
+			if (group_label_index >= 0)
 			{
-				MyMesh::Point p = cuboid_1->get_bbox_corner(corner_index) - cuboid_2->get_bbox_corner(corner_index);
-				for (unsigned int i = 0; i < 3; ++i)
-					A.row(corner_index)[i] = p[i];
+				// NOTE:
+				// The current implementation assumes that there is only one part for each label.
+				assert(_cuboid_structure.label_cuboids_[group_label_index].size() <= 1);
+				if (!_cuboid_structure.label_cuboids_[group_label_index].empty())
+					group_cuboid = _cuboid_structure.label_cuboids_[group_label_index].front();
 			}
 
-			// The first column of matrix V in SVD is the vector maximizing
-			// cos(angle) with all columns in the given matrix A.
-			Eigen::JacobiSVD<Eigen::MatrixXd> svd(A, Eigen::ComputeFullU | Eigen::ComputeFullV);
-			reflection_plane_normal = svd.matrixV().col(0);
+			if (group_cuboid)
+			{
+				printf(">> Group Cuboid Index  = %d\n", group_label_index);
+				for (unsigned int i = 0; i < 3; ++i)
+				{
+					reflection_plane_point[i] = group_cuboid->get_bbox_center()[i];
+					reflection_plane_normal[i] = group_cuboid->get_bbox_axis(flip_axis_index)[i];
+				}
+			}
+			else
+			{
+				for (unsigned int corner_index = 0; corner_index < MeshCuboid::k_num_corners; ++corner_index)
+				{
+					MyMesh::Point p = cuboid_1->get_bbox_corner(corner_index) + cuboid_2->get_bbox_corner(corner_index);
+					for (unsigned int i = 0; i < 3; ++i)
+						reflection_plane_point[i] += p[i];
+				}
+				reflection_plane_point /= static_cast<Real>(MeshCuboid::k_num_corners);
+
+				// FIXME.
+				//printf(">> reflection_plane_point[0] = %lf\n", reflection_plane_point[0]);
+				//reflection_plane_point[0] = 0.0;
+
+				Eigen::MatrixXd A(MeshCuboid::k_num_corners, 3);
+				for (unsigned int corner_index = 0; corner_index < MeshCuboid::k_num_corners; ++corner_index)
+				{
+					MyMesh::Point p = cuboid_1->get_bbox_corner(corner_index) - cuboid_2->get_bbox_corner(corner_index);
+					for (unsigned int i = 0; i < 3; ++i)
+						A.row(corner_index)[i] = p[i];
+				}
+
+				// The first column of matrix V in SVD is the vector maximizing
+				// cos(angle) with all columns in the given matrix A.
+				Eigen::JacobiSVD<Eigen::MatrixXd> svd(A, Eigen::ComputeFullU | Eigen::ComputeFullV);
+				reflection_plane_normal = svd.matrixV().col(0);
+
+				// FIXME.
+				//printf(">> reflection_plane_normal = %lf, %lf, %lf\n",
+				//	reflection_plane_normal[0], reflection_plane_normal[1], reflection_plane_normal[2]);
+				//reflection_plane_normal = Eigen::Vector3d::UnitX();
+			}
 			reflection_plane_normal.normalize();
+			printf(">> reflection_plane_point[0] = %lf\n", reflection_plane_point[0]);
+			printf(">> reflection_plane_normal = %lf, %lf, %lf\n",
+				reflection_plane_normal[0], reflection_plane_normal[1], reflection_plane_normal[2]);
 
 
 			// Define symmetry transformation matrix (' = transpose, n'n = 1).
