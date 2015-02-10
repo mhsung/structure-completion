@@ -690,11 +690,11 @@ void MeshViewerCore::draw_openmesh(const std::string& _drawmode)
 		}
 		*/
 
-		//bool draw_all_labels = (cuboid_structure_.query_label_index_ == cuboid_structure_.num_labels());
+		bool draw_all_labels = (cuboid_structure_.query_label_index_ == cuboid_structure_.num_labels());
 
 		// Draw sample points (Black).
-		//if (draw_all_labels)
-		//{
+		if (draw_all_labels)
+		{
 			for (std::vector<MeshSamplePoint *>::iterator it = cuboid_structure_.sample_points_.begin();
 				it != cuboid_structure_.sample_points_.end(); it++)
 			{
@@ -719,7 +719,7 @@ void MeshViewerCore::draw_openmesh(const std::string& _drawmode)
 					glPopMatrix();
 				}
 			}
-		//}
+		}
 
 		
 		// For each label.
