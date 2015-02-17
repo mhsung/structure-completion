@@ -1077,6 +1077,23 @@ void MeshCuboid::compute_cuboid_surface_point_visibility(
 	}
 }
 
+Real MeshCuboid::get_cuboid_overvall_visibility()
+{
+	// Assume that visibility of each surface point is already computed.
+	Real sum_visibility = 0.0;
+	if (cuboid_surface_points_.empty())
+		return sum_visibility;
+
+	for (std::vector<MeshCuboidSurfacePoint *>::iterator it = cuboid_surface_points_.begin();
+		it != cuboid_surface_points_.end(); it++)
+	{
+		sum_visibility += (*it)->visibility_;
+	}
+
+	sum_visibility /= static_cast<Real>(cuboid_surface_points_.size());
+	return sum_visibility;
+}
+
 void MeshCuboid::update_corner_points()
 {
 	for (unsigned int corner_index = 0; corner_index < k_num_corners; ++corner_index)
@@ -1421,7 +1438,7 @@ void MeshCuboid::create_sub_cuboids(const Real _object_diameter,
 		if (seed_sample_point_index < 0) break;
 		assert(!is_sample_visited[seed_sample_point_index]);
 		assert(sample_points_[seed_sample_point_index]->label_index_confidence_[label_index_]
-			>= FLAGS_param_sample_point_confidence_tol);
+			>= FLAGS_param_min_sample_point_confidence);
 
 
 		// 2. Propagate to close points.

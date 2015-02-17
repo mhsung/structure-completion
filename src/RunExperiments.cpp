@@ -726,18 +726,21 @@ void MeshViewerCore::predict()
 
 
 			//
-			symmetrize_cuboids(cuboid_structure_);
+			if (FLAGS_use_symmetric_group_cuboids)
+			{
+				symmetrize_cuboids(cuboid_structure_);
 
-			updateGL();
-			snapshot_filename_sstr.clear(); snapshot_filename_sstr.str("");
-			snapshot_filename_sstr << FLAGS_output_path << filename_prefix
-				<< num_final_cuboid_structure_candidates << std::string("_symmetrized");
-			snapshot(snapshot_filename_sstr.str().c_str());
+				updateGL();
+				snapshot_filename_sstr.clear(); snapshot_filename_sstr.str("");
+				snapshot_filename_sstr << FLAGS_output_path << filename_prefix
+					<< num_final_cuboid_structure_candidates << std::string("_symmetrized");
+				snapshot(snapshot_filename_sstr.str().c_str());
 
-			cuboid_filename_sstr.clear(); cuboid_filename_sstr.str("");
-			cuboid_filename_sstr << FLAGS_output_path << filename_prefix
-				<< num_final_cuboid_structure_candidates << std::string("_symmetrized.arff");
-			cuboid_structure_.save_cuboids(cuboid_filename_sstr.str());
+				cuboid_filename_sstr.clear(); cuboid_filename_sstr.str("");
+				cuboid_filename_sstr << FLAGS_output_path << filename_prefix
+					<< num_final_cuboid_structure_candidates << std::string("_symmetrized.arff");
+				cuboid_structure_.save_cuboids(cuboid_filename_sstr.str());
+			}
 			//
 
 
@@ -753,16 +756,19 @@ void MeshViewerCore::predict()
 
 
 			//
-			cuboid_structure_.clear_cuboids();
+			if (FLAGS_use_symmetric_group_cuboids)
+			{
+				cuboid_structure_.clear_cuboids();
 
-			updateGL();
-			snapshot_filename_sstr.clear(); snapshot_filename_sstr.str("");
-			snapshot_filename_sstr << FLAGS_output_path << filename_prefix
-				<< num_final_cuboid_structure_candidates << std::string("_reconstructed");
-			snapshot(snapshot_filename_sstr.str().c_str());
+				updateGL();
+				snapshot_filename_sstr.clear(); snapshot_filename_sstr.str("");
+				snapshot_filename_sstr << FLAGS_output_path << filename_prefix
+					<< num_final_cuboid_structure_candidates << std::string("_reconstructed");
+				snapshot(snapshot_filename_sstr.str().c_str());
 
-			snapshot_filename_sstr << std::string(".pts");
-			cuboid_structure_.save_sample_points(snapshot_filename_sstr.str().c_str());
+				snapshot_filename_sstr << std::string(".pts");
+				cuboid_structure_.save_sample_points(snapshot_filename_sstr.str().c_str());
+			}
 			//
 
 

@@ -37,7 +37,7 @@ Real MeshCuboidPredictor::get_single_potential(
 		sample_it != _cuboid->get_sample_points().end(); ++sample_it)
 	{
 		assert(_label_index < (*sample_it)->label_index_confidence_.size());
-		if ((*sample_it)->label_index_confidence_[_label_index] >= FLAGS_param_sample_point_confidence_tol)
+		if ((*sample_it)->label_index_confidence_[_label_index] >= FLAGS_param_min_sample_point_confidence)
 			++num_confidence_tol_sample_point;
 	}
 

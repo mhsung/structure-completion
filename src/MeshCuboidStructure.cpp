@@ -984,7 +984,7 @@ void MeshCuboidStructure::compute_label_cuboids()
 			assert(sample_point);
 
 			// Select sample points which has sufficient confidence for the given label.
-			if (sample_point->label_index_confidence_[label_index] >= FLAGS_param_sample_point_confidence_tol)
+			if (sample_point->label_index_confidence_[label_index] >= FLAGS_param_min_sample_point_confidence)
 				label_sample_points.push_back(sample_point);
 		}
 

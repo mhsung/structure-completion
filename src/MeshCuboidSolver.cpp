@@ -1724,8 +1724,16 @@ void add_missing_cuboids(
 			cuboid->compute_cuboid_surface_point_visibility(
 				_modelview_matrix, radius, _cuboid_structure.sample_points_);
 
-			LabelIndex label_index = cuboid->get_label_index();
-			_cuboid_structure.label_cuboids_[label_index].push_back(cuboid);
+			//if (cuboid->get_cuboid_overvall_visibility() > FLAGS_param_min_cuboid_overall_visibility)
+			//{
+			//	// The cuboid is placed in the visible area.
+			//	delete cuboid;
+			//}
+			//else
+			//{
+				LabelIndex label_index = cuboid->get_label_index();
+				_cuboid_structure.label_cuboids_[label_index].push_back(cuboid);
+			//}
 		}
 	}
 }
@@ -1747,6 +1755,52 @@ void symmetrize_cuboids(MeshCuboidStructure &_cuboid_structure)
 		assert(_cuboid_structure.label_cuboids_[label_index_1].size() <= 1);
 		if (!_cuboid_structure.label_cuboids_[label_index_1].empty())
 			cuboid_1 = _cuboid_structure.label_cuboids_[label_index_1].front();
+
+
+		// FIXME.
+		// Assume that all cuboids have either intra-cuboid or inter-cuboid symmetry.
+		if (cuboid_1 && _cuboid_structure.label_symmetries_[label_index_1].empty())
+		{
+			const int flip_axis_index = FLAGS_param_intra_cuboid_symmetry_axis;
+
+			Eigen::Vector3d reflection_plane_point(0.0);
+			Eigen::Vector3d reflection_plane_normal(0.0);
+
+			for (unsigned int i = 0; i < 3; ++i)
+			{
+				reflection_plane_point[i] = cuboid_1->get_bbox_center()[i];
+				reflection_plane_normal[i] = cuboid_1->get_bbox_axis(flip_axis_index)[i];
+			}
+
+			Eigen::Matrix3d R = Eigen::Matrix3d::Identity()
+				- 2 * (reflection_plane_normal * reflection_plane_normal.transpose());
+			Eigen::Vector3d t = 2 * (reflection_plane_normal * reflection_plane_normal.transpose())
+				* reflection_plane_point;
+
+			CHECK_NUMERICAL_ERROR(__FUNCTION__, (R * R - Eigen::Matrix3d::Identity()).norm());
+			CHECK_NUMERICAL_ERROR(__FUNCTION__, (t + R * t).norm());
+
+
+			std::vector<MeshSamplePoint *>cuboid_sample_points_1;
+			cuboid_sample_points_1.insert(cuboid_sample_points_1.end(),
+				cuboid_1->get_sample_points().begin(), cuboid_1->get_sample_points().end());
+
+			for (std::vector<MeshSamplePoint *>::const_iterator it = cuboid_sample_points_1.begin();
+				it != cuboid_sample_points_1.end(); ++it)
+			{
+				MeshSamplePoint *new_sample_point = new MeshSamplePoint(**it);
+
+				Eigen::Vector3d p(0.0);
+				for (unsigned int i = 0; i < 3; ++i)
+					p[i] = new_sample_point->point_[i];
+				Eigen::Vector3d transformed_p = R * p + t;
+				for (unsigned int i = 0; i < 3; ++i)
+					new_sample_point->point_[i] = transformed_p[i];
+
+				cuboid_1->add_sample_point(new_sample_point);
+				_cuboid_structure.sample_points_.push_back(new_sample_point);
+			}
+		}
 
 
 		for (std::list<LabelIndex>::const_iterator it = _cuboid_structure.label_symmetries_[label_index_1].begin();

@@ -231,6 +231,8 @@ public:
 		const Real _radius,
 		const std::vector<MeshSamplePoint *>& _all_sample_points);
 
+	Real get_cuboid_overvall_visibility();
+
 	void update_point_correspondences();
 
 	// NOTE:
