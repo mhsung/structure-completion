@@ -153,12 +153,14 @@ void MeshCuboidEvaluator::evaluate_cuboid_distance()
 		{
 			++num_missing_labels;
 		}
+		else
+		{
+			MeshCuboid *cuboid = cuboid_structure_.label_cuboids_[label_index].front();
+			assert(cuboid);
 
-		MeshCuboid *cuboid = cuboid_structure_.label_cuboids_[label_index].front();
-		assert(cuboid);
-
-		Real cuboid_distance = MeshCuboid::distance_between_cuboids(ground_truth_cuboid, cuboid);
-		max_cuboid_distance = std::max(max_cuboid_distance, cuboid_distance);
+			Real cuboid_distance = MeshCuboid::distance_between_cuboids(ground_truth_cuboid, cuboid);
+			max_cuboid_distance = std::max(max_cuboid_distance, cuboid_distance);
+		}
 	}
 
 	evaluation_results_["num_missing_labels"] = static_cast<Real>(num_missing_labels);

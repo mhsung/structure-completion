@@ -1744,8 +1744,8 @@ void symmetrize_cuboids(MeshCuboidStructure &_cuboid_structure)
 
 	for (LabelIndex label_index_1 = 0; label_index_1 < num_given_labels; ++label_index_1)
 	{
-		if (_cuboid_structure.label_symmetries_[label_index_1].empty())
-			continue;
+		//if (_cuboid_structure.label_symmetries_[label_index_1].empty())
+		//	continue;
 
 		Label label_1 = _cuboid_structure.labels_[label_index_1];
 		MeshCuboid *cuboid_1 = NULL;
@@ -1763,8 +1763,8 @@ void symmetrize_cuboids(MeshCuboidStructure &_cuboid_structure)
 		{
 			const int flip_axis_index = FLAGS_param_intra_cuboid_symmetry_axis;
 
-			Eigen::Vector3d reflection_plane_point(0.0);
-			Eigen::Vector3d reflection_plane_normal(0.0);
+			Eigen::Vector3d reflection_plane_point(0.0, 0.0, 0.0);
+			Eigen::Vector3d reflection_plane_normal(0.0, 0.0, 0.0);
 
 			for (unsigned int i = 0; i < 3; ++i)
 			{
@@ -1790,7 +1790,7 @@ void symmetrize_cuboids(MeshCuboidStructure &_cuboid_structure)
 			{
 				MeshSamplePoint *new_sample_point = new MeshSamplePoint(**it);
 
-				Eigen::Vector3d p(0.0);
+				Eigen::Vector3d p(0.0, 0.0, 0.0);
 				for (unsigned int i = 0; i < 3; ++i)
 					p[i] = new_sample_point->point_[i];
 				Eigen::Vector3d transformed_p = R * p + t;
@@ -1847,8 +1847,8 @@ void symmetrize_cuboids(MeshCuboidStructure &_cuboid_structure)
 			
 			// Find the accurate reflection plane,
 			// which might not be perfectly perpendicular with one of x, y, or z axis.
-			Eigen::Vector3d reflection_plane_point(0.0);
-			Eigen::Vector3d reflection_plane_normal(0.0);
+			Eigen::Vector3d reflection_plane_point(0.0, 0.0, 0.0);
+			Eigen::Vector3d reflection_plane_normal(0.0, 0.0, 0.0);
 
 			MeshCuboid *group_cuboid = NULL;
 
@@ -1987,7 +1987,7 @@ void symmetrize_cuboids(MeshCuboidStructure &_cuboid_structure)
 			{
 				MeshSamplePoint *new_sample_point = new MeshSamplePoint(**it);
 
-				Eigen::Vector3d p(0.0);
+				Eigen::Vector3d p(0.0, 0.0, 0.0);
 				for (unsigned int i = 0; i < 3; ++i)
 					p[i] = new_sample_point->point_[i];
 				Eigen::Vector3d transformed_p = R * p + t;
@@ -2004,7 +2004,7 @@ void symmetrize_cuboids(MeshCuboidStructure &_cuboid_structure)
 			{
 				MeshSamplePoint *new_sample_point = new MeshSamplePoint(**it);
 
-				Eigen::Vector3d p(0.0);
+				Eigen::Vector3d p(0.0, 0.0, 0.0);
 				for (unsigned int i = 0; i < 3; ++i)
 					p[i] = new_sample_point->point_[i];
 				Eigen::Vector3d transformed_p = R * p + t;
