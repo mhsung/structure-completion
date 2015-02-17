@@ -246,7 +246,8 @@ public slots:
 	void run_train_file_files() { mesh_viewer_core_.train_file_files(); }
 	void run_batch_predict() { mesh_viewer_core_.batch_predict(); }
 	void run_predict() { mesh_viewer_core_.predict(); }
-	void run_batch_render_point_clusters() { mesh_viewer_core_.batch_render_point_clusters(); }
+	void run_batch_render_cuboids() { mesh_viewer_core_.batch_render_cuboids(); }
+	void run_batch_render_points() { mesh_viewer_core_.batch_render_points(); }
 	void run_set_view_direction() { mesh_viewer_core_.set_view_direction(); }
 	void run_print_arguments() { mesh_viewer_core_.parse_arguments(); }
 	void run_print_mesh_info() { mesh_viewer_core_.print_mesh_info(); }

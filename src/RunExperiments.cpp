@@ -843,6 +843,11 @@ void MeshViewerCore::batch_render_point_clusters()
 		} while (std::cin.get() != '\n');
 	}
 
+	if (FLAGS_use_symmetric_group_cuboids)
+	{
+		cuboid_structure_.add_symmetric_group_labels();
+	}
+
 	unsigned int num_labels = cuboid_structure_.num_labels();
 
 
@@ -906,6 +911,144 @@ void MeshViewerCore::batch_render_point_clusters()
 	draw_cuboid_axes_ = true;
 }
 
+void MeshViewerCore::batch_render_cuboids()
+{
+	bool ret = true;
+	ret = ret & cuboid_structure_.load_labels((FLAGS_data_root_path +
+		FLAGS_label_info_path + FLAGS_label_info_filename).c_str());
+	ret = ret & cuboid_structure_.load_label_symmetries((FLAGS_data_root_path +
+		FLAGS_label_info_path + FLAGS_label_symmetry_info_filename).c_str());
+	if (!ret)
+	{
+		do {
+			std::cout << "Error: Cannot open label information files.";
+			std::cout << '\n' << "Press the Enter key to continue.";
+		} while (std::cin.get() != '\n');
+	}
+
+	if (FLAGS_use_symmetric_group_cuboids)
+	{
+		cuboid_structure_.add_symmetric_group_labels();
+	}
+
+	unsigned int num_labels = cuboid_structure_.num_labels();
+
+
+	setDrawMode(CUSTOM_VIEW);
+	open_modelview_matrix_file(FLAGS_pose_filename.c_str());
+
+	// For every file in the base path.
+	QDir input_dir(FLAGS_output_path.c_str());
+	assert(input_dir.exists());
+	input_dir.setFilter(QDir::Files | QDir::Hidden | QDir::NoSymLinks);
+	input_dir.setSorting(QDir::Name);
+
+	QDir output_dir;
+	output_dir.mkpath((FLAGS_output_path + std::string("/cuboid_snapshots/")).c_str());
+
+
+	QFileInfoList dir_list = input_dir.entryInfoList();
+	for (int i = 0; i < dir_list.size(); i++)
+	{
+		QFileInfo file_info = dir_list.at(i);
+		if (file_info.exists() &&
+			file_info.suffix().compare("arff") == 0)
+		{
+			std::string cuboid_name = std::string(file_info.baseName().toLocal8Bit());
+			std::string cuboid_filename = std::string(file_info.filePath().toLocal8Bit());
+			std::string snapshot_filename = FLAGS_output_path + std::string("/cuboid_snapshots/") + cuboid_name;
+
+			QFileInfo cuboid_file(cuboid_filename.c_str());
+			if (!cuboid_file.exists())
+				continue;
+
+			cuboid_structure_.clear_cuboids();
+			cuboid_structure_.clear_sample_points();
+			cuboid_structure_.load_cuboids(cuboid_filename.c_str());
+
+			draw_cuboid_axes_ = true;
+			updateGL();
+			snapshot(snapshot_filename.c_str());
+		}
+	}
+}
+
+void MeshViewerCore::batch_render_points()
+{
+	bool ret = true;
+	ret = ret & cuboid_structure_.load_labels((FLAGS_data_root_path +
+		FLAGS_label_info_path + FLAGS_label_info_filename).c_str());
+	ret = ret & cuboid_structure_.load_label_symmetries((FLAGS_data_root_path +
+		FLAGS_label_info_path + FLAGS_label_symmetry_info_filename).c_str());
+	if (!ret)
+	{
+		do {
+			std::cout << "Error: Cannot open label information files.";
+			std::cout << '\n' << "Press the Enter key to continue.";
+		} while (std::cin.get() != '\n');
+	}
+
+	if (FLAGS_use_symmetric_group_cuboids)
+	{
+		cuboid_structure_.add_symmetric_group_labels();
+	}
+
+	unsigned int num_labels = cuboid_structure_.num_labels();
+
+
+	setDrawMode(CUSTOM_VIEW);
+	open_modelview_matrix_file(FLAGS_pose_filename.c_str());
+
+	// For every file in the base path.
+	QDir input_dir((FLAGS_data_root_path + FLAGS_mesh_path).c_str());
+	assert(input_dir.exists());
+	input_dir.setFilter(QDir::Files | QDir::Hidden | QDir::NoSymLinks);
+	input_dir.setSorting(QDir::Name);
+
+	QDir output_dir;
+	output_dir.mkpath((FLAGS_output_path + std::string("/reconstruction_snapshots/")).c_str());
+
+
+	const std::string sample_filename_postfix("_0_reconstructed.pts");
+
+	QFileInfoList dir_list = input_dir.entryInfoList();
+	for (int i = 0; i < dir_list.size(); i++)
+	{
+		QFileInfo file_info = dir_list.at(i);
+		if (file_info.exists() &&
+			(file_info.suffix().compare("obj") == 0
+			|| file_info.suffix().compare("off") == 0))
+		{
+			std::string mesh_name = std::string(file_info.baseName().toLocal8Bit());
+			std::string mesh_filename = std::string(file_info.filePath().toLocal8Bit());
+
+			//std::string sample_filename = FLAGS_data_root_path + FLAGS_sample_path + std::string("/") + mesh_name + std::string(".pts");
+			std::string sample_filename = FLAGS_output_path + std::string("/") + mesh_name + sample_filename_postfix;
+			std::string snapshot_filename = FLAGS_output_path + std::string("/reconstruction_snapshots/") + mesh_name;
+
+			QFileInfo mesh_file(mesh_filename.c_str());
+			QFileInfo sample_file(sample_filename.c_str());
+
+			if (!mesh_file.exists()
+				|| !sample_file.exists())
+				continue;
+
+
+			cuboid_structure_.clear_cuboids();
+			cuboid_structure_.clear_sample_points();
+
+			open_mesh(mesh_filename.c_str());
+			open_sample_point_file(sample_filename.c_str());
+
+			mesh_.clear_colors();
+			draw_cuboid_axes_ = false;
+			updateGL();
+			snapshot(snapshot_filename.c_str());
+		}
+	}
+
+	draw_cuboid_axes_ = true;
+}
 /*
 void MeshViewerCore::do_occlusion_test()
 {

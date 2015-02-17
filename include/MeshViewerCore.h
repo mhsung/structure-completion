@@ -58,6 +58,8 @@ public:
 	void batch_predict();
 	void predict();
 	void batch_render_point_clusters();
+	void batch_render_cuboids();
+	void batch_render_points();
 	void set_view_direction();
 	void parse_arguments();
 	void print_mesh_info();

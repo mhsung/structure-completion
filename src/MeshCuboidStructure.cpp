@@ -204,9 +204,9 @@ bool MeshCuboidStructure::load_cuboids(const std::string _filename, bool _verbos
 			}
 			else if (label_index >= num_labels())
 			{
-				std::cerr << "Error: The label index exceeds the number of labels"
+				std::cerr << "Warning: The label index exceeds the number of labels"
 					<< " (" << label_index << " >= " << num_labels() << ": \"" << _filename << "\"" << std::endl;
-				return false;
+				continue;
 			}
 
 			MeshCuboid *cuboid = new MeshCuboid(label_index);
@@ -1324,6 +1324,10 @@ void MeshCuboidStructure::add_symmetric_group_labels()
 	}
 
 	delete[] is_label_added;
+
+	// NOTE:
+	// Draws all points.
+	query_label_index_ = num_labels();
 }
 
 void MeshCuboidStructure::create_symmetric_group_cuboids()

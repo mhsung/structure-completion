@@ -238,8 +238,12 @@ void create_menu(QMainWindow &w)
 	QObject::connect(runAct, SIGNAL(triggered()), w.centralWidget(), SLOT(run_batch_predict()));
 	w.menuBar()->addAction(runAct);
 
-	runAct = new QAction(w.tr("Render Point Clusters"), &w);
-	QObject::connect(runAct, SIGNAL(triggered()), w.centralWidget(), SLOT(run_batch_render_point_clusters()));
+	runAct = new QAction(w.tr("Render Cuboids"), &w);
+	QObject::connect(runAct, SIGNAL(triggered()), w.centralWidget(), SLOT(run_batch_render_cuboids()));
+	w.menuBar()->addAction(runAct);
+
+	runAct = new QAction(w.tr("Render Points"), &w);
+	QObject::connect(runAct, SIGNAL(triggered()), w.centralWidget(), SLOT(run_batch_render_points()));
 	w.menuBar()->addAction(runAct);
 
 	runAct = new QAction(w.tr("Set View Direction"), &w);
