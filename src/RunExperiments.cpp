@@ -1,6 +1,5 @@
 #include "MeshViewerCore.h"
 #include "MeshCuboidEvaluator.h"
-#include "MeshCuboidNonLinearSolver.h"
 #include "MeshCuboidPredictor.h"
 #include "MeshCuboidRelation.h"
 #include "MeshCuboidTrainer.h"
@@ -16,7 +15,7 @@
 
 DEFINE_bool(run_training, false, "");
 DEFINE_bool(run_prediction, false, "");
-DEFINE_bool(use_symmetric_group_cuboids, true, "");
+DEFINE_bool(use_symmetric_group_cuboids, false, "");
 
 DEFINE_string(data_root_path, "D:/Data/shape2pose/", "");
 DEFINE_string(label_info_path, "data/0_body/coseg_chairs/", "");

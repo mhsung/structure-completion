@@ -8,7 +8,19 @@
 
 #include <vector>
 #include <string>
+#include <Eigen/Core>
 
+
+std::vector<int> solve_markov_random_field(
+	const unsigned int _num_nodes,
+	const unsigned int _num_labels,
+	const Eigen::MatrixXd& _energy_mat);
+
+Eigen::VectorXd solve_quadratic_programming(
+	const Eigen::MatrixXd& _quadratic_term,
+	const Eigen::VectorXd& _linear_term,
+	const double _constant_term,
+	Eigen::VectorXd* _init_values_vec = NULL);
 
 void update_cuboid_surface_points(
 	MeshCuboidStructure &_cuboid_structure,

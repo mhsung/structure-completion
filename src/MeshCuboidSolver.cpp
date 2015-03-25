@@ -1,6 +1,7 @@
 #include "MeshCuboidSolver.h"
 
 #include "MeshCuboidParameters.h"
+#include "MeshCuboidNonLinearSolver.h"
 #include "Utilities.h"
 
 #include <cstdint>
@@ -62,7 +63,9 @@ bool read_eigen_vector_binary(const char* filename, Eigen::VectorXd& matrix){
 	return true;
 }
 
-std::vector<int> solve_markov_random_field(const unsigned int _num_nodes, const unsigned int _num_labels,
+std::vector<int> solve_markov_random_field(
+	const unsigned int _num_nodes,
+	const unsigned int _num_labels,
 	const Eigen::MatrixXd& _energy_mat)
 {
 	assert(_energy_mat.rows() == _num_nodes * _num_labels);
@@ -172,7 +175,9 @@ std::vector<int> solve_markov_random_field(const unsigned int _num_nodes, const 
 }
 
 /*
-std::vector<int> solve_markov_random_field(const unsigned int _num_nodes, const unsigned int _num_labels,
+std::vector<int> solve_markov_random_field(
+	const unsigned int _num_nodes,
+	const unsigned int _num_labels,
 	const Eigen::MatrixXd& _energy_mat)
 {
 	const unsigned int mat_size = _num_nodes * _num_labels;
@@ -247,9 +252,7 @@ Eigen::VectorXd solve_quadratic_programming(
 	const Eigen::MatrixXd& _quadratic_term,
 	const Eigen::VectorXd& _linear_term,
 	const double _constant_term,
-	Eigen::VectorXd* _init_values_vec = NULL,
-	Eigen::MatrixXd* _init_values_mask = NULL,
-	double _quadprog_ratio = 1.0)
+	Eigen::VectorXd* _init_values_vec)
 {
 	const unsigned int n = _quadratic_term.cols();
 	assert(_quadratic_term.rows() == n);
@@ -329,9 +332,7 @@ Eigen::VectorXd solve_quadratic_programming(
 	const Eigen::MatrixXd& _quadratic_term,
 	const Eigen::VectorXd& _linear_term,
 	const double _constant_term,
-	Eigen::VectorXd* _init_values_vec = NULL,
-	Eigen::MatrixXd* _init_values_mask = NULL,
-	double _quadprog_ratio = 1.0)
+	Eigen::VectorXd* _init_values_vec)
 {
 	const unsigned int dimension = _quadratic_term.cols();
 	assert(_quadratic_term.rows() == dimension);
@@ -1328,6 +1329,83 @@ void optimize_attributes_once(
 
 
 	// Solve quadratic programming.
+	Eigen::VectorXd new_values = solve_quadratic_programming_with_constraints(
+		_cuboids, quadratic_term, linear_term, constant_term, &init_values);
+
+	assert(new_values.rows() == mat_size);
+
+
+	// Update cuboid.
+	for (unsigned int cuboid_index = 0; cuboid_index < num_cuboids; ++cuboid_index)
+	{
+		MeshCuboid *cuboid = _cuboids[cuboid_index];
+		Eigen::VectorXd new_attributes_vec = new_values.segment(
+			num_attributes * cuboid_index, num_attributes);
+
+		MyMesh::Point new_bbox_center(0.0);
+		std::array<MyMesh::Point, MeshCuboid::k_num_corners> new_bbox_corners;
+
+		//for (unsigned int i = 0; i < 3; ++i)
+		//	new_bbox_center[i] = new_attributes_vec[MeshCuboidAttributes::k_center_index + i];
+
+		for (unsigned int corner_index = 0; corner_index < MeshCuboid::k_num_corners; ++corner_index)
+		{
+			for (unsigned int i = 0; i < 3; ++i)
+			{
+				new_bbox_corners[corner_index][i] = new_attributes_vec[
+					MeshCuboidAttributes::k_corner_index + 3 * corner_index + i];
+			}
+			new_bbox_center += new_bbox_corners[corner_index];
+		}
+		new_bbox_center = new_bbox_center / MeshCuboid::k_num_corners;
+
+		cuboid->set_bbox_center(new_bbox_center);
+		cuboid->set_bbox_corners(new_bbox_corners);
+
+		// Update cuboid surface points.
+		for (unsigned int point_index = 0; point_index < cuboid->num_cuboid_surface_points();
+			++point_index)
+		{
+			MeshCuboidSurfacePoint *cuboid_surface_point = cuboid->get_cuboid_surface_point(point_index);
+
+			MyMesh::Point new_point(0.0);
+			for (unsigned int corner_index = 0; corner_index < MeshCuboid::k_num_corners; ++corner_index)
+				new_point += cuboid_surface_point->corner_weights_[corner_index] * new_bbox_corners[corner_index];
+
+			cuboid_surface_point->point_ = new_point;
+		}
+	}
+}
+
+/*
+void optimize_attributes_once(
+	const std::vector<MeshCuboid *>& _cuboids,
+	const MeshCuboidPredictor& _predictor,
+	const double _quadprog_ratio)
+{
+	const unsigned int num_attributes = MeshCuboidAttributes::k_num_attributes;
+	unsigned int num_cuboids = _cuboids.size();
+	unsigned int mat_size = num_cuboids * num_attributes;
+
+	Eigen::VectorXd init_values;
+	Eigen::MatrixXd single_quadratic_term, pair_quadratic_term;
+	Eigen::VectorXd single_linear_term, pair_linear_term;
+	double single_constant_term, pair_constant_term;
+	double single_total_energy, pair_total_energy;
+
+	get_optimization_formulation(_cuboids, _predictor, init_values,
+		single_quadratic_term, pair_quadratic_term,
+		single_linear_term, pair_linear_term,
+		single_constant_term, pair_constant_term,
+		single_total_energy, pair_total_energy);
+
+
+	Eigen::MatrixXd quadratic_term = pair_quadratic_term + _quadprog_ratio * single_quadratic_term;
+	Eigen::VectorXd linear_term = pair_linear_term + _quadprog_ratio * single_linear_term;
+	double constant_term = pair_constant_term + _quadprog_ratio * single_constant_term;
+
+
+	// Solve quadratic programming.
 	Eigen::VectorXd new_values = solve_quadratic_programming(quadratic_term, linear_term, constant_term,
 		&init_values, NULL, _quadprog_ratio);
 
@@ -1375,6 +1453,7 @@ void optimize_attributes_once(
 		}
 	}
 }
+*/
 
 void optimize_attributes(
 	MeshCuboidStructure &_cuboid_structure,

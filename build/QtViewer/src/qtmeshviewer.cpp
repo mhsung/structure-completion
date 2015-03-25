@@ -63,7 +63,7 @@
 #include <QFileDialog>
 
 #include <gflags/gflags.h>
-#include <glog/logging.h>
+//#include <glog/logging.h>
 
 #include "MeshViewerWidget.h"
 
@@ -74,7 +74,7 @@ void usage_and_exit(int xcode);
 int main(int argc, char **argv)
 {
 	gflags::ParseCommandLineFlags(&argc, &argv, true);
-	google::InitGoogleLogging(argv[0]);
+	//google::InitGoogleLogging(argv[0]);
 
 	// OpenGL check
 	QApplication::setColorSpec(QApplication::CustomColor);
