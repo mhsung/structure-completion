@@ -580,6 +580,13 @@ void MeshViewerCore::predict()
 	}
 
 
+	// TEST.
+	MeshCuboidSymmetryGroupInfo symmetry_group_info(0);
+	symmetry_group_info.pair_label_indices_.push_back(std::make_pair(2, 3));
+	symmetry_group_info.pair_label_indices_.push_back(std::make_pair(4, 5));
+	cuboid_structure_.symmetry_group_info_.push_back(symmetry_group_info);
+
+
 	// Pre-processing.
 	std::cout << "\n - Remove occluded points." << std::endl;
 	open_modelview_matrix_file(FLAGS_occlusion_pose_filename.c_str());
@@ -670,6 +677,10 @@ void MeshViewerCore::predict()
 				true);
 			first_iteration = false;
 		}
+
+		//
+		cuboid_structure_.compute_symmetry_groups();
+		//
 
 		updateGL();
 		snapshot_filename_sstr.clear(); snapshot_filename_sstr.str("");

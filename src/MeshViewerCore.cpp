@@ -878,6 +878,39 @@ void MeshViewerCore::draw_openmesh(const std::string& _drawmode)
 			}
 		}
 
+		// Draw symmetry axes.
+		for (std::vector< MeshCuboidSymmetryGroup* >::iterator it = cuboid_structure_.symmetry_groups_.begin();
+			it != cuboid_structure_.symmetry_groups_.end(); ++it)
+		{
+			MeshCuboidSymmetryGroup* group = (*it);
+			assert(group);
+			std::array<MyMesh::Point, 4> corners;
+			group->get_reflection_plane_corners(mesh_.get_bbox_center(), mesh_.get_object_diameter(), corners);
+
+			glColor4f(192.0f / 256.0f, 0.0f / 256.0f, 0.0f / 256.0f, 0.3f);
+			glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
+			glEnable(GL_BLEND);
+			glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+
+			glBegin(GL_QUADS);
+			for (unsigned int i = 0; i < 4; ++i)
+				glVertex3f(corners[i][0], corners[i][1], corners[i][2]);
+			glEnd();
+
+			glDisable(GL_BLEND);
+
+			glColor4f(0.0f, 0.0f, 0.0f, 1.0f);
+			glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
+			glLineWidth(4.0f);
+
+			glBegin(GL_QUADS);
+			for (unsigned int i = 0; i < 4; ++i)
+				glVertex3f(corners[i][0], corners[i][1], corners[i][2]);
+			glEnd();
+
+			glLineWidth(1.0f);
+		}
+
 		// Draw viewing direction.
 		red_color();
 		draw_arrow(view_point_ + (1.0 * mesh_.get_object_diameter()) * view_direction_,

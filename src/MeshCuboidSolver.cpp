@@ -1303,6 +1303,7 @@ void get_optimization_error(
 
 void optimize_attributes_once(
 	const std::vector<MeshCuboid *>& _cuboids,
+	const std::vector<MeshCuboidSymmetryGroup *> _symmetry_groups,
 	const MeshCuboidPredictor& _predictor,
 	const double _quadprog_ratio)
 {
@@ -1329,8 +1330,13 @@ void optimize_attributes_once(
 
 
 	// Solve quadratic programming.
-	Eigen::VectorXd new_values = solve_quadratic_programming_with_constraints(
-		_cuboids, quadratic_term, linear_term, constant_term, &init_values);
+	// TEST
+	//Eigen::VectorXd new_values = solve_quadratic_programming(
+	//	quadratic_term, linear_term, constant_term, &init_values);
+	MeshCuboidNonLinearSolver non_linear_solver(_cuboids, _symmetry_groups);
+	Eigen::VectorXd new_values = non_linear_solver.solve_quadratic_programming_with_constraints(
+		quadratic_term, linear_term, constant_term, &init_values);
+
 
 	assert(new_values.rows() == mat_size);
 
@@ -1509,7 +1515,10 @@ void optimize_attributes(
 		sstr << "iteration [" << iteration << "]" << std::endl;
 		std::cout << sstr.str(); log_file << sstr.str();
 
-		optimize_attributes_once(all_cuboids, _predictor, _quadprog_ratio);
+		//optimize_attributes_once(all_cuboids, _predictor, _quadprog_ratio);
+		optimize_attributes_once(all_cuboids, _cuboid_structure.symmetry_groups_,
+			_predictor, _quadprog_ratio);
+		
 		if (_viewer) _viewer->updateGL();
 
 		//

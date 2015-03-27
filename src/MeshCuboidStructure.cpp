@@ -40,6 +40,9 @@ void MeshCuboidStructure::deep_copy(const MeshCuboidStructure& _other)
 	this->label_symmetries_ = _other.label_symmetries_;
 	this->label_children_ = _other.label_children_;
 
+	this->symmetry_group_info_ = _other.symmetry_group_info_;
+	this->symmetry_groups_ = _other.symmetry_groups_;
+
 	this->translation_ = _other.translation_;
 	this->scale_ = _other.scale_;
 
@@ -103,6 +106,11 @@ void MeshCuboidStructure::clear_cuboids()
 
 	label_cuboids_.clear();
 	label_cuboids_.resize(num_labels());
+
+	for (std::vector< MeshCuboidSymmetryGroup* >::iterator it = symmetry_groups_.begin();
+		it != symmetry_groups_.end(); ++it)
+		delete (*it);
+	symmetry_groups_.clear();
 }
 
 void MeshCuboidStructure::clear_labels()
@@ -113,6 +121,8 @@ void MeshCuboidStructure::clear_labels()
 	label_names_.clear();
 	label_symmetries_.clear();
 	label_children_.clear();
+
+	symmetry_group_info_.size();
 
 	query_label_index_ = 0;
 }
@@ -1397,6 +1407,23 @@ Label MeshCuboidStructure::get_new_label()const
 	}
 
 	return max_label + 1;
+}
+
+void MeshCuboidStructure::compute_symmetry_groups()
+{
+	for (std::vector< MeshCuboidSymmetryGroup* >::iterator it = symmetry_groups_.begin();
+		it != symmetry_groups_.end(); ++it)
+		delete (*it);
+	symmetry_groups_.clear();
+
+	const std::vector<MeshCuboid*> cuboids = get_all_cuboids();
+
+	for (std::vector< MeshCuboidSymmetryGroupInfo >::iterator it = symmetry_group_info_.begin();
+		it != symmetry_group_info_.end(); ++it)
+	{
+		MeshCuboidSymmetryGroup* group = MeshCuboidSymmetryGroup::constructor(*it, cuboids);
+		if (group) symmetry_groups_.push_back(group);
+	}
 }
 
 /*

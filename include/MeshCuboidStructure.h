@@ -11,6 +11,7 @@
 
 #include "MyMesh.h"
 #include "MeshCuboid.h"
+#include "MeshCuboidSymmetryGroup.h"
 
 #include <vector>
 #include <set>
@@ -99,6 +100,8 @@ public:
 
 	int find_parent_label_index(const LabelIndex _label_index_1, const LabelIndex _label_index_2);
 
+	void compute_symmetry_groups();
+
 	// TEST.
 	bool test_load_cuboids(const char *_filename, bool _verbose = true);
 
@@ -133,6 +136,9 @@ public:
 	std::vector< std::list<LabelIndex> > label_symmetries_;
 	std::vector< std::vector<MeshCuboid *> > label_cuboids_;
 	std::vector< std::list<LabelIndex> > label_children_;
+
+	std::vector< MeshCuboidSymmetryGroupInfo > symmetry_group_info_;
+	std::vector< MeshCuboidSymmetryGroup* > symmetry_groups_;
 
 	MyMesh::Normal translation_;
 	Real scale_;

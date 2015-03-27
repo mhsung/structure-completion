@@ -8,6 +8,7 @@
 
 #include "MeshCuboidStructure.h"
 #include "MeshCuboidPredictor.h"
+#include "MeshCuboidSymmetryGroup.h"
 
 
 //== DEFINES ==================================================================

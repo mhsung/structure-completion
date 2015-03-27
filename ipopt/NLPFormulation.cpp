@@ -26,8 +26,11 @@ NLPSparseFunction::NLPSparseFunction(const Index _num_vars,
 	: NLPFunction(_num_vars)
 	, expression_(_expression)
 {
-	_expression.get_sparse_gradient(_num_vars, gradient_.indices_, gradient_.expressions_);
-	_expression.get_sparse_hessian(_num_vars, hessian_.indices_, hessian_.expressions_);
+	bool ret;
+	ret = _expression.get_sparse_gradient(_num_vars, gradient_.indices_, gradient_.expressions_);
+	assert(ret);
+	ret = _expression.get_sparse_hessian(_num_vars, hessian_.indices_, hessian_.expressions_);
+	assert(ret);
 }
 
 NLPSparseFunction::~NLPSparseFunction()
@@ -91,8 +94,11 @@ NLPSparseConstraint::NLPSparseConstraint(const Index _num_vars,
 	: NLPConstraint(_num_vars, _lower_bound, _upper_bound)
 	, expression_(_expression)
 {
-	_expression.get_sparse_gradient(_num_vars, gradient_.indices_, gradient_.expressions_);
-	_expression.get_sparse_hessian(_num_vars, hessian_.indices_, hessian_.expressions_);
+	bool ret;
+	ret = _expression.get_sparse_gradient(_num_vars, gradient_.indices_, gradient_.expressions_);
+	assert(ret);
+	ret = _expression.get_sparse_hessian(_num_vars, hessian_.indices_, hessian_.expressions_);
+	assert(ret);
 }
 
 NLPSparseConstraint::~NLPSparseConstraint()
