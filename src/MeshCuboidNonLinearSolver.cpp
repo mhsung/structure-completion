@@ -137,12 +137,28 @@ void MeshCuboidNonLinearSolver::add_cuboid_constraints(NLPFormulation &_formulat
 
 void MeshCuboidNonLinearSolver::add_symmetry_group_constraints(NLPFormulation &_formulation)
 {
-	for (unsigned int symmetry_grou_index = 0; symmetry_grou_index < num_symmetry_groups_;
-		++symmetry_grou_index)
+	for (unsigned int symmetry_group_index = 0; symmetry_group_index < num_symmetry_groups_;
+		++symmetry_group_index)
 	{
 		add_symmetry_group_constraints(
-			symmetry_grou_index, symmetry_groups_[symmetry_grou_index], _formulation);
+			get_symmetry_group_variable_start_index(symmetry_group_index),
+			symmetry_groups_[symmetry_group_index],
+			_formulation);
 	}
+}
+
+void MeshCuboidNonLinearSolver::add_symmetry_group_pair_constraints(NLPFormulation &_formulation)
+{
+	// TEST.
+	const unsigned int symmetry_group_1_index = 0;
+	const unsigned int symmetry_group_2_index = 1;
+	const unsigned int n1_variable_index = get_symmetry_group_variable_start_index(symmetry_group_1_index);
+	const unsigned int n2_variable_index = get_symmetry_group_variable_start_index(symmetry_group_2_index);
+
+	const unsigned int dimension = 3;
+	NLPExpression expression
+		= NLPVectorExpression::dot_product(dimension, n1_variable_index, n2_variable_index);
+	_formulation.add_constraint(expression, 0, 0);
 }
 
 void MeshCuboidNonLinearSolver::add_symmetry_group_constraints(
@@ -156,22 +172,49 @@ void MeshCuboidNonLinearSolver::add_symmetry_group_constraints(
 	const unsigned int n_variable_index = _symmetry_group_variable_index;
 
 
+	std::vector< unsigned int > single_cuboid_indices;
+	_symmetry_group->get_single_cuboid_indices(cuboids_, single_cuboid_indices);
+
+	for (std::vector< unsigned int >::const_iterator it = single_cuboid_indices.begin();
+		it != single_cuboid_indices.end(); ++it)
+	{
+		unsigned int cuboid_index = (*it);
+		for (unsigned int i = 0; i < dimension; ++i)
+		{
+			// The symmetry axis should be identical with the cuboid axis.
+			NLPExpression expression
+				= NLPExpression(1, n_variable_index + i)
+				+ NLPExpression(-1, get_cuboid_axis_variable_start_index(cuboid_index,
+				_symmetry_group->get_reflection_axis_index()) + i);
+			_formulation.add_constraint(expression, 0, 0);
+		}
+	}
+
+
 	std::vector< std::pair<unsigned int, unsigned int> > pair_cuboid_indices;
 	_symmetry_group->get_pair_cuboid_indices(cuboids_, pair_cuboid_indices);
 
 	for (std::vector< std::pair<unsigned int, unsigned int> >::const_iterator it = pair_cuboid_indices.begin();
 		it != pair_cuboid_indices.end(); ++it)
 	{
-		add_cuboid_reflection_constraints((*it).first, (*it).second,
+		add_cuboid_reflection_constraints(
+			(*it).first, (*it).second,
 			_symmetry_group_variable_index,
 			_symmetry_group->get_reflection_axis_index(),
 			_formulation);
 	}
 
-	// Unit vector constraint.
-	NLPExpression expression = NLPVectorExpression::dot_product(dimension,
-		n_variable_index, n_variable_index);
-	_formulation.add_constraint(expression, 1, 1);
+
+	if (single_cuboid_indices.empty())
+	{
+		// Unit vector constraint.
+		// NOTICE:
+		// If there is an identical cuboid axis,
+		// the unit vector constraint is added from the cuboid constraint.
+		NLPExpression expression = NLPVectorExpression::dot_product(dimension,
+			n_variable_index, n_variable_index);
+		_formulation.add_constraint(expression, 1, 1);
+	}
 }
 
 void MeshCuboidNonLinearSolver::add_cuboid_constraints(
@@ -270,10 +313,8 @@ void MeshCuboidNonLinearSolver::add_reflection_constraints(
 	// and 't' is a scalar value s.t. np = t for any 'p' on the reflection plane.
 
 	const unsigned int dimension = 3;
-
 	const unsigned int n_variable_index = _symmetry_group_variable_index;
 	const unsigned int t_variable_index = _symmetry_group_variable_index + dimension;
-
 
 	// n^T(x + y) - 2t = 0.
 	NLPExpression expression_1
@@ -281,7 +322,10 @@ void MeshCuboidNonLinearSolver::add_reflection_constraints(
 		+ NLPVectorExpression::dot_product(dimension, n_variable_index, _y_variable_index)
 		+ NLPExpression(-2, t_variable_index);
 
-	_formulation.add_constraint(expression_1, 0, 0);
+	// NOTICE:
+	// Relaxing equality constraint.
+	// The equality constraints cause "too few degrees" errors.
+	_formulation.add_constraint(expression_1, -1.0E-12, 1.0E-12);
 
 	// (I - nn^T)(x - y) = 0.
 	for (unsigned int axis_index = 0; axis_index < 3; ++axis_index)
@@ -298,7 +342,10 @@ void MeshCuboidNonLinearSolver::add_reflection_constraints(
 		expression_2 += NLPExpression(+1, _x_variable_index + axis_index);
 		expression_2 += NLPExpression(-1, _y_variable_index + axis_index);
 
-		_formulation.add_constraint(expression_2, 0, 0);
+		// NOTICE:
+		// Relaxing equality constraint.
+		// The equality constraints cause "too few degrees" errors.
+		_formulation.add_constraint(expression_2, -1.0E-12, 1.0E-12);
 	}
 }
 
@@ -346,6 +393,7 @@ bool MeshCuboidNonLinearSolver::compute_initial_values(const Eigen::VectorXd &_i
 	_output.segment(0, num_total_cuboid_corner_variables()) = _input;
 
 	compute_cuboid_axis_values(_output);
+	compute_symmetry_group_values(_output);
 
 	return true;
 }
@@ -403,6 +451,7 @@ Eigen::VectorXd MeshCuboidNonLinearSolver::solve_quadratic_programming_with_cons
 
 	add_cuboid_constraints(formulation);
 	add_symmetry_group_constraints(formulation);
+	add_symmetry_group_pair_constraints(formulation);
 
 
 	if (_init_values_vec)
@@ -432,7 +481,7 @@ Eigen::VectorXd MeshCuboidNonLinearSolver::solve_quadratic_programming_with_cons
 	//       suitable for your optimization problem.
 	app->Options()->SetNumericValue("tol", 1e-7);
 	app->Options()->SetStringValue("mu_strategy", "adaptive");
-	app->Options()->SetIntegerValue("print_level", 0);
+	//app->Options()->SetIntegerValue("print_level", 0);
 	// app->Options()->SetStringValue("output_file", "ipopt.out");
 	// The following overwrites the default name (ipopt.opt) of the
 	// options file
@@ -449,11 +498,12 @@ Eigen::VectorXd MeshCuboidNonLinearSolver::solve_quadratic_programming_with_cons
 	// Ask Ipopt to solve the problem
 	status = app->OptimizeTNLP(mynlp);
 
-	if (status == Solve_Succeeded) {
+	if (status == Solve_Succeeded || status == Solved_To_Acceptable_Level) {
 		//std::cout << std::endl << std::endl << "*** The problem solved!" << std::endl;
 	}
 	else {
-		std::cout << std::endl << std::endl << "*** The problem FAILED!" << std::endl;
+		std::cout << std::endl << std::endl << "*** The problem FAILED!"
+			<< " (" << static_cast<int>(status) << ")" << std::endl;
 		assert(false);
 	}
 
@@ -462,6 +512,8 @@ Eigen::VectorXd MeshCuboidNonLinearSolver::solve_quadratic_programming_with_cons
 	// be deleted.
 	// ---- //
 
+	// DEBUG.
+	//formulation.print_constraint_evaluations();
 
 	std::vector< Number > output;
 	formulation.get_values(output);
@@ -471,6 +523,26 @@ Eigen::VectorXd MeshCuboidNonLinearSolver::solve_quadratic_programming_with_cons
 	Eigen::VectorXd output_vec(num_total_cuboid_corner_variables());
 	for (int i = 0; i < num_total_cuboid_corner_variables(); ++i)
 		output_vec[i] = output[i];
+
+
+	// Update symmetry groups.
+	const unsigned int dimension = 3;
+
+	for (unsigned int symmetry_group_index = 0; symmetry_group_index < num_symmetry_groups_;
+		++symmetry_group_index)
+	{
+		const unsigned int symmetry_group_variable_index =
+			get_symmetry_group_variable_start_index(symmetry_group_index);
+		const unsigned int n_variable_index = symmetry_group_variable_index;
+		const unsigned int t_variable_index = symmetry_group_variable_index + dimension;
+
+		MyMesh::Normal n; double t;
+		for (unsigned int i = 0; i < 3; ++i)
+			n[i] = output[n_variable_index + i];
+		t = output[t_variable_index];
+		symmetry_groups_[symmetry_group_index]->set_reflection_plane(n, t);
+	}
+
 
 	return output_vec;
 }

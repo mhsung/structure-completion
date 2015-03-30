@@ -54,6 +54,8 @@ public:
 
 	void get_reflection_plane(MyMesh::Normal &_n, double &_t) const;
 
+	void set_reflection_plane(const MyMesh::Normal &_n, const double &_t);
+
 	void get_reflection_plane_corners(MyMesh::Point &_point, double _size,
 		std::array<MyMesh::Point, 4>& _corners);
 

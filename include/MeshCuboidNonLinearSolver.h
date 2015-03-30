@@ -57,6 +57,7 @@ private:
 	// Constraint functions.
 	void add_cuboid_constraints(NLPFormulation &_formulation);
 	void add_symmetry_group_constraints(NLPFormulation &_formulation);
+	void add_symmetry_group_pair_constraints(NLPFormulation &_formulation);
 
 	void add_cuboid_constraints(
 		const unsigned int _corner_variable_start_index,

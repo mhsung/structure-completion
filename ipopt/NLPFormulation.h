@@ -131,6 +131,10 @@ public:
 		const Number _obj_factor, const Number* _lambda,
 		Index* _variable_indices_i, Index *_variable_indices_j, Number* _output) const;
 
+	void print_constraint_evaluations() const;
+	void print_constraint_evaluations(const NLPConstraint* _constraint) const;
+
+
 private:
 	Index num_vars_;
 	const NLPFunction *function_;

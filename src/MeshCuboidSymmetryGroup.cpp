@@ -81,6 +81,12 @@ void MeshCuboidSymmetryGroup::get_reflection_plane(MyMesh::Normal &_n, double &_
 	_t = t_;
 }
 
+void MeshCuboidSymmetryGroup::set_reflection_plane(const MyMesh::Normal &_n, const double &_t)
+{
+	n_ = _n;
+	t_ = _t;
+}
+
 void MeshCuboidSymmetryGroup::get_single_cuboid_indices(const std::vector<MeshCuboid *>& _cuboids,
 	std::vector<unsigned int> &_single_cuboid_indices) const
 {

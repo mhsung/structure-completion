@@ -581,10 +581,19 @@ void MeshViewerCore::predict()
 
 
 	// TEST.
-	MeshCuboidSymmetryGroupInfo symmetry_group_info(0);
-	symmetry_group_info.pair_label_indices_.push_back(std::make_pair(2, 3));
-	symmetry_group_info.pair_label_indices_.push_back(std::make_pair(4, 5));
-	cuboid_structure_.symmetry_group_info_.push_back(symmetry_group_info);
+	MeshCuboidSymmetryGroupInfo symmetry_group_info_1(0);
+	symmetry_group_info_1.single_label_indices_.push_back(0);
+	symmetry_group_info_1.single_label_indices_.push_back(1);
+	symmetry_group_info_1.pair_label_indices_.push_back(std::make_pair(2, 3));
+	symmetry_group_info_1.pair_label_indices_.push_back(std::make_pair(4, 5));
+	symmetry_group_info_1.pair_label_indices_.push_back(std::make_pair(8, 9));
+	cuboid_structure_.symmetry_group_info_.push_back(symmetry_group_info_1);
+
+	MeshCuboidSymmetryGroupInfo symmetry_group_info_2(1);
+	symmetry_group_info_1.single_label_indices_.push_back(0);
+	symmetry_group_info_2.pair_label_indices_.push_back(std::make_pair(2, 4));
+	symmetry_group_info_2.pair_label_indices_.push_back(std::make_pair(3, 5));
+	cuboid_structure_.symmetry_group_info_.push_back(symmetry_group_info_2);
 
 
 	// Pre-processing.

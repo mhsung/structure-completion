@@ -404,3 +404,38 @@ void NLPFormulation::eval_hessian(const Number* _x,
 		eval_constraint_hessian(_x, _lambda, _output);
 	}
 }
+
+void NLPFormulation::print_constraint_evaluations() const
+{
+	const unsigned int num_constraints = constraints_.size();
+	for (unsigned int constraint_index = 0; constraint_index < num_constraints; ++constraint_index)
+	{
+		std::cout << "[" << constraint_index << "]; ";
+		print_constraint_evaluations(constraints_[constraint_index]);
+	}
+}
+
+void NLPFormulation::print_constraint_evaluations(const NLPConstraint* _constraint) const
+{
+	assert(_constraint);
+	Number output = _constraint->eval(&(values_[0]));
+
+	if (output < _constraint->lower_bound_)
+	{
+		std::cout << "(Out of Range) " << output << " < "
+			<< _constraint->lower_bound_ << "(L) <= "
+			<< _constraint->upper_bound_ << "(H)" << std::endl;
+	}
+	else if (output > _constraint->upper_bound_)
+	{
+		std::cout << "(Out of Range) " << _constraint->lower_bound_ << "(L) <= "
+			<< _constraint->upper_bound_ << "(H) < "
+			<< output << std::endl;
+	}
+	else
+	{
+		std::cout << _constraint->lower_bound_ << "(L) <= "
+			<< output << " <= "
+			<< _constraint->upper_bound_ << "(H)" << std::endl;
+	}
+}
