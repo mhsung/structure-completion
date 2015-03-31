@@ -3,6 +3,8 @@
 
 #include <gflags/gflags.h>
 
+DECLARE_bool(param_optimize_with_non_linear_constraints);
+
 DECLARE_int32(param_num_sample_point_neighbors);
 DECLARE_int32(param_min_num_cuboid_sample_points);
 DECLARE_int32(param_num_cuboid_surface_points);

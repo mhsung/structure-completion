@@ -208,10 +208,12 @@ public:
 	
 	void update_corner_points();
 
+	void update_center_size_corner_points();
+
+	void update_axes_center_size_corner_points();
+
 	// Update the label based on the label confidence values of sample points.
 	void update_label_using_sample_points();
-
-	void cuboidize();
 
 	static MeshCuboid *merge_cuboids(const LabelIndex _label_index,
 		const std::vector<MeshCuboid *> _cuboids);

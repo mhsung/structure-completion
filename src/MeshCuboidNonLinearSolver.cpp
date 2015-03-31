@@ -435,7 +435,7 @@ void MeshCuboidNonLinearSolver::compute_symmetry_group_values(Eigen::VectorXd &_
 	}
 }
 
-Eigen::VectorXd MeshCuboidNonLinearSolver::solve_quadratic_programming_with_constraints(
+void MeshCuboidNonLinearSolver::optimize(
 	const Eigen::MatrixXd& _quadratic_term,
 	const Eigen::VectorXd& _linear_term,
 	const double _constant_term,
@@ -508,6 +508,7 @@ Eigen::VectorXd MeshCuboidNonLinearSolver::solve_quadratic_programming_with_cons
 	// be deleted.
 	// ---- //
 
+
 	// DEBUG.
 	//formulation.print_constraint_evaluations();
 
@@ -516,12 +517,101 @@ Eigen::VectorXd MeshCuboidNonLinearSolver::solve_quadratic_programming_with_cons
 	assert(output.size() == num_total_variables());
 	std::cout << "final = " << function->eval(&(output[0])) << ")" << std::endl;
 
-	Eigen::VectorXd output_vec(num_total_cuboid_corner_variables());
-	for (int i = 0; i < num_total_cuboid_corner_variables(); ++i)
-		output_vec[i] = output[i];
-
-
 	// Update symmetry groups.
+	update_cuboids(output);
+	update_symmetry_groups(output);
+}
+
+void MeshCuboidNonLinearSolver::update_cuboids(const std::vector< Number >& _values)
+{
+	const unsigned int dimension = 3;
+
+	for (unsigned int cuboid_index = 0; cuboid_index < num_cuboids_; ++cuboid_index)
+	{
+		MeshCuboid *cuboid = cuboids_[cuboid_index];
+		assert(cuboid);
+
+		MyMesh::Point new_bbox_center(0.0);
+		std::array<MyMesh::Point, MeshCuboid::k_num_corners> new_bbox_corners;
+		std::array<MyMesh::Normal, dimension> new_bbox_axes;
+
+		for (unsigned int corner_index = 0; corner_index < MeshCuboid::k_num_corners; ++corner_index)
+		{
+			std::pair<Index, Index> index_size_pair;
+			index_size_pair = get_cuboid_corner_variable_index_size(cuboid_index, corner_index);
+			assert(index_size_pair.second == dimension);
+			for (unsigned int i = 0; i < index_size_pair.second; ++i)
+				new_bbox_corners[corner_index][i] = _values[index_size_pair.first + i];
+
+			new_bbox_center += new_bbox_corners[corner_index];
+		}
+		new_bbox_center = new_bbox_center / MeshCuboid::k_num_corners;
+
+		for (unsigned int axis_index = 0; axis_index < dimension; ++axis_index)
+		{
+			std::pair<Index, Index> index_size_pair;
+			index_size_pair = get_cuboid_axis_variable_index_size(cuboid_index, axis_index);
+			assert(index_size_pair.second == dimension);
+			for (unsigned int i = 0; i < index_size_pair.second; ++i)
+				new_bbox_axes[axis_index][i] = _values[index_size_pair.first + i];
+
+			new_bbox_axes[axis_index].normalize();
+
+
+			// Flip axes.
+			MyMesh::Point minus_axis_direction(0.0), plus_axis_direction(0.0);
+
+			for (int axis_1 = 0; axis_1 < 2; ++axis_1)
+			{
+				for (int axis_2 = 0; axis_2 < 2; ++axis_2)
+				{
+					std::bitset<3> bits;
+					bits[(axis_index + 1) % 3] = axis_1;
+					bits[(axis_index + 2) % 3] = axis_2;
+
+					bits[axis_index] = false;
+					int minus_corner_index = bits.to_ulong();
+					minus_axis_direction += new_bbox_corners[minus_corner_index];
+
+					bits[axis_index] = true;
+					int plus_corner_index = bits.to_ulong();
+					plus_axis_direction += new_bbox_corners[plus_corner_index];
+				}
+			}
+
+			// Compare the axis with the direction from the center to the average of corner points on +/- side.
+			minus_axis_direction = (minus_axis_direction / 4.0 - new_bbox_center).normalized();
+			plus_axis_direction = (plus_axis_direction / 4.0 - new_bbox_center).normalized();
+
+			if (dot(new_bbox_axes[axis_index], minus_axis_direction)
+				> dot(new_bbox_axes[axis_index], plus_axis_direction))
+			{
+				// Flip.
+				new_bbox_axes[axis_index] = -new_bbox_axes[axis_index];
+			}
+		}
+
+		cuboid->set_bbox_center(new_bbox_center);
+		cuboid->set_bbox_corners(new_bbox_corners);
+		cuboid->set_bbox_axes(new_bbox_axes, false);
+
+		// Update cuboid surface points.
+		for (unsigned int point_index = 0; point_index < cuboid->num_cuboid_surface_points();
+			++point_index)
+		{
+			MeshCuboidSurfacePoint *cuboid_surface_point = cuboid->get_cuboid_surface_point(point_index);
+
+			MyMesh::Point new_point(0.0);
+			for (unsigned int corner_index = 0; corner_index < MeshCuboid::k_num_corners; ++corner_index)
+				new_point += cuboid_surface_point->corner_weights_[corner_index] * new_bbox_corners[corner_index];
+
+			cuboid_surface_point->point_ = new_point;
+		}
+	}
+}
+
+void MeshCuboidNonLinearSolver::update_symmetry_groups(const std::vector< Number >& _values)
+{
 	const unsigned int dimension = 3;
 
 	for (unsigned int symmetry_group_index = 0; symmetry_group_index < num_symmetry_groups_;
@@ -531,17 +621,14 @@ Eigen::VectorXd MeshCuboidNonLinearSolver::solve_quadratic_programming_with_cons
 
 		std::pair<Index, Index> index_size_pair;
 		index_size_pair = get_symmetry_group_variable_n_index_size(symmetry_group_index);
-		assert(index_size_pair.second == 3);
+		assert(index_size_pair.second == dimension);
 		for (unsigned int i = 0; i < index_size_pair.second; ++i)
-			n[i] = output[index_size_pair.first + i];
+			n[i] = _values[index_size_pair.first + i];
 
 		index_size_pair = get_symmetry_group_variable_t_index_size(symmetry_group_index);
 		assert(index_size_pair.second == 1);
-		t = output[index_size_pair.first];
-		
+		t = _values[index_size_pair.first];
+
 		symmetry_groups_[symmetry_group_index]->set_reflection_plane(n, t);
 	}
-
-
-	return output_vec;
 }

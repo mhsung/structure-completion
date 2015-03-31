@@ -1,5 +1,7 @@
 #include "MeshCuboidParameters.h"
 
+DEFINE_bool(param_optimize_with_non_linear_constraints, true, "");
+
 DEFINE_int32(param_num_sample_point_neighbors, 8, "");
 DEFINE_int32(param_min_num_cuboid_sample_points, 10, "");
 DEFINE_int32(param_num_cuboid_surface_points, 1000, "");

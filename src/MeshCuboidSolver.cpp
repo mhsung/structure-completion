@@ -1303,6 +1303,82 @@ void get_optimization_error(
 
 void optimize_attributes_once(
 	const std::vector<MeshCuboid *>& _cuboids,
+	const MeshCuboidPredictor& _predictor,
+	const double _quadprog_ratio)
+{
+	const unsigned int num_attributes = MeshCuboidAttributes::k_num_attributes;
+	unsigned int num_cuboids = _cuboids.size();
+	unsigned int mat_size = num_cuboids * num_attributes;
+
+	Eigen::VectorXd init_values;
+	Eigen::MatrixXd single_quadratic_term, pair_quadratic_term;
+	Eigen::VectorXd single_linear_term, pair_linear_term;
+	double single_constant_term, pair_constant_term;
+	double single_total_energy, pair_total_energy;
+
+	get_optimization_formulation(_cuboids, _predictor, init_values,
+		single_quadratic_term, pair_quadratic_term,
+		single_linear_term, pair_linear_term,
+		single_constant_term, pair_constant_term,
+		single_total_energy, pair_total_energy);
+
+
+	Eigen::MatrixXd quadratic_term = pair_quadratic_term + _quadprog_ratio * single_quadratic_term;
+	Eigen::VectorXd linear_term = pair_linear_term + _quadprog_ratio * single_linear_term;
+	double constant_term = pair_constant_term + _quadprog_ratio * single_constant_term;
+
+
+	// Solve quadratic programming.
+	Eigen::VectorXd new_values = solve_quadratic_programming(
+		quadratic_term, linear_term, constant_term, &init_values);
+
+	assert(new_values.rows() == mat_size);
+
+
+	// Update cuboid.
+	for (unsigned int cuboid_index = 0; cuboid_index < num_cuboids; ++cuboid_index)
+	{
+		MeshCuboid *cuboid = _cuboids[cuboid_index];
+		Eigen::VectorXd new_attributes_vec = new_values.segment(
+			num_attributes * cuboid_index, num_attributes);
+
+		MyMesh::Point new_bbox_center(0.0);
+		std::array<MyMesh::Point, MeshCuboid::k_num_corners> new_bbox_corners;
+
+		//for (unsigned int i = 0; i < 3; ++i)
+		//	new_bbox_center[i] = new_attributes_vec[MeshCuboidAttributes::k_center_index + i];
+
+		for (unsigned int corner_index = 0; corner_index < MeshCuboid::k_num_corners; ++corner_index)
+		{
+			for (unsigned int i = 0; i < 3; ++i)
+			{
+				new_bbox_corners[corner_index][i] = new_attributes_vec[
+					MeshCuboidAttributes::k_corner_index + 3 * corner_index + i];
+			}
+			new_bbox_center += new_bbox_corners[corner_index];
+		}
+		new_bbox_center = new_bbox_center / MeshCuboid::k_num_corners;
+
+		cuboid->set_bbox_center(new_bbox_center);
+		cuboid->set_bbox_corners(new_bbox_corners);
+
+		// Update cuboid surface points.
+		for (unsigned int point_index = 0; point_index < cuboid->num_cuboid_surface_points();
+			++point_index)
+		{
+			MeshCuboidSurfacePoint *cuboid_surface_point = cuboid->get_cuboid_surface_point(point_index);
+
+			MyMesh::Point new_point(0.0);
+			for (unsigned int corner_index = 0; corner_index < MeshCuboid::k_num_corners; ++corner_index)
+				new_point += cuboid_surface_point->corner_weights_[corner_index] * new_bbox_corners[corner_index];
+
+			cuboid_surface_point->point_ = new_point;
+		}
+	}
+}
+
+void optimize_attributes_once_with_constraints(
+	const std::vector<MeshCuboid *>& _cuboids,
 	const std::vector<MeshCuboidSymmetryGroup *> _symmetry_groups,
 	const MeshCuboidPredictor& _predictor,
 	const double _quadprog_ratio)
@@ -1328,138 +1404,9 @@ void optimize_attributes_once(
 	Eigen::VectorXd linear_term = pair_linear_term + _quadprog_ratio * single_linear_term;
 	double constant_term = pair_constant_term + _quadprog_ratio * single_constant_term;
 
-
-	// Solve quadratic programming.
-	// TEST
-	//Eigen::VectorXd new_values = solve_quadratic_programming(
-	//	quadratic_term, linear_term, constant_term, &init_values);
 	MeshCuboidNonLinearSolver non_linear_solver(_cuboids, _symmetry_groups);
-	Eigen::VectorXd new_values = non_linear_solver.solve_quadratic_programming_with_constraints(
-		quadratic_term, linear_term, constant_term, &init_values);
-
-
-	assert(new_values.rows() == mat_size);
-
-
-	// Update cuboid.
-	for (unsigned int cuboid_index = 0; cuboid_index < num_cuboids; ++cuboid_index)
-	{
-		MeshCuboid *cuboid = _cuboids[cuboid_index];
-		Eigen::VectorXd new_attributes_vec = new_values.segment(
-			num_attributes * cuboid_index, num_attributes);
-
-		MyMesh::Point new_bbox_center(0.0);
-		std::array<MyMesh::Point, MeshCuboid::k_num_corners> new_bbox_corners;
-
-		//for (unsigned int i = 0; i < 3; ++i)
-		//	new_bbox_center[i] = new_attributes_vec[MeshCuboidAttributes::k_center_index + i];
-
-		for (unsigned int corner_index = 0; corner_index < MeshCuboid::k_num_corners; ++corner_index)
-		{
-			for (unsigned int i = 0; i < 3; ++i)
-			{
-				new_bbox_corners[corner_index][i] = new_attributes_vec[
-					MeshCuboidAttributes::k_corner_index + 3 * corner_index + i];
-			}
-			new_bbox_center += new_bbox_corners[corner_index];
-		}
-		new_bbox_center = new_bbox_center / MeshCuboid::k_num_corners;
-
-		cuboid->set_bbox_center(new_bbox_center);
-		cuboid->set_bbox_corners(new_bbox_corners);
-
-		// Update cuboid surface points.
-		for (unsigned int point_index = 0; point_index < cuboid->num_cuboid_surface_points();
-			++point_index)
-		{
-			MeshCuboidSurfacePoint *cuboid_surface_point = cuboid->get_cuboid_surface_point(point_index);
-
-			MyMesh::Point new_point(0.0);
-			for (unsigned int corner_index = 0; corner_index < MeshCuboid::k_num_corners; ++corner_index)
-				new_point += cuboid_surface_point->corner_weights_[corner_index] * new_bbox_corners[corner_index];
-
-			cuboid_surface_point->point_ = new_point;
-		}
-	}
+	non_linear_solver.optimize(quadratic_term, linear_term, constant_term, &init_values);
 }
-
-/*
-void optimize_attributes_once(
-	const std::vector<MeshCuboid *>& _cuboids,
-	const MeshCuboidPredictor& _predictor,
-	const double _quadprog_ratio)
-{
-	const unsigned int num_attributes = MeshCuboidAttributes::k_num_attributes;
-	unsigned int num_cuboids = _cuboids.size();
-	unsigned int mat_size = num_cuboids * num_attributes;
-
-	Eigen::VectorXd init_values;
-	Eigen::MatrixXd single_quadratic_term, pair_quadratic_term;
-	Eigen::VectorXd single_linear_term, pair_linear_term;
-	double single_constant_term, pair_constant_term;
-	double single_total_energy, pair_total_energy;
-
-	get_optimization_formulation(_cuboids, _predictor, init_values,
-		single_quadratic_term, pair_quadratic_term,
-		single_linear_term, pair_linear_term,
-		single_constant_term, pair_constant_term,
-		single_total_energy, pair_total_energy);
-
-
-	Eigen::MatrixXd quadratic_term = pair_quadratic_term + _quadprog_ratio * single_quadratic_term;
-	Eigen::VectorXd linear_term = pair_linear_term + _quadprog_ratio * single_linear_term;
-	double constant_term = pair_constant_term + _quadprog_ratio * single_constant_term;
-
-
-	// Solve quadratic programming.
-	Eigen::VectorXd new_values = solve_quadratic_programming(quadratic_term, linear_term, constant_term,
-		&init_values, NULL, _quadprog_ratio);
-
-	assert(new_values.rows() == mat_size);
-
-
-	// Update cuboid.
-	for (unsigned int cuboid_index = 0; cuboid_index < num_cuboids; ++cuboid_index)
-	{
-		MeshCuboid *cuboid = _cuboids[cuboid_index];
-		Eigen::VectorXd new_attributes_vec = new_values.segment(
-			num_attributes * cuboid_index, num_attributes);
-
-		MyMesh::Point new_bbox_center(0.0);
-		std::array<MyMesh::Point, MeshCuboid::k_num_corners> new_bbox_corners;
-
-		//for (unsigned int i = 0; i < 3; ++i)
-		//	new_bbox_center[i] = new_attributes_vec[MeshCuboidAttributes::k_center_index + i];
-
-		for (unsigned int corner_index = 0; corner_index < MeshCuboid::k_num_corners; ++corner_index)
-		{
-			for (unsigned int i = 0; i < 3; ++i)
-			{
-				new_bbox_corners[corner_index][i] = new_attributes_vec[
-					MeshCuboidAttributes::k_corner_index + 3 * corner_index + i];
-			}
-			new_bbox_center += new_bbox_corners[corner_index];
-		}
-		new_bbox_center = new_bbox_center / MeshCuboid::k_num_corners;
-
-		cuboid->set_bbox_center(new_bbox_center);
-		cuboid->set_bbox_corners(new_bbox_corners);
-
-		// Update cuboid surface points.
-		for (unsigned int point_index = 0; point_index < cuboid->num_cuboid_surface_points();
-			++point_index)
-		{
-			MeshCuboidSurfacePoint *cuboid_surface_point = cuboid->get_cuboid_surface_point(point_index);
-
-			MyMesh::Point new_point(0.0);
-			for (unsigned int corner_index = 0; corner_index < MeshCuboid::k_num_corners; ++corner_index)
-				new_point += cuboid_surface_point->corner_weights_[corner_index] * new_bbox_corners[corner_index];
-
-			cuboid_surface_point->point_ = new_point;
-		}
-	}
-}
-*/
 
 void optimize_attributes(
 	MeshCuboidStructure &_cuboid_structure,
@@ -1515,9 +1462,16 @@ void optimize_attributes(
 		sstr << "iteration [" << iteration << "]" << std::endl;
 		std::cout << sstr.str(); log_file << sstr.str();
 
-		//optimize_attributes_once(all_cuboids, _predictor, _quadprog_ratio);
-		optimize_attributes_once(all_cuboids, _cuboid_structure.symmetry_groups_,
-			_predictor, _quadprog_ratio);
+		if (FLAGS_param_optimize_with_non_linear_constraints)
+		{
+			optimize_attributes_once_with_constraints(
+				all_cuboids, _cuboid_structure.symmetry_groups_, _predictor, _quadprog_ratio);
+		}
+		else
+		{
+			optimize_attributes_once(all_cuboids, _predictor, _quadprog_ratio);
+		}
+		
 		
 		if (_viewer) _viewer->updateGL();
 
@@ -1534,9 +1488,19 @@ void optimize_attributes(
 		//
 
 		// Cuboidize.
-		for (std::vector<MeshCuboid *>::const_iterator it = all_cuboids.begin();
-			it != all_cuboids.end(); ++it)
-			(*it)->cuboidize();
+		if (FLAGS_param_optimize_with_non_linear_constraints)
+		{
+			// Cuboid axes are estimated in the optimization.
+			for (std::vector<MeshCuboid *>::const_iterator it = all_cuboids.begin();
+				it != all_cuboids.end(); ++it)
+				(*it)->update_center_size_corner_points();
+		}
+		else
+		{
+			for (std::vector<MeshCuboid *>::const_iterator it = all_cuboids.begin();
+				it != all_cuboids.end(); ++it)
+				(*it)->update_axes_center_size_corner_points();
+		}
 
 		update_cuboid_surface_points(_cuboid_structure, _modelview_matrix);
 		if (_viewer) _viewer->updateGL();
@@ -1771,7 +1735,7 @@ void add_missing_cuboids_once(
 		cuboid->set_bbox_corners(new_bbox_corners);
 
 		// Cuboidize.
-		cuboid->cuboidize();
+		cuboid->update_axes_center_size_corner_points();
 
 		_new_cuboids.push_back(cuboid);
 	}
@@ -2055,11 +2019,11 @@ void symmetrize_cuboids(MeshCuboidStructure &_cuboid_structure)
 
 			cuboid_1->set_bbox_center(new_bbox_center_1);
 			cuboid_1->set_bbox_corners(new_bbox_corners_1);
-			cuboid_1->cuboidize();
+			cuboid_1->update_axes_center_size_corner_points();
 
 			cuboid_2->set_bbox_center(new_bbox_center_2);
 			cuboid_2->set_bbox_corners(new_bbox_corners_2);
-			cuboid_2->cuboidize();
+			cuboid_2->update_axes_center_size_corner_points();
 
 			
 			// Copy sample points.

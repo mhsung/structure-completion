@@ -12,6 +12,7 @@
 #include <time.h>
 #include <vector>
 #include <Eigen/Core>
+#include <Eigen/Dense>
 #include <Eigen/Eigenvalues>
 #include <Eigen/SVD>
 #include <Eigen/Geometry>
@@ -525,7 +526,7 @@ void MeshCuboid::rotate(const Eigen::Matrix3d _rotation_mat, bool _update_center
 			for (unsigned int i = 0; i < 3; ++i)
 				local_coord_rotation_mat.row(axis_index)(i) = bbox_axes_[axis_index][i];
 
-		Eigen::MatrixXd sample_points_mat(3, num_sample_points());
+		Eigen::MatrixXd sample_points_mat = Eigen::MatrixXd::Zero(3, num_sample_points());
 		for (SamplePointIndex sapmle_point_index = 0; sapmle_point_index < num_sample_points();
 			++sapmle_point_index)
 		{
@@ -568,137 +569,6 @@ void MeshCuboid::flip_axis(const unsigned int _axis_index)
 	}
 
 	bbox_corners_.swap(new_bbox_corners);
-}
-
-void MeshCuboid::cuboidize()
-{
-	//std::vector<MyMesh::Point> face_center_points(k_num_faces, MyMesh::Point(0.0));
-
-	//for (unsigned int face_index = 0; face_index < k_num_faces; ++face_index)
-	//{
-	//	for (unsigned int i = 0; i < k_num_face_corners; ++i)
-	//	{
-	//		unsigned int corner_index = k_face_corner_indices[face_index][i];
-	//		MyMesh::Point corner_point = bbox_corners_[corner_index];
-	//		face_center_points[face_index] += (1.0 / k_num_face_corners * corner_point);
-	//	}
-	//}
-
-	//Eigen::Matrix3d axes;
-	//for (unsigned int i = 0; i < 3; ++i)
-	//{
-	//	axes.col(0)(i) = (face_center_points[POSITIVE_X_AXIS] - face_center_points[NEGATIVE_X_AXIS])[i];
-	//	axes.col(1)(i) = (face_center_points[POSITIVE_Y_AXIS] - face_center_points[NEGATIVE_Y_AXIS])[i];
-	//	axes.col(2)(i) = (face_center_points[POSITIVE_Z_AXIS] - face_center_points[NEGATIVE_Z_AXIS])[i];
-	//}
-	//axes.colwise().normalize();
-
-	const unsigned int num_face_corners = MeshCuboid::k_num_face_corners;
-
-	Eigen::Matrix3d axes;
-
-	for (unsigned int axis_index = 0; axis_index < 3; ++axis_index)
-	{
-		Eigen::MatrixXd A(num_face_corners, 3);
-		double sum_length = 0.0;
-
-		for (unsigned int face_corner_index = 0; face_corner_index < k_num_face_corners; ++face_corner_index)
-		{
-			std::bitset<3> bits;
-			bits[(axis_index + 1) % 3] = ((face_corner_index / 2) == 0);
-			bits[(axis_index + 2) % 3] = ((face_corner_index % 2) == 0);
-
-			bits[axis_index] = true;
-			unsigned int pos_corner_index = static_cast<unsigned int>(bits.to_ulong());
-			MyMesh::Point pos_corner_point = bbox_corners_[pos_corner_index];
-
-			bits[axis_index] = false;
-			unsigned int neg_corner_index = static_cast<unsigned int>(bits.to_ulong());
-			MyMesh::Point neg_corner_point = bbox_corners_[neg_corner_index];
-
-			MyMesh::Normal direction = pos_corner_point - neg_corner_point;
-			sum_length += direction.norm();
-			direction.normalize();
-
-			for (unsigned int i = 0; i < 3; ++i)
-				A.row(face_corner_index)[i] = direction[i];
-		}
-
-		if (sum_length == 0)
-			sum_length += MIN_CUBOID_SIZE;
-		
-		// The first column of matrix V in SVD is the vector maximizing
-		// cos(angle) with all columns in the given matrix A.
-		Eigen::JacobiSVD<Eigen::MatrixXd> svd(A, Eigen::ComputeFullU | Eigen::ComputeFullV);
-		axes.col(axis_index) = svd.matrixV().col(0);
-
-		// Weight each axis based on the length of cuboid edges.
-		axes.col(axis_index) = sum_length * axes.col(axis_index);
-
-		// FIXME:
-		// Hack. Check whether each axis is flipped...
-		Eigen::Vector3d axis;
-		for (unsigned int i = 0; i < 3; ++i)
-			axis[i] = bbox_axes_[axis_index][i];
-
-		if (axes.col(axis_index).dot(axis) < 0)
-			axes.col(axis_index) = -axes.col(axis_index);
-	}
-
-
-	// Find the nearest orthogonal matrix.
-	Eigen::JacobiSVD<Eigen::Matrix3d> svd(axes, Eigen::ComputeFullU | Eigen::ComputeFullV);
-	Eigen::Matrix3d new_axes = svd.matrixU() * svd.matrixV().transpose();
-	new_axes.colwise().normalize();
-	
-	// Update axes.
-	for (unsigned int axis_index = 0; axis_index < 3; ++axis_index)
-		for (unsigned int i = 0; i < 3; ++i)
-			bbox_axes_[axis_index][i] = new_axes.col(axis_index)(i);
-
-	// Update size.
-	// n: Axis.
-	// c: Center.
-	// x: Size.
-	// p: Corner point.
-	// min sum (n^T(p - c) +/- 0.5x)^2 (+0.5 if negative direction, -0.5 if positive direction).
-
-	// min sum (ax + b)^2.
-	// x = -sum (ab) / sum(a^2).
-	for (unsigned int axis_index = 0; axis_index < 3; ++axis_index)
-	{
-		Real sum_aa = 0, sum_ab = 0;
-
-		for (unsigned int axis_flipped = 0; axis_flipped < 2; ++axis_flipped)
-		{
-			unsigned int face_index = 0;
-			switch (axis_index)
-			{
-			case 0: face_index = (axis_flipped == 1) ? NEGATIVE_X_AXIS : POSITIVE_X_AXIS; break;
-			case 1: face_index = (axis_flipped == 1) ? NEGATIVE_Y_AXIS : POSITIVE_Y_AXIS; break;
-			case 2: face_index = (axis_flipped == 1) ? NEGATIVE_Z_AXIS : POSITIVE_Z_AXIS; break;
-			}
-
-			for (unsigned int i = 0; i < k_num_face_corners; ++i)
-			{
-				unsigned int corner_index = k_face_corner_indices[face_index][i];
-				MyMesh::Point corner_point = bbox_corners_[corner_index];
-
-				Real a = (axis_flipped == 1) ? 0.5 : -0.5;
-				Real b = dot(bbox_axes_[axis_index], corner_point - bbox_center_);
-				sum_aa += (a * a);
-				sum_ab += (a * b);
-			}
-		}
-
-		assert(sum_aa != 0);
-		// NOTE:
-		// Since the + or - direction of axis does not matter,
-		// the size is given as an absolute value.
-		bbox_size_[axis_index] = std::abs( std::max(-sum_ab / sum_aa, MIN_CUBOID_SIZE) );
-	}
-
-	update_corner_points();
 }
 
 void MeshCuboid::clear_sample_points()
@@ -1131,6 +1001,113 @@ void MeshCuboid::update_corner_points()
 		for (unsigned int axis_index = 0; axis_index < 3; ++axis_index)
 			bbox_corners_[corner_index][axis_index] = bbox_corner_vec[axis_index];
 	}
+}
+
+void MeshCuboid::update_center_size_corner_points()
+{
+	// error = (center + sum_i( +/-0.5 * scale_i * axis_i)) - corner.
+	// Find center and size minimizing the error.
+
+	Eigen::MatrixXd A = Eigen::MatrixXd::Zero(3 * MeshCuboid::k_num_corners, 6);
+	Eigen::VectorXd b = Eigen::VectorXd::Zero(3 * MeshCuboid::k_num_corners);
+
+	for (unsigned int corner_index = 0; corner_index < MeshCuboid::k_num_corners; ++corner_index)
+	{
+		std::bitset<3> bits(corner_index);
+
+		A.block<3, 3>(3 * corner_index, 0).setIdentity();
+
+		for (unsigned int axis_index = 0; axis_index < 3; ++axis_index)
+		{
+			for (unsigned int i = 0; i < 3; ++i)
+			{
+				if (!bits[axis_index])
+					A(3 * corner_index + i, 3 + axis_index) = -0.5 * bbox_axes_[axis_index][i];
+				else
+					A(3 * corner_index + i, 3 + axis_index) = +0.5 * bbox_axes_[axis_index][i];
+
+				b(3 * corner_index + i) = bbox_corners_[corner_index][i];
+			}
+		}
+	}
+
+	// Least square.
+	Eigen::VectorXd x = A.colPivHouseholderQr().solve(b);
+	assert(x.rows() == 6);
+	for (unsigned int axis_index = 0; axis_index < 3; ++axis_index)
+	{
+		bbox_center_[axis_index] = x(axis_index);
+		bbox_size_[axis_index] = x(3 + axis_index);
+	}
+
+	update_corner_points();
+}
+
+void MeshCuboid::update_axes_center_size_corner_points()
+{
+	const unsigned int num_face_corners = MeshCuboid::k_num_face_corners;
+	Eigen::Matrix3d axes;
+
+	for (unsigned int axis_index = 0; axis_index < 3; ++axis_index)
+	{
+		Eigen::MatrixXd A(num_face_corners, 3);
+		double sum_length = 0.0;
+
+		for (unsigned int face_corner_index = 0; face_corner_index < k_num_face_corners; ++face_corner_index)
+		{
+			std::bitset<3> bits;
+			bits[(axis_index + 1) % 3] = ((face_corner_index / 2) == 0);
+			bits[(axis_index + 2) % 3] = ((face_corner_index % 2) == 0);
+
+			bits[axis_index] = true;
+			unsigned int pos_corner_index = static_cast<unsigned int>(bits.to_ulong());
+			MyMesh::Point pos_corner_point = bbox_corners_[pos_corner_index];
+
+			bits[axis_index] = false;
+			unsigned int neg_corner_index = static_cast<unsigned int>(bits.to_ulong());
+			MyMesh::Point neg_corner_point = bbox_corners_[neg_corner_index];
+
+			MyMesh::Normal direction = pos_corner_point - neg_corner_point;
+			sum_length += direction.norm();
+			direction.normalize();
+
+			for (unsigned int i = 0; i < 3; ++i)
+				A.row(face_corner_index)[i] = direction[i];
+		}
+
+		if (sum_length == 0)
+			sum_length += MIN_CUBOID_SIZE;
+
+		// The first column of matrix V in SVD is the vector maximizing
+		// cos(angle) with all columns in the given matrix A.
+		Eigen::JacobiSVD<Eigen::MatrixXd> svd(A, Eigen::ComputeFullU | Eigen::ComputeFullV);
+		axes.col(axis_index) = svd.matrixV().col(0);
+
+		// Weight each axis based on the length of cuboid edges.
+		axes.col(axis_index) = sum_length * axes.col(axis_index);
+
+		// FIXME:
+		// Hack. Check whether each axis is flipped...
+		Eigen::Vector3d axis;
+		for (unsigned int i = 0; i < 3; ++i)
+			axis[i] = bbox_axes_[axis_index][i];
+
+		if (axes.col(axis_index).dot(axis) < 0)
+			axes.col(axis_index) = -axes.col(axis_index);
+	}
+
+
+	// Find the nearest orthogonal matrix.
+	Eigen::JacobiSVD<Eigen::Matrix3d> svd(axes, Eigen::ComputeFullU | Eigen::ComputeFullV);
+	Eigen::Matrix3d new_axes = svd.matrixU() * svd.matrixV().transpose();
+	new_axes.colwise().normalize();
+
+	for (unsigned int axis_index = 0; axis_index < 3; ++axis_index)
+		for (unsigned int i = 0; i < 3; ++i)
+			bbox_axes_[axis_index][i] = new_axes.col(axis_index)(i);
+
+
+	update_center_size_corner_points();
 }
 
 bool MeshCuboid::compute_bbox()

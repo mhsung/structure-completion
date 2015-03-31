@@ -742,7 +742,7 @@ bool MeshCuboidStructure::test_load_cuboids(const char *_filename, bool _verbose
 		bbox_center = bbox_center / MeshCuboid::k_num_corners;
 		new_cuboid->set_bbox_center(bbox_center);
 		new_cuboid->set_bbox_corners(bbox_corners);
-		new_cuboid->cuboidize();
+		new_cuboid->update_axes_center_size_corner_points();
 
 		// A label is the same with its label index.
 		labels_.push_back(label_index);

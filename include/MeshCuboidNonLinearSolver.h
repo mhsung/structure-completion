@@ -52,7 +52,7 @@ public:
 		unsigned int _symmetry_group_index) const;
 
 
-	Eigen::VectorXd solve_quadratic_programming_with_constraints(
+	void optimize(
 		const Eigen::MatrixXd& _quadratic_term,
 		const Eigen::VectorXd& _linear_term,
 		const double _constant_term,
@@ -95,6 +95,10 @@ private:
 	bool compute_initial_values(const Eigen::VectorXd &_input, Eigen::VectorXd &_output);
 	void compute_cuboid_axis_values(Eigen::VectorXd &_values);
 	void compute_symmetry_group_values(Eigen::VectorXd &_values);
+
+	// Update function.
+	void update_cuboids(const std::vector< Number >& _values);
+	void update_symmetry_groups(const std::vector< Number >& _values);
 
 
 private:

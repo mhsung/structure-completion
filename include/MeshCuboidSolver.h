@@ -65,6 +65,11 @@ void get_optimization_error(
 
 void optimize_attributes_once(
 	const std::vector<MeshCuboid *>& _cuboids,
+	const MeshCuboidPredictor &_predictor,
+	const double _quadprog_ratio);
+
+void optimize_attributes_once_with_constraints(
+	const std::vector<MeshCuboid *>& _cuboids,
 	const std::vector<MeshCuboidSymmetryGroup *> _symmetry_groups,
 	const MeshCuboidPredictor &_predictor,
 	const double _quadprog_ratio);
