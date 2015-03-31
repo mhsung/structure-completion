@@ -6,16 +6,57 @@
 
 #include "NLPExpression.h"
 
+#include "NLPExpression.h"
+
 
 class NLPVectorExpression
 {
 public:
-	static NLPExpression dot_product(const Index _dimension,
-		const Index _vec_var_start_index_1, const Index _vec_var_start_index_2);
+	NLPVectorExpression(const Index _dimension);
+	~NLPVectorExpression();
 
-	static void cross_product(const Index _dimension,
-		const Index _vec_var_start_index_1, const Index _vec_var_start_index_2,
-		std::vector<NLPExpression>& _output);
+	inline Index dimension() const { return expressions_.size(); }
+	void get_segment(const Index _index, const Index _sub_dimension) const;
+	void set_segment(const Index _index, const NLPVectorExpression &_segment);
+
+	static NLPExpression dot_product(const NLPVectorExpression& _vector_1,
+		const NLPVectorExpression& _vector_2);
+
+	static NLPVectorExpression cross_product(const NLPVectorExpression& _vector_1,
+		const NLPVectorExpression& _vector_2);
+
+
+	NLPVectorExpression& operator+=(const NLPVectorExpression& rhs);
+	friend NLPVectorExpression operator+(NLPVectorExpression lhs, const NLPVectorExpression& rhs)
+	{
+		return lhs += rhs;
+	}
+
+	NLPVectorExpression& operator-=(const NLPVectorExpression& rhs);
+	friend NLPVectorExpression operator-(NLPVectorExpression lhs, const NLPVectorExpression& rhs)
+	{
+		return lhs -= rhs;
+	}
+
+	NLPVectorExpression& operator*=(const Number& rhs);
+	friend NLPVectorExpression operator*(NLPVectorExpression lhs, const Number& rhs)
+	{
+		return lhs *= rhs;
+	}
+
+	NLPVectorExpression& operator*=(const NLPExpression& rhs);
+	friend NLPVectorExpression operator*(NLPVectorExpression lhs, const NLPExpression& rhs)
+	{
+		return lhs *= rhs;
+	}
+
+	NLPExpression& operator[](const Index i);
+
+	const NLPExpression& operator[](const Index i) const;
+
+
+private:
+	std::vector< NLPExpression > expressions_;
 };
 
 #endif	// __NLP_VECTOR_EXPRESSION_H__

@@ -9,6 +9,7 @@
 #include <vector>
 
 #include "NLPExpression.h"
+#include "NLPVectorExpression.h"
 
 #define NLP_BOUND_INFINITY	1e19
 
@@ -114,6 +115,9 @@ public:
 	bool set_values(const std::vector< Number > &_values);
 
 	bool add_constraint(const NLPExpression &_expression,
+		Number _lower_bound, Number _upper_bound);
+
+	bool add_constraint(const NLPVectorExpression &_vector_expression,
 		Number _lower_bound, Number _upper_bound);
 
 	Number eval_function(const Number* _x) const;

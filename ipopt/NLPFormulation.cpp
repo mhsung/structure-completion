@@ -292,6 +292,18 @@ bool NLPFormulation::add_constraint(const NLPExpression &_expression,
 	return true;
 }
 
+bool NLPFormulation::add_constraint(const NLPVectorExpression &_vector_expression,
+	Number _lower_bound, Number _upper_bound)
+{
+	for (unsigned int i = 0; i < _vector_expression.dimension(); ++i)
+	{
+		NLPSparseConstraint *new_constraint = new NLPSparseConstraint(
+			num_vars_, _lower_bound, _upper_bound, _vector_expression[i]);
+		constraints_.push_back(new_constraint);
+	}
+	return true;
+}
+
 void NLPFormulation::get_constraint_bounds(Number* _lower_bound, Number* _upper_bound) const
 {
 	const unsigned int num_constraints = constraints_.size();

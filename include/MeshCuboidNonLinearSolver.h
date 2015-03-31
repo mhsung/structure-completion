@@ -29,15 +29,26 @@ public:
 	inline unsigned int num_total_cuboid_axis_variables() const;
 	inline unsigned int num_total_symmetry_gtoup_variables() const;
 
-	inline unsigned int get_cuboid_corner_variable_start_index(
-		unsigned int _cuboid_index) const;
-	inline unsigned int get_cuboid_corner_variable_start_index(
+	static NLPVectorExpression create_vector_variable(
+		const std::pair<Index, Index>& _index_size_pair);
+
+	// Pair: (index, size)
+	inline std::pair<Index, Index> get_cuboid_corner_variable_index_size(
 		unsigned int _cuboid_index, unsigned int _corner_index) const;
-	inline unsigned int get_cuboid_axis_variable_start_index(
-		unsigned int _cuboid_index) const;
-	inline unsigned int get_cuboid_axis_variable_start_index(
-		unsigned int _cuboid_index, unsigned int axis_index) const;
-	inline unsigned int get_symmetry_group_variable_start_index(
+	inline std::pair<Index, Index> get_cuboid_axis_variable_index_size(
+		unsigned int _cuboid_index, unsigned int _axis_index) const;
+	inline std::pair<Index, Index> get_symmetry_group_variable_n_index_size(
+		unsigned int _symmetry_group_index) const;
+	inline std::pair<Index, Index> get_symmetry_group_variable_t_index_size(
+		unsigned int _symmetry_group_index) const;
+
+	inline NLPVectorExpression get_cuboid_corner_variable(
+		unsigned int _cuboid_index, unsigned int _corner_index) const;
+	inline NLPVectorExpression get_cuboid_axis_variable(
+		unsigned int _cuboid_index, unsigned int _axis_index) const;
+	inline NLPVectorExpression get_symmetry_group_variable_n(
+		unsigned int _symmetry_group_index) const;
+	inline NLPVectorExpression get_symmetry_group_variable_t(
 		unsigned int _symmetry_group_index) const;
 
 
@@ -57,28 +68,26 @@ private:
 	// Constraint functions.
 	void add_cuboid_constraints(NLPFormulation &_formulation);
 	void add_symmetry_group_constraints(NLPFormulation &_formulation);
-	void add_symmetry_group_pair_constraints(NLPFormulation &_formulation);
 
 	void add_cuboid_constraints(
-		const unsigned int _corner_variable_start_index,
-		const unsigned int _axis_variable_start_index,
+		const unsigned int _cuboid_index,
 		NLPFormulation &_formulation);
 
 	void add_symmetry_group_constraints(
-		const unsigned int _symmetry_group_variable_index,
-		const MeshCuboidSymmetryGroup *_symmetry_group,
+		const unsigned int _symmetry_group_index,
 		NLPFormulation &_formulation);
 
 	void add_reflection_constraints(
-		const unsigned int _x_variable_index,
-		const unsigned int _y_variable_index,
-		const unsigned int _symmetry_group_variable_index,
+		const NLPVectorExpression& _x_variable,
+		const NLPVectorExpression& _y_variable,
+		const NLPVectorExpression& _n_variable,
+		const NLPVectorExpression& _t_variable,
 		NLPFormulation &_formulation);
 
 	void add_cuboid_reflection_constraints(
 		const unsigned int _cuboid_index_1,
 		const unsigned int _cuboid_index_2,
-		const unsigned int _symmetry_group_variable_index,
+		const unsigned int _symmetry_group_index,
 		const unsigned int _reflection_axis_index,
 		NLPFormulation &_formulation);
 

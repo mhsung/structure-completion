@@ -580,14 +580,19 @@ NLPExpression& NLPExpression::operator*=(const NLPTerm& rhs)
 
 NLPExpression& NLPExpression::operator*=(const NLPExpression& rhs)
 {
+	std::list< NLPTerm > product_terms;
+
 	for (std::list< NLPTerm >::iterator it = terms_.begin();
 		it != terms_.end(); ++it)
 	{
 		for (std::list< NLPTerm >::const_iterator jt = rhs.terms_.begin();
 			jt != rhs.terms_.end(); ++jt)
 		{
-			(*it) *= (*jt);
+			product_terms.push_back((*it) * (*jt));
 		}
 	}
+
+	product_terms.swap(terms_);
+
 	return *this;
 }
