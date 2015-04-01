@@ -13,6 +13,7 @@
 #include "IPOPTSolver.h"
 #include "IpIpoptApplication.hpp"
 
+#include "ANN/ANN.h"
 #include <Eigen/Core>
 
 
@@ -21,8 +22,10 @@ class MeshCuboidNonLinearSolver
 public:
 	MeshCuboidNonLinearSolver(
 		const std::vector<MeshCuboid *>& _cuboids,
-		const std::vector<MeshCuboidSymmetryGroup *>& _symmetry_groups);
+		const std::vector<MeshCuboidSymmetryGroup *>& _symmetry_groups,
+		const Real _neighbor_distance);
 	~MeshCuboidNonLinearSolver();
+
 
 	inline unsigned int num_total_variables() const;
 	inline unsigned int num_total_cuboid_corner_variables() const;
@@ -60,10 +63,32 @@ public:
 
 
 private:
-	NLPEigenQuadFunction* create_quadratic_function(
+	NLPEigenQuadFunction* create_quadratic_energy_function(
 		const Eigen::MatrixXd& _quadratic_term,
 		const Eigen::VectorXd& _linear_term,
 		const double _constant_term);
+
+	void add_symmetry_group_energy_functions(
+		Eigen::MatrixXd& _quadratic_term,
+		Eigen::VectorXd& _linear_term,
+		double &_constant_term);
+
+	void add_symmetry_group_energy_functions(
+		const unsigned int _symmetry_group_index,
+		const std::vector<ANNpointArray>& _cuboid_ann_points,
+		const std::vector<ANNkd_tree *>& _cuboid_ann_kd_tree,
+		Eigen::MatrixXd& _quadratic_term,
+		Eigen::VectorXd& _linear_term,
+		double &_constant_term);
+
+	void create_cuboid_sample_point_ann_trees(
+		std::vector<ANNpointArray>& _cuboid_ann_points,
+		std::vector<ANNkd_tree *>& _cuboid_ann_kd_tree) const;
+
+	void delete_cuboid_sample_point_ann_trees(
+		std::vector<ANNpointArray>& _cuboid_ann_points,
+		std::vector<ANNkd_tree *>& _cuboid_ann_kd_tree) const;
+
 
 	// Constraint functions.
 	void add_cuboid_constraints(NLPFormulation &_formulation);
@@ -91,10 +116,12 @@ private:
 		const unsigned int _reflection_axis_index,
 		NLPFormulation &_formulation);
 
+
 	// Initialization function.
 	bool compute_initial_values(const Eigen::VectorXd &_input, Eigen::VectorXd &_output);
 	void compute_cuboid_axis_values(Eigen::VectorXd &_values);
 	void compute_symmetry_group_values(Eigen::VectorXd &_values);
+
 
 	// Update function.
 	void update_cuboids(const std::vector< Number >& _values);
@@ -104,9 +131,10 @@ private:
 private:
 	const std::vector<MeshCuboid *>& cuboids_;
 	const std::vector<MeshCuboidSymmetryGroup *>& symmetry_groups_;
+	const Real neighbor_distance_;
 
 	unsigned int num_cuboids_;
-	int num_symmetry_groups_;
+	unsigned int num_symmetry_groups_;
 
 	unsigned int cuboid_corner_variable_start_index_;
 	unsigned int cuboid_axis_variable_start_index_;

@@ -204,6 +204,7 @@ void MeshViewerCore::train()
 			mesh_name_list_file << mesh_name << std::endl;
 
 
+
 			cuboid_structure_.clear_cuboids();
 			cuboid_structure_.clear_sample_points();
 

@@ -169,6 +169,16 @@ void MeshCuboidSymmetryGroup::compute_reflection_plane(
 	const std::list< std::pair < MyMesh::Point, MyMesh::Point > > &_point_pairs,
 	MyMesh::Normal &_n, double &_t)
 {
+	// Eq (1):
+	// min {(I - nn^T)(x - y)}^2. Let d = (x - y).
+	// Since (I - nn^T)^2 = (I - nn^T),
+	// => min d^T(I - nn^T)d = d^Td - d^Tnn^Td = d^Td - n^Tdd^Tn.
+	// => max n^Tdd^Tn.
+
+	// Eq (2):
+	// min {n^T(x + y) - 2t}^2.
+	// If n is estimated, t = 0.5*n^T(x + y).
+
 	assert(!_point_pairs.empty());
 
 	Eigen::Matrix3d A = Eigen::Matrix3d::Zero();
@@ -177,16 +187,15 @@ void MeshCuboidSymmetryGroup::compute_reflection_plane(
 	for (std::list< std::pair < MyMesh::Point, MyMesh::Point > >::const_iterator it = _point_pairs.begin();
 		it != _point_pairs.end(); ++it)
 	{
-		Eigen::Vector3d x, y;
+		Eigen::Vector3d sum_p, diff_p;
 		for (int i = 0; i < 3; ++i)
 		{
-			x[i] = (*it).first[i];
-			y[i] = (*it).second[i];
+			sum_p[i] = (*it).first[i] + (*it).second[i];
+			diff_p[i] = (*it).first[i] - (*it).second[i];
 		}
 
-		Eigen::Vector3d d = (x - y);
-		A += (d * d.transpose());
-		b += (0.5 * (x + y));
+		A += (diff_p * diff_p.transpose());
+		b += (0.5 * sum_p);
 	}
 
 	Eigen::SelfAdjointEigenSolver<Eigen::Matrix3d> es(A);
@@ -231,4 +240,124 @@ void MeshCuboidSymmetryGroup::get_reflection_plane_corners(MyMesh::Point &_point
 	_corners[1] = center + 0.5 * _size * axes[0] - 0.5 * _size * axes[1];
 	_corners[2] = center + 0.5 * _size * axes[0] + 0.5 * _size * axes[1];
 	_corners[3] = center - 0.5 * _size * axes[0] + 0.5 * _size * axes[1];
+}
+
+MyMesh::Point MeshCuboidSymmetryGroup::get_symmetric_point(const MyMesh::Point& _point) const
+{
+	MyMesh::Normal plane_to_point = n_ * (dot(n_, _point) - t_);
+	MyMesh::Point symmetric_point = _point - (plane_to_point * 2);
+	CHECK_NUMERICAL_ERROR(__FUNCTION__, t_ - dot(n_, 0.5 * (_point + symmetric_point)));
+	return symmetric_point;
+}
+
+void MeshCuboidSymmetryGroup::get_symmetric_sample_point_pairs(
+	const std::vector<MeshCuboid *> &_cuboids,
+	const std::vector<ANNpointArray> &_cuboid_ann_points,
+	const std::vector<ANNkd_tree *> &_cuboid_ann_kd_tree,
+	const Real _neighbor_distance,
+	std::list<WeightedPointPair> &_sample_point_pairs) const
+{
+	const unsigned int num_cuboids = _cuboids.size();
+	assert(_cuboid_ann_points.size() == num_cuboids);
+	assert(_cuboid_ann_kd_tree.size() == num_cuboids);
+
+	_sample_point_pairs.clear();
+
+
+
+	std::vector<unsigned int> single_cuboid_indices;
+	get_single_cuboid_indices(_cuboids, single_cuboid_indices);
+
+	for (std::vector<unsigned int>::const_iterator it = single_cuboid_indices.begin();
+		it != single_cuboid_indices.end(); ++it)
+	{
+		const unsigned int cuboid_index = (*it);
+
+		get_symmetric_sample_point_pairs(
+			_cuboids[cuboid_index],
+			_cuboid_ann_points[cuboid_index],
+			_cuboid_ann_kd_tree[cuboid_index],
+			_neighbor_distance, _sample_point_pairs);
+	}
+
+
+	std::vector< std::pair<unsigned int, unsigned int> > pair_cuboid_indices;
+	get_pair_cuboid_indices(_cuboids, pair_cuboid_indices);
+
+	for (std::vector< std::pair<unsigned int, unsigned int> >::const_iterator it = pair_cuboid_indices.begin();
+		it != pair_cuboid_indices.end(); ++it)
+	{
+		const unsigned int cuboid_index_1 = (*it).first;
+		const unsigned int cuboid_index_2 = (*it).second;
+
+		// 1 -> 2.
+		get_symmetric_sample_point_pairs(
+			_cuboids[cuboid_index_1],
+			_cuboid_ann_points[cuboid_index_2],
+			_cuboid_ann_kd_tree[cuboid_index_2],
+			_neighbor_distance, _sample_point_pairs);
+
+		// 2 -> 1.
+		get_symmetric_sample_point_pairs(
+			_cuboids[cuboid_index_2],
+			_cuboid_ann_points[cuboid_index_1],
+			_cuboid_ann_kd_tree[cuboid_index_1],
+			_neighbor_distance, _sample_point_pairs);
+	}
+}
+
+void MeshCuboidSymmetryGroup::get_symmetric_sample_point_pairs(
+	const MeshCuboid *_cuboid_1,
+	const ANNpointArray &_cuboid_ann_points_2,
+	ANNkd_tree *_cuboid_ann_kd_tree_2,
+	const Real neighbor_distance,
+	std::list<WeightedPointPair> &_sample_point_pairs) const
+{
+	if (!_cuboid_1 || !_cuboid_ann_points_2 || !_cuboid_ann_kd_tree_2)
+		return;
+
+	const int num_points_1 = _cuboid_1->num_sample_points();
+	const int num_points_2 = _cuboid_ann_kd_tree_2->nPoints();
+
+	//
+	ANNpoint q = annAllocPt(3);
+	ANNidxArray nn_idx = new ANNidx[1];
+	ANNdistArray dd = new ANNdist[1];
+	//
+
+	for (int point_index_1 = 0; point_index_1 < num_points_1; ++point_index_1)
+	{
+		MyMesh::Point point_1 = _cuboid_1->get_sample_point(point_index_1)->point_;
+		MyMesh::Point symmetric_point_1 = get_symmetric_point(point_1);
+
+		for (unsigned int i = 0; i < 3; ++i)
+			q[i] = symmetric_point_1[i];
+
+		int num_searched_neighbors = _cuboid_ann_kd_tree_2->annkFRSearch(q, neighbor_distance, 1, nn_idx, dd);
+		if (num_searched_neighbors > 0)
+		{
+			int point_index_2 = (int)nn_idx[0];
+			assert(point_index_2 < num_points_2);
+
+			MyMesh::Point point_2;
+			for (unsigned int i = 0; i < 3; ++i)
+				point_2[i] = _cuboid_ann_points_2[point_index_2][i];
+
+			//
+			double distance = (neighbor_distance - dd[0]);
+			assert(distance >= 0);
+			//
+
+			double weight = distance * distance;
+
+			WeightedPointPair point_pair(weight, point_1, point_2);
+			_sample_point_pairs.push_back(point_pair);
+		}
+	}
+
+	//
+	annDeallocPt(q);
+	delete[] nn_idx;
+	delete[] dd;
+	//
 }

@@ -12,6 +12,7 @@
 #include "MyMesh.h"
 #include "MeshCuboid.h"
 
+#include "ANN/ANN.h"
 #include <array>
 #include <vector>
 
@@ -42,6 +43,15 @@ private:
 
 
 public:
+	struct WeightedPointPair
+	{
+		WeightedPointPair(const Real _weight, const MyMesh::Point _p1, const MyMesh::Point _p2)
+			: weight_(_weight), p1_(_p1), p2_(_p2) {}
+		Real weight_;
+		MyMesh::Point p1_;
+		MyMesh::Point p2_;
+	};
+
 	void get_single_cuboid_indices(const std::vector<MeshCuboid *>& _cuboids,
 		std::vector<unsigned int> &_single_cuboid_indices) const;
 
@@ -58,6 +68,22 @@ public:
 
 	void get_reflection_plane_corners(MyMesh::Point &_point, double _size,
 		std::array<MyMesh::Point, 4>& _corners);
+
+	void get_symmetric_sample_point_pairs(const std::vector<MeshCuboid *> &_cuboids,
+		const std::vector<ANNpointArray> &_cuboid_ann_points,
+		const std::vector<ANNkd_tree *> &_cuboid_ann_kd_tree,
+		const Real _neighbor_distance,
+		std::list<WeightedPointPair> &_sample_point_pairs) const;
+
+	void get_symmetric_sample_point_pairs(
+		const MeshCuboid *_cuboid_1,
+		const ANNpointArray &_cuboid_ann_points_2,
+		ANNkd_tree *_cuboid_ann_kd_tree_2,
+		const Real _neighbor_distance,
+		std::list<WeightedPointPair> &_sample_point_pairs) const;
+
+	MyMesh::Point get_symmetric_point(const MyMesh::Point& _point) const;
+
 
 	// static functions.
 	static void add_symmety_cuboid_corner_points(

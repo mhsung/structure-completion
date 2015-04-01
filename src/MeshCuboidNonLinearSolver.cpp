@@ -7,9 +7,11 @@
 
 MeshCuboidNonLinearSolver::MeshCuboidNonLinearSolver(
 	const std::vector<MeshCuboid *>& _cuboids,
-	const std::vector<MeshCuboidSymmetryGroup *>& _symmetry_groups)
+	const std::vector<MeshCuboidSymmetryGroup *>& _symmetry_groups,
+	const Real _neighbor_distance)
 	: cuboids_(_cuboids)
 	, symmetry_groups_(_symmetry_groups)
+	, neighbor_distance_(_neighbor_distance)
 	, num_cuboid_corner_variables_(MeshCuboidAttributes::k_num_attributes)
 	, num_cuboid_axis_variables_(3 * 3)
 	, num_symmetry_group_variables_(3 + 1)
@@ -142,7 +144,7 @@ NLPVectorExpression MeshCuboidNonLinearSolver::get_symmetry_group_variable_t(
 }
 
 
-NLPEigenQuadFunction* MeshCuboidNonLinearSolver::create_quadratic_function(
+NLPEigenQuadFunction* MeshCuboidNonLinearSolver::create_quadratic_energy_function(
 	const Eigen::MatrixXd& _quadratic_term,
 	const Eigen::VectorXd& _linear_term,
 	const double _constant_term)
@@ -163,10 +165,99 @@ NLPEigenQuadFunction* MeshCuboidNonLinearSolver::create_quadratic_function(
 		num_total_cuboid_corner_variables(), num_total_cuboid_corner_variables()) = _quadratic_term;
 	linear_term_.segment(0, num_total_cuboid_corner_variables()) = _linear_term;
 
+	//
+	add_symmetry_group_energy_functions(quadratic_term_, linear_term_, constant_term_);
+	//
+
 	NLPEigenQuadFunction *function = new NLPEigenQuadFunction(
 		quadratic_term_, linear_term_, constant_term_);
 
 	return function;
+}
+
+void MeshCuboidNonLinearSolver::add_symmetry_group_energy_functions(
+	Eigen::MatrixXd& _quadratic_term,
+	Eigen::VectorXd& _linear_term,
+	double &_constant_term)
+{
+	assert(_quadratic_term.rows() == num_total_variables());
+	assert(_quadratic_term.cols() == num_total_variables());
+	assert(_linear_term.rows() == num_total_variables());
+
+	std::vector<ANNpointArray> cuboid_ann_points;
+	std::vector<ANNkd_tree *> cuboid_ann_kd_tree;
+
+	create_cuboid_sample_point_ann_trees(cuboid_ann_points, cuboid_ann_kd_tree);
+
+	for (unsigned int symmetry_group_index = 0; symmetry_group_index < num_symmetry_groups_;
+		++symmetry_group_index)
+	{
+		add_symmetry_group_energy_functions(symmetry_group_index,
+			cuboid_ann_points, cuboid_ann_kd_tree,
+			_quadratic_term, _linear_term, _constant_term);
+	}
+
+	delete_cuboid_sample_point_ann_trees(cuboid_ann_points, cuboid_ann_kd_tree);
+}
+
+void MeshCuboidNonLinearSolver::add_symmetry_group_energy_functions(
+	const unsigned int _symmetry_group_index,
+	const std::vector<ANNpointArray>& _cuboid_ann_points,
+	const std::vector<ANNkd_tree *>& _cuboid_ann_kd_tree,
+	Eigen::MatrixXd& _quadratic_term,
+	Eigen::VectorXd& _linear_term,
+	double &_constant_term)
+{
+	const MeshCuboidSymmetryGroup* symmetry_group = symmetry_groups_[_symmetry_group_index];
+	assert(symmetry_group);
+
+	std::list<MeshCuboidSymmetryGroup::WeightedPointPair> sample_point_pairs;
+	symmetry_group->get_symmetric_sample_point_pairs(cuboids_,
+		_cuboid_ann_points, _cuboid_ann_kd_tree, neighbor_distance_,
+		sample_point_pairs);
+
+	// Eq (1):
+	// min {(I - nn^T)(x - y)}^2. Let d = (x - y).
+	// Since (I - nn^T)^2 = (I - nn^T),
+	// => min d^T(I - nn^T)d = d^Td - d^Tnn^Td = d^Td - n^Tdd^Tn.
+
+	// Eq (2):
+	// min {n^T(x + y) - 2t}^2.
+
+	Eigen::Matrix3d A1 = Eigen::Matrix3d::Zero();
+	Eigen::MatrixXd A2 = Eigen::MatrixXd::Zero(3 + 1, 3 + 1);
+	Real sum_weight = 0.0;
+
+	for (std::list<MeshCuboidSymmetryGroup::WeightedPointPair>::iterator it = sample_point_pairs.begin();
+		it != sample_point_pairs.end(); ++it)
+	{
+		assert((*it).weight_ > 0);
+		Eigen::Vector3d sum_p, diff_p;
+		for (int i = 0; i < 3; ++i)
+		{
+			sum_p[i] = (*it).p1_[i] + (*it).p2_[i];
+			diff_p[i] = (*it).p1_[i] - (*it).p2_[i];
+		}
+
+		A1 += ((*it).weight_ * (-1) * diff_p * diff_p.transpose());
+
+		_constant_term += (diff_p.transpose() * diff_p);
+
+		Eigen::VectorXd b(3 + 1);
+		b << sum_p, -2;
+		A2 += ((*it).weight_ * b * b.transpose());
+
+		sum_weight += (*it).weight_;
+	}
+
+	std::pair<Index, Index> index_size_pair;
+	index_size_pair = get_symmetry_group_variable_n_index_size(_symmetry_group_index);
+
+	_quadratic_term.block<3, 3>(index_size_pair.first, index_size_pair.first) += A1;
+	
+	// NOTICE:
+	// Variables 'n' and 't' are adjacent in the variable list.
+	_quadratic_term.block<3 + 1, 3 + 1>(index_size_pair.first, index_size_pair.first) += A2;
 }
 
 void MeshCuboidNonLinearSolver::add_cuboid_constraints(NLPFormulation &_formulation)
@@ -441,7 +532,7 @@ void MeshCuboidNonLinearSolver::optimize(
 	const double _constant_term,
 	Eigen::VectorXd* _init_values_vec)
 {
-	NLPEigenQuadFunction* function = create_quadratic_function(
+	NLPEigenQuadFunction* function = create_quadratic_energy_function(
 		_quadratic_term, _linear_term, _constant_term);
 	assert(function);
 	NLPFormulation formulation(function);
@@ -631,4 +722,58 @@ void MeshCuboidNonLinearSolver::update_symmetry_groups(const std::vector< Number
 
 		symmetry_groups_[symmetry_group_index]->set_reflection_plane(n, t);
 	}
+}
+
+void MeshCuboidNonLinearSolver::create_cuboid_sample_point_ann_trees(
+	std::vector<ANNpointArray>& _cuboid_ann_points,
+	std::vector<ANNkd_tree *>& _cuboid_ann_kd_tree) const
+{
+	delete_cuboid_sample_point_ann_trees(_cuboid_ann_points, _cuboid_ann_kd_tree);
+	_cuboid_ann_points.resize(num_cuboids_);
+	_cuboid_ann_kd_tree.resize(num_cuboids_);
+
+	for (unsigned int cuboid_index = 0; cuboid_index < num_cuboids_; ++cuboid_index)
+	{
+		_cuboid_ann_kd_tree[cuboid_index] = NULL;
+		_cuboid_ann_points[cuboid_index] = NULL;
+
+		MeshCuboid *cuboid = cuboids_[cuboid_index];
+		unsigned int num_cuboid_sample_points = cuboid->num_sample_points();
+		if (num_cuboid_sample_points == 0)
+			continue;
+
+		Eigen::MatrixXd cuboid_sample_points(3, num_cuboid_sample_points);
+
+		for (unsigned int point_index = 0; point_index < num_cuboid_sample_points; ++point_index)
+		{
+			for (unsigned int i = 0; i < 3; ++i)
+				cuboid_sample_points.col(point_index)(i) =
+				cuboid->get_sample_point(point_index)->point_[i];
+		}
+
+		_cuboid_ann_kd_tree[cuboid_index] = ICP::create_kd_tree(cuboid_sample_points,
+			_cuboid_ann_points[cuboid_index]);
+		assert(_cuboid_ann_points[cuboid_index]);
+		assert(_cuboid_ann_kd_tree[cuboid_index]);
+	}
+}
+
+void MeshCuboidNonLinearSolver::delete_cuboid_sample_point_ann_trees(
+	std::vector<ANNpointArray>& _cuboid_ann_points,
+	std::vector<ANNkd_tree *>& _cuboid_ann_kd_tree) const
+{
+	if (_cuboid_ann_points.empty() && _cuboid_ann_kd_tree.empty())
+		return;
+
+	assert(_cuboid_ann_points.size() == num_cuboids_);
+	assert(_cuboid_ann_kd_tree.size() == num_cuboids_);
+
+	for (unsigned int cuboid_index = 0; cuboid_index < num_cuboids_; ++cuboid_index)
+	{
+		if (_cuboid_ann_points[cuboid_index]) annDeallocPts(_cuboid_ann_points[cuboid_index]);
+		if (_cuboid_ann_kd_tree[cuboid_index]) delete _cuboid_ann_kd_tree[cuboid_index];
+	}
+
+	_cuboid_ann_points.clear();
+	_cuboid_ann_kd_tree.clear();
 }

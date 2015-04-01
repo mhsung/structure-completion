@@ -1378,13 +1378,18 @@ void optimize_attributes_once(
 }
 
 void optimize_attributes_once_with_constraints(
-	const std::vector<MeshCuboid *>& _cuboids,
-	const std::vector<MeshCuboidSymmetryGroup *> _symmetry_groups,
+	MeshCuboidStructure &_cuboid_structure,
 	const MeshCuboidPredictor& _predictor,
 	const double _quadprog_ratio)
 {
+	const Real neighbor_distance = FLAGS_param_sample_point_neighbor_distance *
+		_cuboid_structure.mesh_->get_object_diameter();
+
+	std::vector<MeshCuboid *> all_cuboids = _cuboid_structure.get_all_cuboids();
+	std::vector<MeshCuboidSymmetryGroup *>& all_symmetry_groups = _cuboid_structure.symmetry_groups_;
+
 	const unsigned int num_attributes = MeshCuboidAttributes::k_num_attributes;
-	unsigned int num_cuboids = _cuboids.size();
+	unsigned int num_cuboids = all_cuboids.size();
 	unsigned int mat_size = num_cuboids * num_attributes;
 
 	Eigen::VectorXd init_values;
@@ -1393,7 +1398,7 @@ void optimize_attributes_once_with_constraints(
 	double single_constant_term, pair_constant_term;
 	double single_total_energy, pair_total_energy;
 
-	get_optimization_formulation(_cuboids, _predictor, init_values,
+	get_optimization_formulation(all_cuboids, _predictor, init_values,
 		single_quadratic_term, pair_quadratic_term,
 		single_linear_term, pair_linear_term,
 		single_constant_term, pair_constant_term,
@@ -1404,7 +1409,7 @@ void optimize_attributes_once_with_constraints(
 	Eigen::VectorXd linear_term = pair_linear_term + _quadprog_ratio * single_linear_term;
 	double constant_term = pair_constant_term + _quadprog_ratio * single_constant_term;
 
-	MeshCuboidNonLinearSolver non_linear_solver(_cuboids, _symmetry_groups);
+	MeshCuboidNonLinearSolver non_linear_solver(all_cuboids, all_symmetry_groups, neighbor_distance);
 	non_linear_solver.optimize(quadratic_term, linear_term, constant_term, &init_values);
 }
 
@@ -1465,7 +1470,7 @@ void optimize_attributes(
 		if (FLAGS_param_optimize_with_non_linear_constraints)
 		{
 			optimize_attributes_once_with_constraints(
-				all_cuboids, _cuboid_structure.symmetry_groups_, _predictor, _quadprog_ratio);
+				_cuboid_structure, _predictor, _quadprog_ratio);
 		}
 		else
 		{
