@@ -240,7 +240,8 @@ void MeshCuboidTrainer::get_joint_normal_relations(
 			// NOTE:
 			// Since the center point is always the origin in the local coordinates,
 			// it is not used as the feature values.
-			Eigen::MatrixXd X(num_objects, MeshCuboidJointNormalRelations::k_mat_size);
+			const unsigned int num_cols = MeshCuboidJointNormalRelations::k_mat_size;
+			Eigen::MatrixXd X(num_objects, num_cols);
 
 			for (int object_index = 0; object_index < num_objects; ++object_index)
 			{

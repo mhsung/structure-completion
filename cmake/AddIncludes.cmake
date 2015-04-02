@@ -23,22 +23,22 @@ include_directories (
 if (MSVC)
 #  file (GLOB SHADER_SOURCES
 #   "${CMAKE_CURRENT_LIST_DIR}/../shader/*.h"
-#	"${CMAKE_CURRENT_LIST_DIR}/../shader/*.cpp")
+#	  "${CMAKE_CURRENT_LIST_DIR}/../shader/*.cpp")
 #  source_group("Shader Files" FILES ${SHADER_SOURCES})
 
   file (GLOB IPOPT_SOURCES
     "${CMAKE_CURRENT_LIST_DIR}/../ipopt/*.h"
-	"${CMAKE_CURRENT_LIST_DIR}/../ipopt/*.cpp")
+	  "${CMAKE_CURRENT_LIST_DIR}/../ipopt/*.cpp")
   source_group("IPOPT" FILES ${IPOPT_SOURCES})
   
   file (GLOB TRWS_SOURCES
     "${LIBRARY_ROOT_PATH}/TRW_S-v1.3/*.h"
-	"${LIBRARY_ROOT_PATH}/TRW_S-v1.3/*.cpp")
+	  "${LIBRARY_ROOT_PATH}/TRW_S-v1.3/*.cpp")
   source_group("TRW_S" FILES ${TRWS_SOURCES})
   
   file (GLOB EIGENQP_SOURCES
     "${LIBRARY_ROOT_PATH}/wingsit_QP/*.h"
-	"${LIBRARY_ROOT_PATH}/wingsit_QP/*.cpp")
+	  "${LIBRARY_ROOT_PATH}/wingsit_QP/*.cpp")
   source_group("Eigen_QP" FILES ${EIGENQP_SOURCES})
 endif()
 endif()

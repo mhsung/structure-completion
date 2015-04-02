@@ -450,7 +450,8 @@ Real MeshCuboidJointNormalRelationPredictor::get_pair_quadratic_form(
 	// NOTE:
 	// Since the center point is always the origin in the local coordinates,
 	// it is not used as the feature values.
-	Eigen::MatrixXd A(MeshCuboidJointNormalRelations::k_mat_size, mat_size);
+	const unsigned int num_rows = MeshCuboidJointNormalRelations::k_mat_size;
+	Eigen::MatrixXd A(num_rows, mat_size);
 	A.topRows(2 * num_features - MeshCuboidFeatures::k_corner_index)
 		= A1_orig.bottomRows(2 * num_features - MeshCuboidFeatures::k_corner_index);
 	A.bottomRows(2 * num_features - MeshCuboidFeatures::k_corner_index)

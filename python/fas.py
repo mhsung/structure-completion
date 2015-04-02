@@ -8,7 +8,7 @@
 import os, string, decimal, glob, re, subprocess, shlex, sys, datetime, time, getpass
 
 ######   Job Scheduling     ######
-maxJobs=10;
+maxJobs=128;
 usrName = getpass.getuser();
 
 def ScheduleJob(cmd, jobName, scriptFile):
@@ -21,12 +21,12 @@ def ScheduleJob(cmd, jobName, scriptFile):
 			os.makedirs(path);
 		f = open(scriptFile+".sh", 'w'); f.write(cmd); f.close();
 		os.system("chmod 777 "+scriptFile+".sh");
-		qsubParams = "-X -v display";
-		qsubParams += "-l mem=8000mb,cput=4:00:00 ";	# 4 hours
-		qsubParams += "-N "+jobName + " ";
-		qsubParams += "-d "+os.getcwd()+" -o "+scriptFile+".log -e "+scriptFile+".err";
+		qsubParams = "-V ";
+		qsubParams += "-l mem=4000mb,cput=4:00:00 ";	# 4 hours
+		qsubParams += "-N "+jobName;
+		qsubParams += " -d "+os.getcwd()+" -o "+scriptFile+".log -e "+scriptFile+".err";
 		cmd = "qsub "+qsubParams+" "+scriptFile+".sh ";
-
+		
 		if int(NumMyJobs()) >= int(maxJobs):
 			while (int(NumMyJobs()) >= .9 * int(maxJobs)):
 				print("Too many jobs ("+str(NumMyJobs())+" / "+str(.9 * int(maxJobs))+")... waiting 5s");
@@ -191,4 +191,73 @@ def WaitForJobsInArray(jobsIds):
 			if (len(jMap)>0):
 			  print("        Waiting for jobs: "+str(nRunning)+" / "+str(len(jMap))+" / "+str(nTotal));
 			  time.sleep(sleepTime)
+
+######   Reading / Writing lists     ######
+def NameOnly(filename):
+	id = string.rfind(filename, "/")
+	return filename[(id+1):]
+
+def ReadModelNames(filename):
+	if os.path.isfile(filename):
+		f = open(filename, "r");
+		mList = f.readlines();
+		mList = [NameOnly(s.strip()) for s in mList];
+		f.close();
+	elif os.path.isdir(filename):
+		mListTemp = glob.glob(filename+"/*");
+		mListTemp = [NameOnly(s.strip()) for s in mListTemp];
+		mList = [];
+		for mName in mListTemp:
+			if mName[-4:]==".off":
+				mName = mName[:-4];
+			elif mName[-3:]==".gt":
+				mName = mName[:-3];
+			mList = mList + [mName];
+	else:
+		print("[ERROR] Could not read filename: "+filename);
+		mList = [];
+	return mList;
+
+
+def WriteModelNames(mList, filename):
+	with open(filename, "w") as f:
+		f.write("\n".join(mList))
+
+def ReadRegionNames(rFile):
+	newRList = [];
+	with open(rFile, "r") as f:
+		rList = f.readlines();
+	for s in rList:
+		sSplit = s.split(" ");
+		newRList.append(sSplit[0].strip());
+	return newRList;
+
+
+######   Weka classification (move to training?)     ######
+def WekaTrainClassifier(trainingData, trainedClassifier, statsFile):
+	wekajar = "../../external/weka-3-7-9/weka.jar";
+	classifier = "weka.classifiers.trees.M5P";
+	cmd = "java -Djava.awt.headless=true -Xmx2000m -cp "+wekajar+" "+classifier+" -t "+trainingData+" ";
+	cmd += "-d "+trainedClassifier+" -M 10 "; #-M 15 -- 4 still seems to be the best :(
+	return cmd+" > "+statsFile+" ";
+
+def WekaClassify(trainedClassifier, unclassifiedPoints, classifiedPoints):
+	wekajar = "../../external/weka-3-7-9/weka.jar";
+	classifier = "weka.classifiers.trees.M5P";
+	cmd = "java -Djava.awt.headless=true -Xmx2000m -cp "+wekajar+" "+classifier+" -l "+trainedClassifier+" ";
+	cmd += "-T "+unclassifiedPoints+" -p 0 > "+classifiedPoints+" ";
+	return cmd;
+
+pythonname = "python2.7 ";
+def SciKitTrainClassifier(trainingData, trainedClassifier, statsFile):
+	cmd = pythonname+"./scriptlibs/randomforest.py -train "+trainingData+" "+trainedClassifier+" "+statsFile+" ";
+	return cmd;
+
+def SciKitClassify(trainedClassifier, unclassifiedPoints, classifiedPoints):
+	cmd = pythonname+"./scriptlibs/randomforest.py -test "+trainedClassifier+" "+unclassifiedPoints+" "+classifiedPoints+" ";
+	return cmd;
+
+
+
+
 

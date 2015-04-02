@@ -12,7 +12,7 @@ import fas
 
 
 ## Variables
-disallowParallel = False;
+disallowParallel = True;
 dataDir = "";
 expDir = "";
 
@@ -38,27 +38,37 @@ else:
 
 # Prepare files
 mListTest = [os.path.basename(x) for x in glob.glob(dataDir + "/*.off")];
-print "\n".join(mListTest)
-binDir = "../../build/Build/bin/"
+#print("\n".join(mListTest))
+binDir = "../../build/OSMesaViewer/build/Build/bin/"
 
 
 ## Batch jobs
+os.chdir(expDir);
 jobIDs = [];
 removeFiles = [];
-counter = 0;
+count = 0;
 
 for mName in mListTest:
-	cmd = binDir + "QtViewer" + " "
-	cmd += "--flagfile=" + expDir + "/arguments.txt" + " "
+	count = count + 1
+	cmd = binDir + "OSMesaViewer" + " "
+	cmd += "--flagfile=arguments.txt" + " "
 	cmd += "--mesh_filename=" + mName + " "
 	cmd += "--run_prediction" + " "
 
-	scriptFile = expDir + "/output/" + mName
+	scriptFile = "script/" + mName
 
 	if not disallowParallel:
 		jobIDs += fas.ScheduleJob(cmd, mName, scriptFile);
 		removeFiles += fas.TmpFilesNames(scriptFile);
 	else:
-		os.system(cmd + " ");
+		if not os.path.isdir("script"):
+			os.mkdir("script");
+        
+		print("\n====================");
+		print("(%d / %d)" % (count, len(mListTest)));
+		print("Job [" + mName + "] Started.");
+		os.system("time " + cmd + " > script/" + mName + ".out");
+		print("Job [" + mName + "] Finished.");
+		print("====================\n");
 
 fas.WaitForJobsInArray(jobIDs);
