@@ -67,8 +67,8 @@ public:
 
 	void set_reflection_plane(const MyMesh::Normal &_n, const double &_t);
 
-	void get_reflection_plane_corners(MyMesh::Point &_point, double _size,
-		std::array<MyMesh::Point, 4>& _corners);
+	void get_reflection_plane_corners(const MyMesh::Point &_point, const Real _size,
+		std::array<MyMesh::Point, 4>& _corners) const;
 
 	MyMesh::Point get_symmetric_point(const MyMesh::Point& _point) const;
 

@@ -211,18 +211,18 @@ void MeshCuboidSymmetryGroup::compute_reflection_plane(
 	Eigen::Vector3d n = es.eigenvectors().col(3 - 1);
 	for (unsigned int i = 0; i < 3; ++i) _n[i] = n[i];
 
+	_n.normalize();
 	_t = (n.transpose() * b);
 	_t /= _point_pairs.size();
 }
 
-void MeshCuboidSymmetryGroup::get_reflection_plane_corners(MyMesh::Point &_point, double _size,
-	std::array<MyMesh::Point, 4>& _corners)
+void MeshCuboidSymmetryGroup::get_reflection_plane_corners(
+	const MyMesh::Point &_point, const Real _size,
+	std::array<MyMesh::Point, 4>& _corners) const
 {
 	// Find the closest point on the plane to the given '_point'.
 	// p_proj = (p - a) - (n'(p-a))n + a  ('a' is a point on the plane, n'a = t)
 	// p_proj = p - (n'p)n + tn
-
-	n_.normalize();
 
 	MyMesh::Point center = _point - dot(n_, _point) * n_ + t_ * n_;
 
