@@ -37,6 +37,7 @@ public:
 		const std::vector<MeshCuboid *>& _cuboids);
 	~MeshCuboidSymmetryGroup();
 
+	MeshCuboidSymmetryGroup(const MeshCuboidSymmetryGroup &_other);
 
 private:
 	MeshCuboidSymmetryGroup(const MeshCuboidSymmetryGroupInfo &_info);
@@ -69,7 +70,10 @@ public:
 	void get_reflection_plane_corners(MyMesh::Point &_point, double _size,
 		std::array<MyMesh::Point, 4>& _corners);
 
-	void get_symmetric_sample_point_pairs(const std::vector<MeshCuboid *> &_cuboids,
+	MyMesh::Point get_symmetric_point(const MyMesh::Point& _point) const;
+
+	void get_symmetric_sample_point_pairs(
+		const std::vector<MeshCuboid *> &_cuboids,
 		const std::vector<ANNpointArray> &_cuboid_ann_points,
 		const std::vector<ANNkd_tree *> &_cuboid_ann_kd_tree,
 		const Real _neighbor_distance,
@@ -82,7 +86,6 @@ public:
 		const Real _neighbor_distance,
 		std::list<WeightedPointPair> &_sample_point_pairs) const;
 
-	MyMesh::Point get_symmetric_point(const MyMesh::Point& _point) const;
 
 
 	// static functions.
@@ -98,7 +101,7 @@ public:
 
 
 protected:
-	const MeshCuboidSymmetryGroupInfo &info_;
+	MeshCuboidSymmetryGroupInfo info_;
 
 	// For any point p on the reflection plane, dot(n, p) = t.
 	MyMesh::Normal n_;

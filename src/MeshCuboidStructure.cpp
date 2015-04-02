@@ -18,6 +18,7 @@ MeshCuboidStructure::MeshCuboidStructure(const MyMesh* _mesh)
 
 MeshCuboidStructure::~MeshCuboidStructure()
 {
+	clear();
 }
 
 MeshCuboidStructure::MeshCuboidStructure(const MeshCuboidStructure& _other)
@@ -27,26 +28,27 @@ MeshCuboidStructure::MeshCuboidStructure(const MeshCuboidStructure& _other)
 
 MeshCuboidStructure& MeshCuboidStructure::operator=(const MeshCuboidStructure& _other)
 {
+	clear();
 	deep_copy(_other);
 	return (*this);
 }
 
 void MeshCuboidStructure::deep_copy(const MeshCuboidStructure& _other)
 {
-	this->mesh_ = _other.mesh_;
+	// NOTICE:
+	// This cuboid should be cleaned prior to call this function.
 
+	this->mesh_ = _other.mesh_;
+	this->translation_ = _other.translation_;
+	this->scale_ = _other.scale_;
+	this->query_label_index_ = _other.query_label_index_;
+	
 	this->labels_ = _other.labels_;
 	this->label_names_ = _other.label_names_;
 	this->label_symmetries_ = _other.label_symmetries_;
-	this->label_children_ = _other.label_children_;
-
+	//this->label_children_ = _other.label_children_;
 	this->symmetry_group_info_ = _other.symmetry_group_info_;
-	this->symmetry_groups_ = _other.symmetry_groups_;
 
-	this->translation_ = _other.translation_;
-	this->scale_ = _other.scale_;
-
-	this->query_label_index_ = _other.query_label_index_;
 
 	// Deep copy sample points.
 	assert(_other.sample_points_.size() == _other.num_sample_points());
@@ -73,8 +75,27 @@ void MeshCuboidStructure::deep_copy(const MeshCuboidStructure& _other)
 			it != _other.label_cuboids_[label_index].end(); ++it)
 		{
 			MeshCuboid *cuboid = new MeshCuboid(**it);
+
+			// FIXME:
+			// Since sample points are deep-copied, clear sample point pointers in cuboids.
+			// Use smart pointers for sample points.
+			cuboid->clear_sample_points();
+
 			this->label_cuboids_[label_index].push_back(cuboid);
 		}
+	}
+
+	// Deep copy symmetry groups.
+	unsigned int num_symmetry_groups = _other.symmetry_groups_.size();
+	this->symmetry_groups_.clear();
+	this->symmetry_groups_.reserve(num_symmetry_groups);
+
+	for (std::vector<MeshCuboidSymmetryGroup *>::const_iterator it = _other.symmetry_groups_.begin();
+		it != _other.symmetry_groups_.end(); ++it)
+	{
+		assert(*it);
+		MeshCuboidSymmetryGroup *symmetry_group = new MeshCuboidSymmetryGroup(**it);
+		this->symmetry_groups_.push_back(symmetry_group);
 	}
 }
 
@@ -120,7 +141,7 @@ void MeshCuboidStructure::clear_labels()
 	labels_.clear();
 	label_names_.clear();
 	label_symmetries_.clear();
-	label_children_.clear();
+	//label_children_.clear();
 
 	symmetry_group_info_.size();
 
@@ -240,7 +261,7 @@ bool MeshCuboidStructure::load_cuboids(const std::string _filename, bool _verbos
 	return true;
 }
 
-bool MeshCuboidStructure::save_cuboids(const std::string _filename, bool _verbose)
+bool MeshCuboidStructure::save_cuboids(const std::string _filename, bool _verbose) const
 {
 	std::ofstream file(_filename);
 	if (!file)
@@ -422,7 +443,7 @@ bool MeshCuboidStructure::load_labels(const char *_filename, bool _verbose)
 		labels_.push_back(new_label);
 		label_names_.push_back(tokens[0]);
 		label_symmetries_.push_back(std::list<LabelIndex>());
-		label_children_.push_back(std::list<LabelIndex>());
+		//label_children_.push_back(std::list<LabelIndex>());
 		label_cuboids_.push_back(std::vector<MeshCuboid *>());
 		++new_label;
 	}
@@ -854,6 +875,16 @@ std::vector<MeshCuboid *> MeshCuboidStructure::get_all_cuboids() const
 	return all_cuboids;
 }
 
+MeshSamplePoint *MeshCuboidStructure::add_sample_point(const MyMesh::Point& _pos)
+{
+	// NOTE:
+	// Assume that the sample point index is the same with the index in the 'sample_points_' vector.
+	SamplePointIndex new_sample_point_index = sample_points_.size();
+	MeshSamplePoint *new_sample_point = new MeshSamplePoint(new_sample_point_index, 0, MyMesh::Point(0.0), _pos);
+	sample_points_.push_back(new_sample_point);
+	return new_sample_point;
+}
+
 void MeshCuboidStructure::add_sample_points_from_mesh_vertices()
 {
 	assert(mesh_);
@@ -1217,6 +1248,8 @@ void MeshCuboidStructure::remove_occluded_sample_points(
 
 void MeshCuboidStructure::remove_symmetric_cuboids()
 {
+	// Remove cuboids in symmetric labels (when the same cuboids are duplicated for symmetric labels).
+
 	assert(label_symmetries_.size() == num_labels());
 	assert(label_cuboids_.size() == num_labels());
 
@@ -1243,6 +1276,107 @@ void MeshCuboidStructure::remove_symmetric_cuboids()
 	delete[] is_label_visited;
 }
 
+void MeshCuboidStructure::compute_symmetry_groups()
+{
+	for (std::vector< MeshCuboidSymmetryGroup* >::iterator it = symmetry_groups_.begin();
+		it != symmetry_groups_.end(); ++it)
+		delete (*it);
+	symmetry_groups_.clear();
+
+	const std::vector<MeshCuboid*> cuboids = get_all_cuboids();
+
+	for (std::vector< MeshCuboidSymmetryGroupInfo >::iterator it = symmetry_group_info_.begin();
+		it != symmetry_group_info_.end(); ++it)
+	{
+		MeshCuboidSymmetryGroup* group = MeshCuboidSymmetryGroup::constructor(*it, cuboids);
+		if (group) symmetry_groups_.push_back(group);
+	}
+}
+
+void MeshCuboidStructure::copy_sample_points_to_symmetric_position()
+{
+	for (std::vector< MeshCuboidSymmetryGroup* >::const_iterator it = symmetry_groups_.begin();
+		it != symmetry_groups_.end(); ++it)
+	{
+		copy_sample_points_to_symmetric_position(*it);
+	}
+}
+
+void MeshCuboidStructure::copy_sample_points_to_symmetric_position(
+	const MeshCuboidSymmetryGroup* _symmetry_group)
+{
+	assert(_symmetry_group);
+	std::vector<MeshCuboid *> all_cuboids = get_all_cuboids();
+	const unsigned int num_cuboids = all_cuboids.size();
+
+	std::vector<unsigned int> single_cuboid_indices;
+	_symmetry_group->get_single_cuboid_indices(all_cuboids, single_cuboid_indices);
+
+	for (std::vector<unsigned int>::const_iterator it = single_cuboid_indices.begin();
+		it != single_cuboid_indices.end(); ++it)
+	{
+		const unsigned int cuboid_index = (*it);
+		copy_sample_points_to_symmetric_position(
+			_symmetry_group, all_cuboids[cuboid_index], all_cuboids[cuboid_index]);
+	}
+
+
+	std::vector< std::pair<unsigned int, unsigned int> > pair_cuboid_indices;
+	_symmetry_group->get_pair_cuboid_indices(all_cuboids, pair_cuboid_indices);
+
+	for (std::vector< std::pair<unsigned int, unsigned int> >::const_iterator it = pair_cuboid_indices.begin();
+		it != pair_cuboid_indices.end(); ++it)
+	{
+		const unsigned int cuboid_index_1 = (*it).first;
+		const unsigned int cuboid_index_2 = (*it).second;
+
+		// 1 -> 2.
+		copy_sample_points_to_symmetric_position(
+			_symmetry_group, all_cuboids[cuboid_index_1], all_cuboids[cuboid_index_2]);
+
+		// 2 -> 1.
+		copy_sample_points_to_symmetric_position(
+			_symmetry_group, all_cuboids[cuboid_index_2], all_cuboids[cuboid_index_1]);
+	}
+}
+
+void MeshCuboidStructure::copy_sample_points_to_symmetric_position(
+	const MeshCuboidSymmetryGroup* _symmetry_group,
+	const MeshCuboid *_cuboid_1, MeshCuboid *_cuboid_2)
+{
+	assert(_symmetry_group);
+	if (!_cuboid_1 || !_cuboid_2)
+		return;
+
+	const int num_points_1 = _cuboid_1->num_sample_points();
+
+	for (int point_index_1 = 0; point_index_1 < num_points_1; ++point_index_1)
+	{
+		const MeshSamplePoint* sample_point_1 = _cuboid_1->get_sample_point(point_index_1);
+		MyMesh::Point pos_1 = sample_point_1->point_;
+		MyMesh::Point symmetric_pos_1 = _symmetry_group->get_symmetric_point(pos_1);
+
+		MeshSamplePoint *symmetric_sample_point = add_sample_point(symmetric_pos_1);
+
+		// Copy label confidence values.
+		symmetric_sample_point->label_index_confidence_ = sample_point_1->label_index_confidence_;
+
+		_cuboid_2->add_sample_point(symmetric_sample_point);
+	}
+}
+
+Label MeshCuboidStructure::get_new_label()const
+{
+	Label max_label = 0;
+	for (std::vector<Label>::const_iterator it = labels_.begin(); it != labels_.end(); ++it)
+	{
+		max_label = std::max(max_label, *it);
+	}
+
+	return max_label + 1;
+}
+
+/*
 bool MeshCuboidStructure::is_label_group(LabelIndex _label_index)
 {
 	assert(_label_index < label_children_.size());
@@ -1398,35 +1532,6 @@ int MeshCuboidStructure::find_parent_label_index(
 	return -1;
 }
 
-Label MeshCuboidStructure::get_new_label()const
-{
-	Label max_label = 0;
-	for (std::vector<Label>::const_iterator it = labels_.begin(); it != labels_.end(); ++it)
-	{
-		max_label = std::max(max_label, *it);
-	}
-
-	return max_label + 1;
-}
-
-void MeshCuboidStructure::compute_symmetry_groups()
-{
-	for (std::vector< MeshCuboidSymmetryGroup* >::iterator it = symmetry_groups_.begin();
-		it != symmetry_groups_.end(); ++it)
-		delete (*it);
-	symmetry_groups_.clear();
-
-	const std::vector<MeshCuboid*> cuboids = get_all_cuboids();
-
-	for (std::vector< MeshCuboidSymmetryGroupInfo >::iterator it = symmetry_group_info_.begin();
-		it != symmetry_group_info_.end(); ++it)
-	{
-		MeshCuboidSymmetryGroup* group = MeshCuboidSymmetryGroup::constructor(*it, cuboids);
-		if (group) symmetry_groups_.push_back(group);
-	}
-}
-
-/*
 bool MeshCuboidStructure::apply_point_cuboid_label_map(
 	const std::vector<PointCuboidLabelMap>& _point_cuboid_label_maps,
 	const std::vector<Label>& _all_cuboid_labels)

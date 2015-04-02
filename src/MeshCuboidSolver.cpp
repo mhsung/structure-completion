@@ -1795,6 +1795,7 @@ void add_missing_cuboids(
 	}
 }
 
+/*
 void symmetrize_cuboids(MeshCuboidStructure &_cuboid_structure)
 {
 	unsigned int num_given_labels = _cuboid_structure.num_labels();
@@ -2079,7 +2080,6 @@ void symmetrize_cuboids(MeshCuboidStructure &_cuboid_structure)
 	}
 }
 
-/*
 MeshCuboid *test_joint_normal_training(
 	const MeshCuboid *_cuboid_1, const MeshCuboid *_cuboid_2,
 	const LabelIndex _label_index_1, const LabelIndex _label_index_2,

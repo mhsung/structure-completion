@@ -15,7 +15,9 @@
 
 DEFINE_bool(run_training, false, "");
 DEFINE_bool(run_prediction, false, "");
-DEFINE_bool(use_symmetric_group_cuboids, false, "");
+
+// To be removed.
+//DEFINE_bool(use_symmetric_group_cuboids, false, "");
 
 DEFINE_string(data_root_path, "D:/Data/shape2pose/", "");
 DEFINE_string(label_info_path, "data/0_body/coseg_chairs/", "");
@@ -91,10 +93,11 @@ void MeshViewerCore::open_cuboid_file(const char *_filename)
 		} while (std::cin.get() != '\n');
 	}
 
-	if (FLAGS_use_symmetric_group_cuboids)
-	{
-		cuboid_structure_.add_symmetric_group_labels();
-	}
+	// To be removed.
+	//if (FLAGS_use_symmetric_group_cuboids)
+	//{
+	//	cuboid_structure_.add_symmetric_group_labels();
+	//}
 
 	cuboid_structure_.load_cuboids(_filename);
 	draw_cuboid_axes_ = true;
@@ -141,10 +144,11 @@ void MeshViewerCore::train()
 		} while (std::cin.get() != '\n');
 	}
 
-	if (FLAGS_use_symmetric_group_cuboids)
-	{
-		cuboid_structure_.add_symmetric_group_labels();
-	}
+	// To be removed.
+	//if (FLAGS_use_symmetric_group_cuboids)
+	//{
+	//	cuboid_structure_.add_symmetric_group_labels();
+	//}
 
 	unsigned int num_labels = cuboid_structure_.num_labels();
 
@@ -227,10 +231,13 @@ void MeshViewerCore::train()
 			// Find the largest part for each part.
 			cuboid_structure_.find_the_largest_label_cuboids();
 
-			if (FLAGS_use_symmetric_group_cuboids)
-			{
-				cuboid_structure_.create_symmetric_group_cuboids();
-			}
+
+			// To be removed.
+			//if (FLAGS_use_symmetric_group_cuboids)
+			//{
+			//	cuboid_structure_.create_symmetric_group_cuboids();
+			//}
+
 
 			open_modelview_matrix_file(FLAGS_pose_filename.c_str());
 
@@ -478,10 +485,13 @@ void MeshViewerCore::predict()
 		} while (std::cin.get() != '\n');
 	}
 
-	if (FLAGS_use_symmetric_group_cuboids)
-	{
-		cuboid_structure_.add_symmetric_group_labels();
-	}
+
+	// To be removed.
+	//if (FLAGS_use_symmetric_group_cuboids)
+	//{
+	//	cuboid_structure_.add_symmetric_group_labels();
+	//}
+
 
 	ret = true;
 	MeshCuboidTrainer trainer;
@@ -622,8 +632,7 @@ void MeshViewerCore::predict()
 
 	updateGL();
 	snapshot_filename_sstr.clear(); snapshot_filename_sstr.str("");
-	snapshot_filename_sstr << FLAGS_output_path + std::string("/Temp")
-		<< filename_prefix << std::string("input");
+	snapshot_filename_sstr << FLAGS_output_path << filename_prefix << std::string("input");
 	snapshot(snapshot_filename_sstr.str().c_str());
 
 
@@ -653,6 +662,7 @@ void MeshViewerCore::predict()
 	{
 		// FIXME:
 		// The cuboid structure should not deep copy all sample points.
+		// Use smart pointers for sample points.
 		std::string cuboid_structure_name = cuboid_structure_candidates.front().first;
 		cuboid_structure_ = cuboid_structure_candidates.front().second;
 		cuboid_structure_candidates.pop_front();
@@ -744,25 +754,22 @@ void MeshViewerCore::predict()
 				<< num_final_cuboid_structure_candidates << std::string(".arff");
 			cuboid_structure_.save_cuboids(cuboid_filename_sstr.str());
 
+			// To be removed.
+			//if (FLAGS_use_symmetric_group_cuboids)
+			//{
+			//	symmetrize_cuboids(cuboid_structure_);
 
-			//
-			if (FLAGS_use_symmetric_group_cuboids)
-			{
-				symmetrize_cuboids(cuboid_structure_);
+			//	updateGL();
+			//	snapshot_filename_sstr.clear(); snapshot_filename_sstr.str("");
+			//	snapshot_filename_sstr << FLAGS_output_path << filename_prefix
+			//		<< num_final_cuboid_structure_candidates << std::string("_symmetrized");
+			//	snapshot(snapshot_filename_sstr.str().c_str());
 
-				updateGL();
-				snapshot_filename_sstr.clear(); snapshot_filename_sstr.str("");
-				snapshot_filename_sstr << FLAGS_output_path << filename_prefix
-					<< num_final_cuboid_structure_candidates << std::string("_symmetrized");
-				snapshot(snapshot_filename_sstr.str().c_str());
-
-				cuboid_filename_sstr.clear(); cuboid_filename_sstr.str("");
-				cuboid_filename_sstr << FLAGS_output_path << filename_prefix
-					<< num_final_cuboid_structure_candidates << std::string("_symmetrized.arff");
-				cuboid_structure_.save_cuboids(cuboid_filename_sstr.str());
-			}
-			//
-
+			//	cuboid_filename_sstr.clear(); cuboid_filename_sstr.str("");
+			//	cuboid_filename_sstr << FLAGS_output_path << filename_prefix
+			//		<< num_final_cuboid_structure_candidates << std::string("_symmetrized.arff");
+			//	cuboid_structure_.save_cuboids(cuboid_filename_sstr.str());
+			//}
 
 			if (mesh_label_file.exists())
 			{
@@ -774,23 +781,22 @@ void MeshViewerCore::predict()
 				evaluator.save_evaluate_results(stats_filename_sstr.str());
 			}
 
+			//if (FLAGS_use_symmetric_group_cuboids)
+			//{
 
-			//
-			if (FLAGS_use_symmetric_group_cuboids)
-			{
-				cuboid_structure_.clear_cuboids();
+			// Reconstruction.
+			cuboid_structure_.copy_sample_points_to_symmetric_position();
+			cuboid_structure_.clear_cuboids();
 
-				updateGL();
-				snapshot_filename_sstr.clear(); snapshot_filename_sstr.str("");
-				snapshot_filename_sstr << FLAGS_output_path << filename_prefix
-					<< num_final_cuboid_structure_candidates << std::string("_reconstructed");
-				snapshot(snapshot_filename_sstr.str().c_str());
+			updateGL();
+			snapshot_filename_sstr.clear(); snapshot_filename_sstr.str("");
+			snapshot_filename_sstr << FLAGS_output_path << filename_prefix
+				<< num_final_cuboid_structure_candidates << std::string("_reconstructed");
+			snapshot(snapshot_filename_sstr.str().c_str());
 
-				snapshot_filename_sstr << std::string(".pts");
-				cuboid_structure_.save_sample_points(snapshot_filename_sstr.str().c_str());
-			}
-			//
-
+			snapshot_filename_sstr << std::string(".pts");
+			cuboid_structure_.save_sample_points(snapshot_filename_sstr.str().c_str());
+			//}
 
 			++num_final_cuboid_structure_candidates;
 			last_iteration = false;
@@ -869,10 +875,13 @@ void MeshViewerCore::batch_render_point_clusters()
 		} while (std::cin.get() != '\n');
 	}
 
-	if (FLAGS_use_symmetric_group_cuboids)
-	{
-		cuboid_structure_.add_symmetric_group_labels();
-	}
+
+	// To be removed.
+	//if (FLAGS_use_symmetric_group_cuboids)
+	//{
+	//	cuboid_structure_.add_symmetric_group_labels();
+	//}
+
 
 	unsigned int num_labels = cuboid_structure_.num_labels();
 
@@ -952,10 +961,13 @@ void MeshViewerCore::batch_render_cuboids()
 		} while (std::cin.get() != '\n');
 	}
 
-	if (FLAGS_use_symmetric_group_cuboids)
-	{
-		cuboid_structure_.add_symmetric_group_labels();
-	}
+
+	// To be removed.
+	//if (FLAGS_use_symmetric_group_cuboids)
+	//{
+	//	cuboid_structure_.add_symmetric_group_labels();
+	//}
+
 
 	unsigned int num_labels = cuboid_structure_.num_labels();
 
@@ -1014,10 +1026,13 @@ void MeshViewerCore::batch_render_points()
 		} while (std::cin.get() != '\n');
 	}
 
-	if (FLAGS_use_symmetric_group_cuboids)
-	{
-		cuboid_structure_.add_symmetric_group_labels();
-	}
+
+	// To be removed.
+	//if (FLAGS_use_symmetric_group_cuboids)
+	//{
+	//	cuboid_structure_.add_symmetric_group_labels();
+	//}
+
 
 	unsigned int num_labels = cuboid_structure_.num_labels();
 

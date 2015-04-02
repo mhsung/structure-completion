@@ -32,7 +32,7 @@ public:
 	void clear_labels();
 
 	bool load_cuboids(const std::string _filename, bool _verbose = true);
-	bool save_cuboids(const std::string _filename, bool _verbose = true);
+	bool save_cuboids(const std::string _filename, bool _verbose = true) const;
 
 	void apply_mesh_transformation();
 
@@ -66,6 +66,8 @@ public:
 	// Get sample point labels from the label confidence values.
 	std::vector<LabelIndex> get_sample_point_label_indices();
 
+	MeshSamplePoint *add_sample_point(const MyMesh::Point& _pos);
+
 	void add_sample_points_from_mesh_vertices();
 
 	void compute_label_cuboids();
@@ -87,20 +89,27 @@ public:
 
 	void remove_occluded_sample_points(const std::set<FaceIndex>& _visible_face_indices);
 
-	// Remove cuboids in symmetric labels (when the same cuboids are duplicated for symmetric labels).
 	void remove_symmetric_cuboids();
 
-	bool is_label_group(LabelIndex _label_index);
-
-	void clear_symmetric_group_labels();
-
-	void add_symmetric_group_labels();
-
-	void create_symmetric_group_cuboids();
-
-	int find_parent_label_index(const LabelIndex _label_index_1, const LabelIndex _label_index_2);
+	// NOTICE:
+	// Symmetry group functions are replaced with 'MeshCuboidSymmetryGroup' class.
+	//bool is_label_group(LabelIndex _label_index);
+	//void clear_symmetric_group_labels();
+	//void add_symmetric_group_labels();
+	//void create_symmetric_group_cuboids();
+	//int find_parent_label_index(const LabelIndex _label_index_1, const LabelIndex _label_index_2);
 
 	void compute_symmetry_groups();
+
+	void copy_sample_points_to_symmetric_position();
+
+	void copy_sample_points_to_symmetric_position(
+		const MeshCuboidSymmetryGroup* _symmetry_group);
+
+	void copy_sample_points_to_symmetric_position(
+		const MeshCuboidSymmetryGroup* _symmetry_group,
+		const MeshCuboid *_cuboid_1, MeshCuboid *_cuboid_2);
+
 
 	// TEST.
 	bool test_load_cuboids(const char *_filename, bool _verbose = true);
@@ -135,7 +144,7 @@ public:
 	std::vector<std::string> label_names_;
 	std::vector< std::list<LabelIndex> > label_symmetries_;
 	std::vector< std::vector<MeshCuboid *> > label_cuboids_;
-	std::vector< std::list<LabelIndex> > label_children_;
+	//std::vector< std::list<LabelIndex> > label_children_;
 
 	std::vector< MeshCuboidSymmetryGroupInfo > symmetry_group_info_;
 	std::vector< MeshCuboidSymmetryGroup* > symmetry_groups_;

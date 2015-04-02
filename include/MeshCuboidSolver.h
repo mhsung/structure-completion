@@ -94,8 +94,8 @@ void add_missing_cuboids(
 	const std::list<LabelIndex> &_missing_label_indices,
 	const MeshCuboidPredictor &_predictor);
 
-void symmetrize_cuboids(
-	MeshCuboidStructure &_cuboid_structure);
+//void symmetrize_cuboids(
+//	MeshCuboidStructure &_cuboid_structure);
 
 /*
 MeshCuboid *test_joint_normal_training(

@@ -40,6 +40,14 @@ MeshCuboidSymmetryGroup::MeshCuboidSymmetryGroup(const MeshCuboidSymmetryGroupIn
 	
 }
 
+MeshCuboidSymmetryGroup::MeshCuboidSymmetryGroup(const MeshCuboidSymmetryGroup &_other)
+	: info_(_other.info_)
+	, n_(_other.n_)
+	, t_(_other.t_)
+{
+
+}
+
 MeshCuboidSymmetryGroup::~MeshCuboidSymmetryGroup()
 {
 
@@ -99,10 +107,11 @@ void MeshCuboidSymmetryGroup::get_single_cuboid_indices(const std::vector<MeshCu
 	for (unsigned int i = 0; i < num_single_labels; ++i)
 	{
 		Label label_index = info_.single_label_indices_[i];
-
 		int cuboid_index = 0;
 		for (; cuboid_index < num_cuboids; ++cuboid_index)
+		{
 			if (_cuboids[cuboid_index]->get_label_index() == label_index) break;
+		}
 
 		if (cuboid_index < num_cuboids)
 			_single_cuboid_indices.push_back(cuboid_index);

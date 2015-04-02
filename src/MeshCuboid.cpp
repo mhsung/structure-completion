@@ -574,6 +574,10 @@ void MeshCuboid::flip_axis(const unsigned int _axis_index)
 void MeshCuboid::clear_sample_points()
 {
 	sample_points_.clear();
+	sample_to_cuboid_surface_correspondence_.clear();
+	cuboid_surface_to_sample_corresopndence_.clear();
+
+	cuboid_surface_to_sample_corresopndence_.resize(num_cuboid_surface_points(), -1);
 }
 
 void MeshCuboid::add_sample_point(MeshSamplePoint *_point)
