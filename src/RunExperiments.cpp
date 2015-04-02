@@ -651,7 +651,6 @@ void MeshViewerCore::predict()
 
 	// Sub-routine.
 	bool first_iteration = true;
-	bool last_iteration = false;
 	unsigned int num_final_cuboid_structure_candidates = 0;
 
 	std::list< std::pair<std::string, MeshCuboidStructure> > cuboid_structure_candidates;
@@ -685,18 +684,13 @@ void MeshViewerCore::predict()
 		draw_cuboid_axes_ = true;
 		
 
+		std::cout << "\n1. Recognize labels and axes configurations." << std::endl;
 		// NOTE:
-		// If this iteration is last, do not perform label recognition (for efficiency).
-		if (!last_iteration)
-		{
-			std::cout << "\n1. Recognize labels and axes configurations." << std::endl;
-			// NOTE:
-			// Use symmetric label information only at the first time of the iteration.
-			recognize_labels_and_axes_configurations(cuboid_structure_,
-				joint_normal_predictor, log_filename_sstr.str(), first_iteration,
-				true);
-			first_iteration = false;
-		}
+		// Use symmetric label information only at the first time of the iteration.
+		recognize_labels_and_axes_configurations(cuboid_structure_,
+			joint_normal_predictor, log_filename_sstr.str(), first_iteration,
+			true);
+		first_iteration = false;
 
 		//
 		cuboid_structure_.compute_symmetry_groups();
@@ -740,9 +734,31 @@ void MeshViewerCore::predict()
 		++snapshot_index;
 
 
-		// Escape loop.
-		if (last_iteration)
+		std::cout << "\n4. Add missing cuboids." << std::endl;
+		assert(cuboid_structure_.num_labels() == num_labels);
+		std::list<LabelIndex> given_label_indices;
+		for (LabelIndex label_index = 0; label_index < num_labels; ++label_index)
+			if (!cuboid_structure_.label_cuboids_[label_index].empty())
+				given_label_indices.push_back(label_index);
+
+		std::list< std::list<LabelIndex> > missing_label_index_groups;
+		trainer.get_missing_label_index_groups(given_label_indices, missing_label_index_groups);
+
+
+		unsigned int missing_label_index_group_index = 0;
+
+		// NOTE:
+		// If there is no missing label, the next iteration becomes the last one.
+		if (missing_label_index_groups.empty())
 		{
+			//std::stringstream new_cuboid_structure_name;
+			//new_cuboid_structure_name << cuboid_structure_name << missing_label_index_group_index;
+			//cuboid_structure_candidates.push_front(
+			//	std::make_pair(new_cuboid_structure_name.str(), cuboid_structure_));
+			//last_iteration = true;
+
+
+			// Escape loop.
 			updateGL();
 			snapshot_filename_sstr.clear(); snapshot_filename_sstr.str("");
 			snapshot_filename_sstr << FLAGS_output_path << filename_prefix
@@ -799,33 +815,6 @@ void MeshViewerCore::predict()
 			//}
 
 			++num_final_cuboid_structure_candidates;
-			last_iteration = false;
-			continue;
-		}
-
-
-		std::cout << "\n4. Add missing cuboids." << std::endl;
-		assert(cuboid_structure_.num_labels() == num_labels);
-		std::list<LabelIndex> given_label_indices;
-		for (LabelIndex label_index = 0; label_index < num_labels; ++label_index)
-			if (!cuboid_structure_.label_cuboids_[label_index].empty())
-				given_label_indices.push_back(label_index);
-
-		std::list< std::list<LabelIndex> > missing_label_index_groups;
-		trainer.get_missing_label_index_groups(given_label_indices, missing_label_index_groups);
-
-
-		unsigned int missing_label_index_group_index = 0;
-
-		// NOTE:
-		// If there is no missing label, the next iteration becomes the last one.
-		if (missing_label_index_groups.empty())
-		{
-			std::stringstream new_cuboid_structure_name;
-			new_cuboid_structure_name << cuboid_structure_name << missing_label_index_group_index;
-			cuboid_structure_candidates.push_front(
-				std::make_pair(new_cuboid_structure_name.str(), cuboid_structure_));
-			last_iteration = true;
 		}
 		else
 		{

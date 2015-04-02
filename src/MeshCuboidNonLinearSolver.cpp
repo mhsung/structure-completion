@@ -541,6 +541,8 @@ void MeshCuboidNonLinearSolver::optimize(
 	add_symmetry_group_constraints(formulation);
 
 
+	std::cout << "Energy: (";
+
 	if (_init_values_vec)
 	{
 		Eigen::VectorXd all_init_values_vec;

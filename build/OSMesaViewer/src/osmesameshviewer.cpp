@@ -10,7 +10,6 @@
 #include <string>
 
 #include <gflags/gflags.h>
-#include <glog/logging.h>
 #include <QImage>
 
 #include "MeshViewerCore.h"
@@ -304,7 +303,6 @@ void snapshot(const std::string filename)
 int main(int argc, char** argv)
 {
 	gflags::ParseCommandLineFlags(&argc, &argv, true);
-	google::InitGoogleLogging(argv[0]);
 
 	// GLUT Window Initialization:
 	osmesaInitWindowSize(640, 480);
