@@ -62,6 +62,7 @@ public:
 	void batch_render_cuboids();
 	void batch_render_points();
 	void set_view_direction();
+	void set_random_view_direction(bool _set_modelview_matrix = false);
 	void parse_arguments();
 	void print_mesh_info();
 	//void do_occlusion_test();

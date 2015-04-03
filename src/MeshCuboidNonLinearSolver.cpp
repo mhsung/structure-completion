@@ -593,7 +593,7 @@ void MeshCuboidNonLinearSolver::optimize(
 	else {
 		std::cout << std::endl << std::endl << "*** The problem FAILED!"
 			<< " (" << static_cast<int>(status) << ")" << std::endl;
-		assert(false);
+		//assert(false);
 	}
 
 	// As the SmartPtrs go out of scope, the reference count

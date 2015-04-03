@@ -19,6 +19,7 @@
 
 struct MeshCuboidSymmetryGroupInfo
 {
+	MeshCuboidSymmetryGroupInfo();
 	MeshCuboidSymmetryGroupInfo(unsigned int _reflection_axis_index);
 	MeshCuboidSymmetryGroupInfo(const MeshCuboidSymmetryGroupInfo& _other);
 

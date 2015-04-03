@@ -56,6 +56,8 @@ public:
 
 	bool load_label_symmetries(const char *_filename, bool _verbose = true);
 
+	bool load_symmetry_groups(const char *_filename, bool _verbose = true);
+
 	bool load_sample_points(const char *_filename, bool _verbose = true);
 	bool save_sample_points(const char *_filename, bool _verbose = true);
 

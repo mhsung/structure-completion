@@ -912,10 +912,10 @@ void MeshViewerCore::draw_openmesh(const std::string& _drawmode)
 		}
 
 		// Draw viewing direction.
-		red_color();
-		draw_arrow(view_point_ + (1.0 * mesh_.get_object_diameter()) * view_direction_,
-			view_point_ + (1.25 * mesh_.get_object_diameter()) * view_direction_,
-			0.02 * mesh_.get_object_diameter());
+		//red_color();
+		//draw_arrow(view_point_ + (1.0 * mesh_.get_object_diameter()) * view_direction_,
+		//	view_point_ + (1.25 * mesh_.get_object_diameter()) * view_direction_,
+		//	0.02 * mesh_.get_object_diameter());
 	}
 	else if (_drawmode == COLORED_RENDERING) // -------------------------------------------
 	{

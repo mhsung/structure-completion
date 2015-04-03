@@ -416,20 +416,20 @@ bool MeshCuboidStructure::load_labels(const char *_filename, bool _verbose)
 		std::getline(file, buffer);
 		if (buffer == "") break;
 
-		std::stringstream strstr(buffer);
+		std::stringstream sstr(buffer);
 		
 		const unsigned int num_tokens = 3;
 		std::string tokens[num_tokens];
 
 		for (unsigned int i = 0; i < num_tokens; ++i)
 		{
-			if (strstr.eof())
+			if (sstr.eof())
 			{
 				std::cerr << "Error: Wrong file format: \"" << _filename << "\"" << std::endl;
 				return false;
 			}
 
-			std::getline(strstr, tokens[i], ' ');
+			std::getline(sstr, tokens[i], ' ');
 		}
 
 		if (tokens[1] != "pnts" || tokens[2] != "1")
@@ -485,13 +485,13 @@ bool MeshCuboidStructure::load_label_symmetries(const char *_filename, bool _ver
 		std::getline(file, buffer);
 		if (buffer == "") break;
 
-		std::stringstream strstr(buffer);
+		std::stringstream sstr(buffer);
 		std::list<LabelIndex> label_symmetry;
 
-		while (!strstr.eof())
+		while (!sstr.eof())
 		{
 			std::string token;
-			std::getline(strstr, token, ' ');
+			std::getline(sstr, token, ' ');
 
 			LabelIndex label_index = get_label_index(token);
 			assert(label_index < num_labels());
@@ -515,6 +515,121 @@ bool MeshCuboidStructure::load_label_symmetries(const char *_filename, bool _ver
 
 	file.close();
 
+
+	std::cout << "Done." << std::endl;
+	return true;
+}
+
+bool MeshCuboidStructure::load_symmetry_groups(const char *_filename, bool _verbose /*= true*/)
+{
+	std::ifstream file(_filename);
+	if (!file)
+	{
+		std::cerr << "Can't open file: \"" << _filename << "\"" << std::endl;
+		return false;
+	}
+
+	if (_verbose)
+		std::cout << "Loading " << _filename << "..." << std::endl;
+
+
+	for (std::vector< MeshCuboidSymmetryGroup* >::iterator it = symmetry_groups_.begin();
+		it != symmetry_groups_.end(); ++it)
+		delete (*it);
+	symmetry_groups_.clear();
+	symmetry_group_info_.clear();
+
+
+	std::string buffer;
+	MeshCuboidSymmetryGroupInfo new_symmetry_group;
+
+	while (!file.eof())
+	{
+		std::getline(file, buffer);
+		if (buffer == "") break;
+
+		std::stringstream sstr(buffer);
+		assert(!sstr.eof());
+		std::string head_element;
+		std::getline(sstr, head_element, ' ');
+
+		std::vector<std::string> tokens;
+		for (std::string each; std::getline(sstr, each, ' '); tokens.push_back(each));
+		const unsigned int num_tokens = tokens.size();
+
+		if (head_element == "symmetry_group")
+		{
+			if (tokens.size() != 0)
+			{
+				std::cerr << "Error: Wrong file format: \"" << _filename << "\"" << std::endl;
+				return false;
+			}
+			else if (!new_symmetry_group.single_label_indices_.empty()
+				|| !new_symmetry_group.pair_label_indices_.empty())
+			{
+				// Add the current symmetry group and create a new one.
+				symmetry_group_info_.push_back(new_symmetry_group);
+				new_symmetry_group = MeshCuboidSymmetryGroupInfo();
+			}
+		}
+		else if (head_element == "axis_index")
+		{
+			if (tokens.size() != 1)
+			{
+				std::cerr << "Error: Wrong file format: \"" << _filename << "\"" << std::endl;
+				return false;
+			}
+			else
+			{
+				unsigned int reflection_axis_index = atoi(tokens[0].c_str());
+				assert(reflection_axis_index < 3);
+				new_symmetry_group.reflection_axis_index_ = reflection_axis_index;
+			}
+		}
+		else if (head_element == "single_label_indices")
+		{
+			for (unsigned int i = 0; i < num_tokens; ++i)
+			{
+				LabelIndex label_index = atoi(tokens[i].c_str());
+				assert(label_index < labels_.size());
+				new_symmetry_group.single_label_indices_.push_back(label_index);
+			}
+		}
+		else if (head_element == "pair_label_indices")
+		{
+			if ((num_tokens % 2) != 0)
+			{
+				std::cerr << "Error: Wrong file format: \"" << _filename << "\"" << std::endl;
+				return false;
+			}
+			else
+			{
+				for (unsigned int i = 0; i < num_tokens / 2; ++i)
+				{
+					LabelIndex label_index_1 = atoi(tokens[2 * i + 0].c_str());
+					LabelIndex label_index_2 = atoi(tokens[2 * i + 1].c_str());
+					assert(label_index_1 < labels_.size());
+					assert(label_index_2 < labels_.size());
+					new_symmetry_group.pair_label_indices_.push_back(
+						std::make_pair(label_index_1, label_index_2));
+				}
+			}
+		}
+		else
+		{
+			std::cerr << "Error: Wrong file format: \"" << _filename << "\"" << std::endl;
+			return false;
+		}
+	}
+
+	if (!new_symmetry_group.single_label_indices_.empty()
+		|| !new_symmetry_group.pair_label_indices_.empty())
+	{
+		symmetry_group_info_.push_back(new_symmetry_group);
+		new_symmetry_group = MeshCuboidSymmetryGroupInfo();
+	}
+
+	file.close();
 
 	std::cout << "Done." << std::endl;
 	return true;

@@ -31,8 +31,10 @@ DEFINE_string(mesh_filename, "", "");
 
 DEFINE_string(label_info_filename, "regions.txt", "");
 DEFINE_string(label_symmetry_info_filename, "regions_symmetry.txt", "");
+DEFINE_string(symmetry_group_info_filename, "symmetry_groups.txt", "");
 DEFINE_string(pose_filename, "pose.txt", "");
-DEFINE_string(occlusion_pose_filename, "occlusion_pose.txt", "");
+//DEFINE_string(occlusion_pose_filename, "occlusion_pose.txt", "");
+DEFINE_string(occlusion_pose_filename, "", "");
 
 DEFINE_string(single_feature_filename_prefix, "single_feature_", "");
 DEFINE_string(pair_feature_filename_prefix, "pair_feature_", "");
@@ -122,6 +124,72 @@ void MeshViewerCore::set_view_direction()
 	{
 		view_point_[i] = view_point[i];
 		view_direction_[i] = view_direction[i];
+	}
+
+	update_cuboid_surface_points(cuboid_structure_, modelview_matrix());
+	updateGL();
+}
+
+void MeshViewerCore::set_random_view_direction(bool _set_modelview_matrix)
+{
+	Eigen::Matrix4d centering_mat = Eigen::Matrix4d::Identity();
+	for (int i = 0; i < 3; ++i)
+		centering_mat(i, 3) = -mesh().get_bbox_center()[i];
+
+	// Sample points on each face.
+	srand(time(NULL));
+
+	// latitude.
+	double x_angle_min = -M_PI;
+	double x_angle_max = 0;
+	double x_angle = static_cast<double>(rand()) / RAND_MAX * (x_angle_max - x_angle_min) + x_angle_min;
+	Eigen::Matrix4d x_axis_random_rotation_mat = Eigen::Matrix4d::Identity();
+	x_axis_random_rotation_mat(1, 1) = cos(x_angle);
+	x_axis_random_rotation_mat(1, 2) = -sin(x_angle);
+	x_axis_random_rotation_mat(2, 1) = sin(x_angle);
+	x_axis_random_rotation_mat(2, 2) = cos(x_angle);
+
+	// longitude.
+	double z_angle_min = 0;
+	double z_angle_max = 2 * M_PI;
+	double z_angle = static_cast<double>(rand()) / RAND_MAX * (z_angle_max - z_angle_min) + z_angle_min;
+	Eigen::Matrix4d z_axis_random_rotation_mat = Eigen::Matrix4d::Identity();
+	z_axis_random_rotation_mat(0, 0) = cos(z_angle);
+	z_axis_random_rotation_mat(0, 1) = -sin(z_angle);
+	z_axis_random_rotation_mat(1, 0) = sin(z_angle);
+	z_axis_random_rotation_mat(1, 1) = cos(z_angle);
+
+
+	const double x_offset = (static_cast<double>(rand()) / RAND_MAX - 0.5) * mesh().get_object_diameter();
+	const double y_offset = (static_cast<double>(rand()) / RAND_MAX - 0.5) * mesh().get_object_diameter();
+	const double z_offset = -1.5 * mesh().get_object_diameter();
+
+	Eigen::Matrix4d translation_mat = Eigen::Matrix4d::Identity();
+	translation_mat(0, 3) = x_offset;
+	translation_mat(1, 3) = y_offset;
+	translation_mat(2, 3) = z_offset;
+
+	Eigen::Matrix4d transformation_mat = translation_mat
+		* x_axis_random_rotation_mat * z_axis_random_rotation_mat * centering_mat;
+
+	// -Z direction.
+	Eigen::Vector3d view_direction = -transformation_mat.row(2).transpose().segment(0, 3);
+	Eigen::Vector3d view_point = transformation_mat.col(3).segment(0, 3);
+
+	for (unsigned int i = 0; i < 3; ++i)
+	{
+		view_point_[i] = view_point[i];
+		view_direction_[i] = view_direction[i];
+	}
+
+	if (_set_modelview_matrix)
+	{
+		GLdouble matrix[16];
+		for (int col = 0; col < 4; ++col)
+			for (int row = 0; row < 4; ++row)
+				matrix[4 * col + row] = transformation_mat(row, col);
+
+		set_modelview_matrix(matrix);
 	}
 
 	update_cuboid_surface_points(cuboid_structure_, modelview_matrix());
@@ -477,6 +545,10 @@ void MeshViewerCore::predict()
 	ret = ret & cuboid_structure_.load_label_symmetries((FLAGS_data_root_path +
 		FLAGS_label_info_path + FLAGS_label_symmetry_info_filename).c_str());
 
+	// Load symmetry groups.
+	ret = ret & cuboid_structure_.load_symmetry_groups((FLAGS_data_root_path +
+		FLAGS_label_info_path + FLAGS_symmetry_group_info_filename).c_str());
+
 	if (!ret)
 	{
 		do {
@@ -591,28 +663,20 @@ void MeshViewerCore::predict()
 	}
 
 
-	// TEST.
-	MeshCuboidSymmetryGroupInfo symmetry_group_info_1(0);
-	symmetry_group_info_1.single_label_indices_.push_back(0);
-	symmetry_group_info_1.single_label_indices_.push_back(1);
-	symmetry_group_info_1.pair_label_indices_.push_back(std::make_pair(2, 3));
-	symmetry_group_info_1.pair_label_indices_.push_back(std::make_pair(4, 5));
-	symmetry_group_info_1.pair_label_indices_.push_back(std::make_pair(8, 9));
-	cuboid_structure_.symmetry_group_info_.push_back(symmetry_group_info_1);
-
-	MeshCuboidSymmetryGroupInfo symmetry_group_info_2(1);
-	symmetry_group_info_1.single_label_indices_.push_back(0);
-	symmetry_group_info_2.pair_label_indices_.push_back(std::make_pair(2, 4));
-	symmetry_group_info_2.pair_label_indices_.push_back(std::make_pair(3, 5));
-	cuboid_structure_.symmetry_group_info_.push_back(symmetry_group_info_2);
-
-
 	// Pre-processing.
 	std::cout << "\n - Remove occluded points." << std::endl;
-	open_modelview_matrix_file(FLAGS_occlusion_pose_filename.c_str());
-	remove_occluded_points();
-	//do_occlusion_test();
-	set_view_direction();
+	if (FLAGS_occlusion_pose_filename == "")
+	{
+		set_random_view_direction(true);
+		remove_occluded_points();
+	}
+	else
+	{
+		open_modelview_matrix_file(FLAGS_occlusion_pose_filename.c_str());
+		remove_occluded_points();
+		//do_occlusion_test();
+		set_view_direction();
+	}
 
 	double occlusion_modelview_matrix[16];
 	memcpy(occlusion_modelview_matrix, modelview_matrix(), 16 * sizeof(double));
@@ -627,9 +691,13 @@ void MeshViewerCore::predict()
 	//assert(occlusion_test_ann_points);
 	//assert(occlusion_test_points_kd_tree);
 
-	open_modelview_matrix_file(FLAGS_pose_filename.c_str());
 	mesh_.clear_colors();
+	updateGL();
+	snapshot_filename_sstr.clear(); snapshot_filename_sstr.str("");
+	snapshot_filename_sstr << FLAGS_output_path << filename_prefix << std::string("view");
+	snapshot(snapshot_filename_sstr.str().c_str());
 
+	open_modelview_matrix_file(FLAGS_pose_filename.c_str());
 	updateGL();
 	snapshot_filename_sstr.clear(); snapshot_filename_sstr.str("");
 	snapshot_filename_sstr << FLAGS_output_path << filename_prefix << std::string("input");

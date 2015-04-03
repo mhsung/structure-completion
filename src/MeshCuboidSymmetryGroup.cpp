@@ -5,6 +5,12 @@
 #include <Eigen/Eigenvalues> 
 
 
+MeshCuboidSymmetryGroupInfo::MeshCuboidSymmetryGroupInfo()
+	: reflection_axis_index_(0)
+{
+
+}
+
 MeshCuboidSymmetryGroupInfo::MeshCuboidSymmetryGroupInfo(unsigned int _reflection_axis_index)
 	: reflection_axis_index_(_reflection_axis_index)
 {
