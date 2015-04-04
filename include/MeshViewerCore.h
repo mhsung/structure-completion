@@ -65,7 +65,9 @@ public:
 	void set_random_view_direction(bool _set_modelview_matrix = false);
 	void parse_arguments();
 	void print_mesh_info();
+	void reconstruct_using_database();
 	//void do_occlusion_test();
+	void run_test();
 	//
 
 	// TEST.

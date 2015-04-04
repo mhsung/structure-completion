@@ -252,12 +252,16 @@ void create_menu(QMainWindow &w)
 
 
 	// TEST.
-	runAct = new QAction(w.tr("[Test] Initialize"), &w);
-	QObject::connect(runAct, SIGNAL(triggered()), w.centralWidget(), SLOT(run_test_initialize()));
-	w.menuBar()->addAction(runAct);
+	//runAct = new QAction(w.tr("[Test] Initialize"), &w);
+	//QObject::connect(runAct, SIGNAL(triggered()), w.centralWidget(), SLOT(run_test_initialize()));
+	//w.menuBar()->addAction(runAct);
 
-	runAct = new QAction(w.tr("[Test] Optimize"), &w);
-	QObject::connect(runAct, SIGNAL(triggered()), w.centralWidget(), SLOT(run_test_optimize()));
+	//runAct = new QAction(w.tr("[Test] Optimize"), &w);
+	//QObject::connect(runAct, SIGNAL(triggered()), w.centralWidget(), SLOT(run_test_optimize()));
+	//w.menuBar()->addAction(runAct);
+
+	runAct = new QAction(w.tr("Test"), &w);
+	QObject::connect(runAct, SIGNAL(triggered()), w.centralWidget(), SLOT(run_test()));
 	w.menuBar()->addAction(runAct);
 	//
 }

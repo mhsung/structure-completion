@@ -251,6 +251,7 @@ public slots:
 	void run_set_view_direction() { mesh_viewer_core_.set_view_direction(); }
 	void run_print_arguments() { mesh_viewer_core_.parse_arguments(); }
 	void run_print_mesh_info() { mesh_viewer_core_.print_mesh_info(); }
+	void run_test() { mesh_viewer_core_.run_test(); }
 
 	void run_test_initialize() { mesh_viewer_core_.test_initialize(); }
 	void run_test_optimize() { mesh_viewer_core_.test_optimize(); }
