@@ -16,8 +16,12 @@
 #include <Eigen/Eigenvalues>
 #include <Eigen/SVD>
 #include <Eigen/Geometry>
-#include <GL/glut.h>
 
+#if __APPLE__
+#include <GLUT/glut.h>
+#else
+#include <GL/glut.h>
+#endif
 
 // Corners.
 // [0]: - - -

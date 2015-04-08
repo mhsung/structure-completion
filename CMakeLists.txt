@@ -2,7 +2,9 @@ cmake_minimum_required (VERSION 2.6)
 project (QtViewer)
 
 # add our macro directory to cmake search path
-set (OPENMESH_DIR "C:/OpenMesh" CACHE PATH "The directory where the OpenMesh files can be found.")
+set (LIBRARY_ROOT_PATH ${CMAKE_CURRENT_SOURCE_DIR}/../../lib CACHE PATH "The directory where the all library files can be found.")
+set (OPENMESH_DIR ${LIBRARY_ROOT_PATH}/OpenMesh CACHE PATH "The directory where the OpenMesh files can be found.")
+
 set (CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} ${CMAKE_SOURCE_DIR}/cmake ${CMAKE_CURRENT_SOURCE_DIR}/cmake ${OPENMESH_DIR}/cmake)
 set (CMAKE_DEBUG_POSTFIX "d")
 

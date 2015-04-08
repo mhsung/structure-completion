@@ -15,8 +15,8 @@ target_link_libraries (${targetName}
   ${LIBRARY_ROOT_PATH}/Ipopt-3.12.1/build/lib/libcoinmetis.so
   ${LIBRARY_ROOT_PATH}/Ipopt-3.12.1/build/lib/libcoinmumps.so
   #${LIBRARY_ROOT_PATH}/ceres-solver-1.10.0/build/lib/libceres.a
-  #${LIBRARY_ROOT_PATH}/glog-0.3.3/build/lib/libglog.a
-  #${LIBRARY_ROOT_PATH}/glog-0.3.3/build/lib/libglog.so
+  #${LIBRARY_ROOT_PATH}/glog/build/lib/libglog.a
+  #${LIBRARY_ROOT_PATH}/glog/build/lib/libglog.so
 )
 endif()
 
