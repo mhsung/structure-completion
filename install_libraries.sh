@@ -22,7 +22,8 @@ mkdir lib && cd lib
 wget http://www.cs.umd.edu/~mount/ANN/Files/1.1.2/ann_1.1.2.tar.gz
 tar xvf ann_1.1.2.tar.gz
 rm -rf ann_1.1.2.tar.gz
-cd ann_1.1.2
+mv ann_1.1.2 ann-1.1.2
+cd ann-1.1.2
 make macosx-g++
 cd ../
 

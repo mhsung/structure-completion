@@ -6,13 +6,17 @@ if (UNIX)
 include_directories (
   ${LIBRARY_ROOT_PATH}/glog/build/include
   ${LIBRARY_ROOT_PATH}/Ipopt-3.12.1/build/include/coin
+  ${LIBRARY_ROOT_PATH}/gflags/build/include
+  ${LIBRARY_ROOT_PATH}/glew-1.12.0/include
 )
 endif()
 
 if (WIN32)
 include_directories (
-  #${LIBRARY_ROOT_PATH}/glog-0.3.3/src/windows
+  ${LIBRARY_ROOT_PATH}/glog-0.3.3/src/windows
   ${LIBRARY_ROOT_PATH}/Ipopt-3.11.0/include/coin
+  ${LIBRARY_ROOT_PATH}/gflags-2.1.1/build/include
+  ${LIBRARY_ROOT_PATH}/glew-1.11.0/include
 )
 
 # source code directories
@@ -43,10 +47,8 @@ include_directories (
   ${CMAKE_CURRENT_LIST_DIR}/../src
   ${CMAKE_CURRENT_LIST_DIR}/../ipopt
   #${CMAKE_CURRENT_LIST_DIR}/../shader
-  ${LIBRARY_ROOT_PATH}/ann_1.1.2/include
+  ${LIBRARY_ROOT_PATH}/ann-1.1.2/include
   ${LIBRARY_ROOT_PATH}/eigen-3.2.2
-  ${LIBRARY_ROOT_PATH}/gflags/build/include
-  ${LIBRARY_ROOT_PATH}/glew-1.12.0/include
   ${LIBRARY_ROOT_PATH}/TRW_S-v1.3
   ${LIBRARY_ROOT_PATH}/wingsit_QP
   #${LIBRARY_ROOT_PATH}/ceres-solver-1.10.0/config
