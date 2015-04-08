@@ -5,8 +5,8 @@
 if (UNIX)
 target_link_libraries (${targetName}
   ${LIBRARY_ROOT_PATH}/ann-1.1.2/lib/libANN.a
-  ${LIBRARY_ROOT_PATH}/glew-1.11.0/lib/libGLEW.a
-  #${LIBRARY_ROOT_PATH}/glew-1.11.0/lib/libGLEW.so
+  ${LIBRARY_ROOT_PATH}/glew-1.12.0/build/lib/libGLEW.a
+  #${LIBRARY_ROOT_PATH}/glew-1.12.0/build/lib/libGLEW.so
 )
 
 target_link_libraries (${targetName}
@@ -14,9 +14,9 @@ target_link_libraries (${targetName}
   ${LIBRARY_ROOT_PATH}/Ipopt-3.12.1/build/lib/libipopt.so
   ${LIBRARY_ROOT_PATH}/Ipopt-3.12.1/build/lib/libcoinmetis.so
   ${LIBRARY_ROOT_PATH}/Ipopt-3.12.1/build/lib/libcoinmumps.so
-  ${LIBRARY_ROOT_PATH}/glog/build/lib/libglog.a
-  ${LIBRARY_ROOT_PATH}/glog/build/lib/libglog.so
   #${LIBRARY_ROOT_PATH}/ceres-solver-1.10.0/build/lib/libceres.a
+  #${LIBRARY_ROOT_PATH}/glog/build/lib/libglog.a
+  #${LIBRARY_ROOT_PATH}/glog/build/lib/libglog.so
 )
 endif()
 
@@ -30,13 +30,13 @@ target_link_libraries (${targetName}
 
 target_link_libraries (${targetName}
   debug ${LIBRARY_ROOT_PATH}/gflags-2.1.1/build/lib/Debug/gflags.lib
-  debug ${LIBRARY_ROOT_PATH}/glog-0.3.3/x64/Debug/libglog.lib
+  #debug ${LIBRARY_ROOT_PATH}/glog-0.3.3/x64/Debug/libglog.lib
   #debug ${LIBRARY_ROOT_PATH}/ceres-solver-1.10.0/build/lib/Debug/ceres-debug.lib
 )
   
 target_link_libraries (${targetName}
   optimized ${LIBRARY_ROOT_PATH}/gflags-2.1.1/build/lib/Release/gflags.lib
-  optimized ${LIBRARY_ROOT_PATH}/glog-0.3.3/x64/Release/libglog.lib
+  #optimized ${LIBRARY_ROOT_PATH}/glog-0.3.3/x64/Release/libglog.lib
   #optimized ${LIBRARY_ROOT_PATH}/ceres-solver-1.10.0/build/lib/Release/ceres.lib
 )
 endif()

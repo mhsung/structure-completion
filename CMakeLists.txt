@@ -2,6 +2,11 @@ cmake_minimum_required (VERSION 2.6)
 project (QtViewer)
 
 # add our macro directory to cmake search path
+if (NOT CMAKE_BUILD_TYPE)
+  set (CMAKE_BUILD_TYPE RelWithDebInfo CACHE STRING
+    "Choose the type of build, options are: None Debug Release RelWithDebInfo MinSizeRel." FORCE)
+endif (NOT CMAKE_BUILD_TYPE)
+
 set (LIBRARY_ROOT_PATH ${CMAKE_CURRENT_SOURCE_DIR}/../../lib CACHE PATH "The directory where the all library files can be found.")
 set (OPENMESH_DIR ${LIBRARY_ROOT_PATH}/OpenMesh CACHE PATH "The directory where the OpenMesh files can be found.")
 
@@ -190,13 +195,13 @@ target_link_libraries (${targetName}
 
 if (UNIX)
 target_link_libraries (${targetName}
-  debug ${OPENMESH_LIBRARY_DIR}/OpenMesh/libOpenMeshCore${CMAKE_DEBUG_POSTFIX}.so
-  debug ${OPENMESH_LIBRARY_DIR}/OpenMesh/libOpenMeshTools${CMAKE_DEBUG_POSTFIX}.so
+  debug ${OPENMESH_LIBRARY_DIR}/libOpenMeshCore${CMAKE_DEBUG_POSTFIX}.so
+  debug ${OPENMESH_LIBRARY_DIR}/libOpenMeshTools${CMAKE_DEBUG_POSTFIX}.so
 )
   
 target_link_libraries (${targetName}
-  ${OPENMESH_LIBRARY_DIR}/OpenMesh/libOpenMeshCore.so
-  ${OPENMESH_LIBRARY_DIR}/OpenMesh/libOpenMeshTools.so
+  ${OPENMESH_LIBRARY_DIR}/libOpenMeshCore.so
+  ${OPENMESH_LIBRARY_DIR}/libOpenMeshTools.so
 )
 endif()
 
