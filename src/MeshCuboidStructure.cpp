@@ -572,12 +572,12 @@ bool MeshCuboidStructure::load_symmetry_groups(const char *_filename, bool _verb
 
 		if (head_element == "symmetry_group")
 		{
-			if (tokens.size() != 0)
-			{
-				std::cerr << "Error: Wrong file format: \"" << _filename << "\"" << std::endl;
-				return false;
-			}
-			else if (!new_symmetry_group.single_label_indices_.empty()
+			//if (tokens.size() != 0)
+			//{
+			//	std::cerr << "Error: Wrong file format: \"" << _filename << "\"" << std::endl;
+			//	return false;
+			//}
+			if (!new_symmetry_group.single_label_indices_.empty()
 				|| !new_symmetry_group.pair_label_indices_.empty())
 			{
 				// Add the current symmetry group and create a new one.
