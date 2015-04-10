@@ -1420,42 +1420,6 @@ void MeshCuboidStructure::split_label_cuboids()
 	}
 }
 
-void MeshCuboidStructure::remove_occluded_sample_points(
-	const std::set<FaceIndex>& _visible_face_indices)
-{
-	assert(mesh_);
-
-	unsigned int num_faces = mesh_->n_faces();
-	bool *is_face_visible = new bool[num_faces];
-	memset(is_face_visible, false, num_faces * sizeof(bool));
-
-	for (std::set<FaceIndex>::const_iterator it = _visible_face_indices.begin();
-		it != _visible_face_indices.end(); ++it)
-	{
-		FaceIndex fid = (*it);
-		assert(fid < num_faces);
-		is_face_visible[fid] = true;
-	}
-
-	for (std::vector<MeshSamplePoint *>::iterator it = sample_points_.begin();
-		it != sample_points_.end();)	// No increment.
-	{
-		if (!is_face_visible[(*it)->corr_fid_])
-			it = sample_points_.erase(it);
-		else
-			++it;
-	}
-
-	// Re-numbering.
-	for (SamplePointIndex sample_point_index = 0; sample_point_index < num_sample_points(); ++sample_point_index)
-	{
-		MeshSamplePoint *sample_point = sample_points_[sample_point_index];
-		sample_point->sample_point_index_ = sample_point_index;
-	}
-
-	delete[] is_face_visible;
-}
-
 void MeshCuboidStructure::remove_symmetric_cuboids()
 {
 	// Remove cuboids in symmetric labels (when the same cuboids are duplicated for symmetric labels).
@@ -1590,6 +1554,42 @@ Label MeshCuboidStructure::get_new_label()const
 }
 
 /*
+void MeshCuboidStructure::remove_occluded_sample_points(
+	const std::set<FaceIndex>& _visible_face_indices)
+{
+	assert(mesh_);
+
+	unsigned int num_faces = mesh_->n_faces();
+	bool *is_face_visible = new bool[num_faces];
+	memset(is_face_visible, false, num_faces * sizeof(bool));
+
+	for (std::set<FaceIndex>::const_iterator it = _visible_face_indices.begin();
+		it != _visible_face_indices.end(); ++it)
+	{
+		FaceIndex fid = (*it);
+		assert(fid < num_faces);
+		is_face_visible[fid] = true;
+	}
+
+	for (std::vector<MeshSamplePoint *>::iterator it = sample_points_.begin();
+		it != sample_points_.end();)	// No increment.
+	{
+		if (!is_face_visible[(*it)->corr_fid_])
+			it = sample_points_.erase(it);
+		else
+			++it;
+	}
+
+	// Re-numbering.
+	for (SamplePointIndex sample_point_index = 0; sample_point_index < num_sample_points(); ++sample_point_index)
+	{
+		MeshSamplePoint *sample_point = sample_points_[sample_point_index];
+		sample_point->sample_point_index_ = sample_point_index;
+	}
+
+	delete[] is_face_visible;
+}
+
 bool MeshCuboidStructure::is_label_group(LabelIndex _label_index)
 {
 	assert(_label_index < label_children_.size());

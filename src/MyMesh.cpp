@@ -109,6 +109,7 @@ void MyMesh::initialize()
 
 	//make_face_normal_consistent();
 	
+	clear_colors();
 
 	// Compute bounding box.
 	MyMesh::Point bbox_min, bbox_max;

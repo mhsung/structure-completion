@@ -246,8 +246,8 @@ void create_menu(QMainWindow &w)
 	QObject::connect(runAct, SIGNAL(triggered()), w.centralWidget(), SLOT(run_batch_render_points()));
 	w.menuBar()->addAction(runAct);
 
-	runAct = new QAction(w.tr("Set View Direction"), &w);
-	QObject::connect(runAct, SIGNAL(triggered()), w.centralWidget(), SLOT(run_set_view_direction()));
+	runAct = new QAction(w.tr("Remove Occluded Points"), &w);
+	QObject::connect(runAct, SIGNAL(triggered()), w.centralWidget(), SLOT(run_remove_occluded_points()));
 	w.menuBar()->addAction(runAct);
 
 

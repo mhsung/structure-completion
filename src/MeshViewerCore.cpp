@@ -598,7 +598,6 @@ void MeshViewerCore::draw_openmesh(const std::string& _drawmode)
 		Mesh::ConstFaceIter f_it(mesh_.faces_begin()), f_end(mesh_.faces_end());
 		Mesh::ConstFaceVertexIter fv_it;
 
-		/*
 		// Draw faces.
 		glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
 		glDepthRange(0.01, 1.0);
@@ -654,6 +653,7 @@ void MeshViewerCore::draw_openmesh(const std::string& _drawmode)
 			glPopMatrix();
 		}
 
+		/*
 		// Draw a query vertex (Blue).
 		if( mesh_.query_vertex_index_ < mesh_.n_vertices() )
 		{
@@ -1090,29 +1090,52 @@ void MeshViewerCore::draw_openmesh(const std::string& _drawmode)
 		if (mesh_.n_faces() >= static_cast<unsigned int>(std::pow(2, 8 * 3)))
 		{
 			std::cout << "Warning: Too many faces." << std::endl;
-		}
-		else
-		{
-			Mesh::ConstFaceIter f_it(mesh_.faces_begin()), f_end(mesh_.faces_end());
-			Mesh::ConstFaceVertexIter fv_it;
-
-			glBegin(GL_TRIANGLES);
-			for (; f_it != f_end; ++f_it)
+			do
 			{
-				FaceIndex face_index = f_it->idx();
-				GLubyte r = static_cast<GLubyte>(face_index % 256);
-				GLubyte g = static_cast<GLubyte>((face_index >> 8) % 256);
-				GLubyte b = static_cast<GLubyte>((face_index >> 16) % 256);
-				glColor3ub(r, g, b);
+				std::cout << '\n' << "Press the Enter key to continue.";
+			} while (std::cin.get() != '\n');
+		}
 
-				fv_it = mesh_.cfv_iter(f_it.handle());
-				glVertex3dv(&mesh_.point(fv_it)[0]);
-				++fv_it;
-				glVertex3dv(&mesh_.point(fv_it)[0]);
-				++fv_it;
-				glVertex3dv(&mesh_.point(fv_it)[0]);
-			}
-			glEnd();
+		const unsigned int num_sample_points = cuboid_structure_.num_sample_points();
+		Mesh::ConstFaceIter f_it(mesh_.faces_begin()), f_end(mesh_.faces_end());
+		Mesh::ConstFaceVertexIter fv_it;
+
+		// Draw mesh.
+		glBegin(GL_TRIANGLES);
+		for (; f_it != f_end; ++f_it)
+		{
+			FaceIndex face_index = f_it->idx();
+			GLubyte r = static_cast<GLubyte>(num_sample_points + face_index % 256);
+			GLubyte g = static_cast<GLubyte>((num_sample_points + face_index >> 8) % 256);
+			GLubyte b = static_cast<GLubyte>((num_sample_points + face_index >> 16) % 256);
+			glColor3ub(r, g, b);
+
+			fv_it = mesh_.cfv_iter(f_it.handle());
+			glVertex3dv(&mesh_.point(fv_it)[0]);
+			++fv_it;
+			glVertex3dv(&mesh_.point(fv_it)[0]);
+			++fv_it;
+			glVertex3dv(&mesh_.point(fv_it)[0]);
+		}
+		glEnd();
+
+		// Draw sample point.
+		for (SamplePointIndex sample_point_index = 0; sample_point_index < num_sample_points; ++sample_point_index)
+		{
+			GLubyte r = static_cast<GLubyte>(sample_point_index % 256);
+			GLubyte g = static_cast<GLubyte>((sample_point_index >> 8) % 256);
+			GLubyte b = static_cast<GLubyte>((sample_point_index >> 16) % 256);
+			glColor3ub(r, g, b);
+
+			MeshSamplePoint *sample_point = cuboid_structure_.sample_points_[sample_point_index];
+			assert(sample_point);
+			GLdouble *point = &(sample_point->point_[0]);
+			Real radius = (mesh_.get_object_diameter() * 0.01) * point_size_;
+			glPushMatrix();
+			glTranslatef(point[0], point[1], point[2]);
+			glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
+			glutSolidSphere(radius, 8, 8);
+			glPopMatrix();
 		}
 	}
 }
@@ -1126,7 +1149,9 @@ void MeshViewerCore::remove_occluded_points()
 	GLenum buffer(GL_BACK);
 
 	std::vector<GLubyte> fbuffer(3 * w*h);
-	std::set<FaceIndex> visible_face_indices;
+	unsigned int num_sample_points = cuboid_structure_.num_sample_points();
+	bool *is_sample_point_visible = new bool[num_sample_points];
+	memset(is_sample_point_visible, false, num_sample_points * sizeof(bool));
 
 	//qApp->processEvents();
 	makeCurrent();
@@ -1154,28 +1179,33 @@ void MeshViewerCore::remove_occluded_points()
 			if (r >= 255 && g >= 255 && b >= 255)
 				continue;
 
-			FaceIndex face_index = r + 256 * g + 65536 * b;
-			assert(face_index < mesh_.n_faces());
-			visible_face_indices.insert(face_index);
+			int index = r + 256 * g + 65536 * b;
+			if(index < num_sample_points)
+				is_sample_point_visible[index] = true;
 		}
 	}
 
-	MyMesh::ConstFaceIter f_it, f_start(mesh_.faces_begin()), f_end(mesh_.faces_end());
-	for (f_it = f_start; f_it != f_end; ++f_it)
-		mesh_.set_color(f_it.handle(), MyMesh::Color(0, 255, 255));
+	// Remove occluded sample points.
+	std::vector<MeshSamplePoint *> new_sample_points;
+	new_sample_points.reserve(num_sample_points);
 
-	for (std::set<FaceIndex>::iterator it = visible_face_indices.begin();
-		it != visible_face_indices.end(); ++it)
+	for (SamplePointIndex sample_point_index = 0; sample_point_index < num_sample_points; ++sample_point_index)
 	{
-		FaceIndex face_index = *it;
-		MyMesh::FaceHandle fh = mesh_.face_handle(face_index);
-		mesh_.set_color(fh, MyMesh::Color(255, 0, 0));
+		if (is_sample_point_visible[sample_point_index])
+		{
+			cuboid_structure_.sample_points_[sample_point_index]->sample_point_index_ = new_sample_points.size();
+			new_sample_points.push_back(cuboid_structure_.sample_points_[sample_point_index]);
+		}
+		else
+		{
+			delete cuboid_structure_.sample_points_[sample_point_index];
+		}
 	}
 
-	setDrawMode(curr_draw_mode);
+	cuboid_structure_.sample_points_.swap(new_sample_points);
+	delete[] is_sample_point_visible;
 
-	// Remove occluded sample points.
-	cuboid_structure_.remove_occluded_sample_points(visible_face_indices);
+	setDrawMode(curr_draw_mode);
 
 	updateGL();
 }

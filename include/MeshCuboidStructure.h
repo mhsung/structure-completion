@@ -93,8 +93,6 @@ public:
 
 	void print_label_cuboids(const LabelIndex _label_index)const;
 
-	void remove_occluded_sample_points(const std::set<FaceIndex>& _visible_face_indices);
-
 	void remove_symmetric_cuboids();
 
 	// NOTICE:
@@ -119,6 +117,9 @@ public:
 
 	// TEST.
 	bool test_load_cuboids(const char *_filename, bool _verbose = true);
+
+
+	//void remove_occluded_sample_points(const std::set<FaceIndex>& _visible_face_indices);
 
 	// Apply labels in new indices.
 	//bool set_new_label_indices(const std::vector<Label>& _labels);

@@ -103,8 +103,8 @@ public slots:
         QString fileName = QFileDialog::getOpenFileName(this,
             tr("Open mesh file"),
             tr(""),
-            tr("OBJ Files (*.obj);;"
-            "OFF Files (*.off);;"
+            tr("OFF Files (*.off);;"
+			"OBJ Files (*.obj);;"
             "STL Files (*.stl);;"
             "All Files (*)"));
         if (!fileName.isEmpty())
@@ -248,7 +248,7 @@ public slots:
 	void run_predict() { mesh_viewer_core_.predict(); }
 	void run_batch_render_cuboids() { mesh_viewer_core_.batch_render_cuboids(); }
 	void run_batch_render_points() { mesh_viewer_core_.batch_render_points(); }
-	void run_set_view_direction() { mesh_viewer_core_.set_view_direction(); }
+	void run_remove_occluded_points() { mesh_viewer_core_.remove_occluded_points(); }
 	void run_print_arguments() { mesh_viewer_core_.parse_arguments(); }
 	void run_print_mesh_info() { mesh_viewer_core_.print_mesh_info(); }
 	void run_test() { mesh_viewer_core_.run_test(); }
