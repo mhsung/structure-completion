@@ -36,7 +36,7 @@ MeshCuboidStructure& MeshCuboidStructure::operator=(const MeshCuboidStructure& _
 void MeshCuboidStructure::deep_copy(const MeshCuboidStructure& _other)
 {
 	// NOTICE:
-	// This cuboid should be cleaned prior to call this function.
+	// This instance should be cleaned prior to call this function.
 
 	this->mesh_ = _other.mesh_;
 	this->translation_ = _other.translation_;
@@ -78,7 +78,7 @@ void MeshCuboidStructure::deep_copy(const MeshCuboidStructure& _other)
 
 			// FIXME:
 			// Since sample points are deep-copied, clear sample point pointers in cuboids.
-			// Use smart pointers for sample points.
+			// Should use smart pointers for sample points.
 			cuboid->clear_sample_points();
 
 			this->label_cuboids_[label_index].push_back(cuboid);
@@ -635,7 +635,8 @@ bool MeshCuboidStructure::load_symmetry_groups(const char *_filename, bool _verb
 	return true;
 }
 
-bool MeshCuboidStructure::load_sample_points(const char *_filename, bool _verbose)
+bool MeshCuboidStructure::load_sample_points(const char *_filename,
+	bool _update_cuboid_memberships, bool _verbose)
 {
 	std::ifstream file(_filename);
 	if (!file)
@@ -651,6 +652,9 @@ bool MeshCuboidStructure::load_sample_points(const char *_filename, bool _verbos
 	clear_sample_points();
 
 
+	assert(mesh_);
+	assert(mesh_->has_face_normals());
+
 	std::string buffer;
 
 	for (SamplePointIndex sample_point_index = 0; !file.eof(); ++sample_point_index)
@@ -662,6 +666,7 @@ bool MeshCuboidStructure::load_sample_points(const char *_filename, bool _verbos
 		std::getline(strstr, token, ' ');
 		FaceIndex corr_fid = atoi(token.c_str());
 		assert(corr_fid >= 0);
+		assert(corr_fid < mesh_->n_faces());
 
 		if (strstr.eof())
 			continue;
@@ -682,9 +687,11 @@ bool MeshCuboidStructure::load_sample_points(const char *_filename, bool _verbos
 		py = std::stof(token);
 		std::getline(strstr, token, ' ');
 		pz = std::stof(token);
-		MyMesh::Point pos = MyMesh::Point(px, py, pz);
+		MyMesh::Point point = MyMesh::Point(px, py, pz);
+		
+		MyMesh::Normal normal = mesh_->normal(mesh_->face_handle(corr_fid));
 
-		MeshSamplePoint *sample_point = new MeshSamplePoint(sample_point_index, corr_fid, bary_coord, pos);
+		MeshSamplePoint *sample_point = new MeshSamplePoint(sample_point_index, corr_fid, bary_coord, point, normal);
 		sample_points_.push_back(sample_point);
 		assert(sample_points_[sample_point_index] == sample_point);
 	}
@@ -692,6 +699,31 @@ bool MeshCuboidStructure::load_sample_points(const char *_filename, bool _verbos
 	file.close();
 
 	apply_mesh_transformation();
+	
+	if (_update_cuboid_memberships)
+	{
+		std::cout << "Update cuboid memberships..." << std::endl;
+
+		for (std::vector< std::vector<MeshCuboid *> >::iterator it = label_cuboids_.begin();
+			it != label_cuboids_.end(); ++it)
+		{
+			for (std::vector<MeshCuboid *>::iterator jt = (*it).begin(); jt != (*it).end(); ++jt)
+			{
+				MeshCuboid* cuboid = (*jt);
+				cuboid->clear_sample_points();
+
+				for (std::vector<MeshSamplePoint *>::iterator kt = sample_points_.begin();
+					kt != sample_points_.end(); ++kt)
+				{
+					MeshSamplePoint* sample_point = (*kt);
+					if (cuboid->is_point_inside_cuboid(sample_point->point_))
+					{
+						cuboid->add_sample_point(sample_point);
+					}
+				}
+			}
+		}
+	}
 
 	std::cout << "Done." << std::endl;
 
@@ -728,6 +760,64 @@ bool MeshCuboidStructure::save_sample_points(const char *_filename, bool _verbos
 		sstr << sample_point->point_[0] << " "
 			<< sample_point->point_[1] << " "
 			<< sample_point->point_[2] << " ";
+
+		file << sstr.str() << std::endl;
+	}
+
+	file.close();
+
+	apply_mesh_transformation();
+
+	std::cout << "Done." << std::endl;
+
+	return true;
+}
+
+bool MeshCuboidStructure::save_sample_points_to_ply(const char *_filename, bool _verbose)
+{
+	std::string ply_filename(_filename);
+	ply_filename.append(".ply");
+	std::ofstream file(ply_filename);
+	if (!file)
+	{
+		std::cerr << "Can't save file: \"" << ply_filename << "\"" << std::endl;
+		return false;
+	}
+
+	if (_verbose)
+		std::cout << "Saving " << ply_filename << "..." << std::endl;
+
+	// Note:
+	// Save the original position of sample points.
+	reset_transformation();
+
+	// Print header.
+	file << "ply" << std::endl;
+	file << "format ascii 1.0" << std::endl;
+	file << "element vertex " << num_sample_points() << std::endl;
+	file << "property float x" << std::endl;
+	file << "property float y" << std::endl;
+	file << "property float z" << std::endl;
+	file << "property float nx" << std::endl;
+	file << "property float ny" << std::endl;
+	file << "property float nz" << std::endl;
+	file << "element face 0" << std::endl;
+	file << "property list uchar int vertex_indices" << std::endl;
+	file << "end_header" << std::endl;
+
+	for (SamplePointIndex sample_point_index = 0; sample_point_index < num_sample_points();
+		++sample_point_index)
+	{
+		MeshSamplePoint *sample_point = sample_points_[sample_point_index];
+		assert(sample_point);
+
+		std::stringstream sstr;
+		sstr << sample_point->point_[0] << " "
+			<< sample_point->point_[1] << " "
+			<< sample_point->point_[2] << " "
+			<< sample_point->normal_[0] << " "
+			<< sample_point->normal_[1] << " "
+			<< sample_point->normal_[2] << " ";
 
 		file << sstr.str() << std::endl;
 	}
@@ -917,8 +1007,9 @@ bool MeshCuboidStructure::test_load_cuboids(const char *_filename, bool _verbose
 			{
 				Real py = (max_y - min_y) / static_cast<Real>(num_axis_points - 1) * j + min_y;
 
-				MyMesh::Point pos = MyMesh::Point(px, py, pz);
-				MeshSamplePoint *sample_point = new MeshSamplePoint(sample_point_index, 0, MyMesh::Point(0.0), pos);
+				MyMesh::Point point = MyMesh::Point(px, py, pz);
+				MeshSamplePoint *sample_point = new MeshSamplePoint(sample_point_index, 0, MyMesh::Point(0.0),
+					point, MyMesh::Normal(0.0));
 				sample_point->label_index_confidence_.resize(num_labels());
 				++sample_point_index;
 
@@ -990,12 +1081,14 @@ std::vector<MeshCuboid *> MeshCuboidStructure::get_all_cuboids() const
 	return all_cuboids;
 }
 
-MeshSamplePoint *MeshCuboidStructure::add_sample_point(const MyMesh::Point& _pos)
+MeshSamplePoint *MeshCuboidStructure::add_sample_point(
+	const MyMesh::Point& _point, const MyMesh::Normal& _normal)
 {
 	// NOTE:
 	// Assume that the sample point index is the same with the index in the 'sample_points_' vector.
 	SamplePointIndex new_sample_point_index = sample_points_.size();
-	MeshSamplePoint *new_sample_point = new MeshSamplePoint(new_sample_point_index, 0, MyMesh::Point(0.0), _pos);
+	MeshSamplePoint *new_sample_point = new MeshSamplePoint(
+		new_sample_point_index, 0, MyMesh::Point(0.0), _point, _normal);
 	sample_points_.push_back(new_sample_point);
 	return new_sample_point;
 }
@@ -1003,6 +1096,7 @@ MeshSamplePoint *MeshCuboidStructure::add_sample_point(const MyMesh::Point& _pos
 void MeshCuboidStructure::add_sample_points_from_mesh_vertices()
 {
 	assert(mesh_);
+	assert(mesh_->has_vertex_normals());
 
 	sample_points_.reserve(sample_points_.size() + 3 * mesh_->n_faces());
 	SamplePointIndex sample_point_index = sample_points_.size();
@@ -1030,9 +1124,10 @@ void MeshCuboidStructure::add_sample_points_from_mesh_vertices()
 			MyMesh::Point bary_coord(0.0);
 			bary_coord[i] = 1.0;
 
-			MyMesh::Point pos = mesh_->point(vh);
+			MyMesh::Point point = mesh_->point(vh);
+			MyMesh::Normal normal = mesh_->normal(vh);
 
-			MeshSamplePoint *sample_point = new MeshSamplePoint(sample_point_index, corr_fid, bary_coord, pos);
+			MeshSamplePoint *sample_point = new MeshSamplePoint(sample_point_index, corr_fid, bary_coord, point, normal);
 
 			sample_point->label_index_confidence_.clear();
 			sample_point->label_index_confidence_.resize(num_labels(), 0.0);
@@ -1468,10 +1563,13 @@ void MeshCuboidStructure::copy_sample_points_to_symmetric_position(
 	for (int point_index_1 = 0; point_index_1 < num_points_1; ++point_index_1)
 	{
 		const MeshSamplePoint* sample_point_1 = _cuboid_1->get_sample_point(point_index_1);
-		MyMesh::Point pos_1 = sample_point_1->point_;
-		MyMesh::Point symmetric_pos_1 = _symmetry_group->get_symmetric_point(pos_1);
+		MyMesh::Point point_1 = sample_point_1->point_;
+		MyMesh::Normal normal_1 = sample_point_1->normal_;
 
-		MeshSamplePoint *symmetric_sample_point = add_sample_point(symmetric_pos_1);
+		MyMesh::Point symmetric_point_1 = _symmetry_group->get_symmetric_point(point_1);
+		MyMesh::Normal symmetric_normal_1 = _symmetry_group->get_symmetric_normal(normal_1);
+
+		MeshSamplePoint *symmetric_sample_point = add_sample_point(symmetric_point_1, symmetric_normal_1);
 
 		// Copy label confidence values.
 		symmetric_sample_point->label_index_confidence_ = sample_point_1->label_index_confidence_;

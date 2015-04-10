@@ -73,6 +73,8 @@ public:
 
 	MyMesh::Point get_symmetric_point(const MyMesh::Point& _point) const;
 
+	MyMesh::Point get_symmetric_normal(const MyMesh::Normal& _normal) const;
+
 	void get_symmetric_sample_point_pairs(
 		const std::vector<MeshCuboid *> &_cuboids,
 		const std::vector<ANNpointArray> &_cuboid_ann_points,

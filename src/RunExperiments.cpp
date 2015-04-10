@@ -23,6 +23,7 @@ DEFINE_string(data_root_path, "D:/Data/shape2pose/", "");
 DEFINE_string(label_info_path, "data/0_body/coseg_chairs/", "");
 DEFINE_string(mesh_path, "data/1_input/coseg_chairs/off/", "");
 DEFINE_string(sample_path, "data/2_analysis/coseg_chairs/points/even1000/", "");
+DEFINE_string(dense_sample_path, "data/2_analysis/coseg_chairs/points/random100000/", "");
 DEFINE_string(mesh_label_path, "data/1_input/coseg_chairs/gt/", "");
 DEFINE_string(sample_label_path, "data/4_experiments/exp1_coseg_two_types/1_prediction/", "");
 DEFINE_string(output_path, "output", "");
@@ -587,6 +588,7 @@ void MeshViewerCore::predict()
 
 	std::string mesh_label_filepath = FLAGS_data_root_path + FLAGS_mesh_label_path + std::string("/") + mesh_name + std::string(".seg");
 	std::string sample_filepath = FLAGS_data_root_path + FLAGS_sample_path + std::string("/") + mesh_name + std::string(".pts");
+	std::string dense_sample_filepath = FLAGS_data_root_path + FLAGS_dense_sample_path + std::string("/") + mesh_name + std::string(".pts");
 	std::string sample_label_filepath = FLAGS_data_root_path + FLAGS_sample_label_path + std::string("/") + mesh_name + std::string(".arff");
 
 	QFileInfo mesh_label_file(mesh_label_filepath.c_str());
@@ -869,6 +871,18 @@ void MeshViewerCore::predict()
 
 			// Reconstruction.
 			MeshCuboidStructure cuboid_structure_copy_1(cuboid_structure_);
+
+			//
+			cuboid_structure_.load_sample_points(dense_sample_filepath.c_str());
+			remove_occluded_points();
+			updateGL();
+
+			snapshot_filename_sstr.clear(); snapshot_filename_sstr.str("");
+			snapshot_filename_sstr << FLAGS_output_path << filename_prefix
+				<< num_final_cuboid_structure_candidates << std::string("_view");
+			cuboid_structure_.save_sample_points_to_ply(snapshot_filename_sstr.str().c_str());
+			//
+
 			cuboid_structure_.copy_sample_points_to_symmetric_position();
 			cuboid_structure_.clear_cuboids();
 
@@ -877,8 +891,7 @@ void MeshViewerCore::predict()
 			snapshot_filename_sstr << FLAGS_output_path << filename_prefix
 				<< num_final_cuboid_structure_candidates << std::string("_reconstructed");
 			snapshot(snapshot_filename_sstr.str().c_str());
-			snapshot_filename_sstr << std::string(".pts");
-			cuboid_structure_.save_sample_points(snapshot_filename_sstr.str().c_str());
+			cuboid_structure_.save_sample_points_to_ply(snapshot_filename_sstr.str().c_str());
 			cuboid_structure_ = cuboid_structure_copy_1;
 
 			//
@@ -891,8 +904,7 @@ void MeshViewerCore::predict()
 			snapshot_filename_sstr << FLAGS_output_path << filename_prefix
 				<< num_final_cuboid_structure_candidates << std::string("_database");
 			snapshot(snapshot_filename_sstr.str().c_str());
-			snapshot_filename_sstr << std::string(".pts");
-			cuboid_structure_.save_sample_points(snapshot_filename_sstr.str().c_str());
+			cuboid_structure_.save_sample_points_to_ply(snapshot_filename_sstr.str().c_str());
 			cuboid_structure_ = cuboid_structure_copy_2;
 			//
 
@@ -1249,6 +1261,7 @@ void MeshViewerCore::reconstruct_using_database()
 			std::string mesh_filepath = std::string(file_info.filePath().toLocal8Bit());
 			std::string mesh_label_filepath = FLAGS_data_root_path + FLAGS_mesh_label_path + std::string("/") + mesh_name + std::string(".seg");
 			std::string sample_filepath = FLAGS_data_root_path + FLAGS_sample_path + std::string("/") + mesh_name + std::string(".pts");
+			std::string dense_sample_filepath = FLAGS_data_root_path + FLAGS_dense_sample_path + std::string("/") + mesh_name + std::string(".pts");
 			std::string sample_label_filepath = FLAGS_data_root_path + FLAGS_sample_label_path + std::string("/") + mesh_name + std::string(".arff");
 			std::string snapshot_filepath = FLAGS_output_path + std::string("/") + mesh_name;
 
@@ -1274,8 +1287,7 @@ void MeshViewerCore::reconstruct_using_database()
 			// Find the largest part for each part.
 			cuboid_structure_.find_the_largest_label_cuboids();
 
-			open_modelview_matrix_file(FLAGS_pose_filename.c_str());
-
+			//open_modelview_matrix_file(FLAGS_pose_filename.c_str());
 			//mesh_.clear_colors();
 			//updateGL();
 
@@ -1326,6 +1338,7 @@ void MeshViewerCore::reconstruct_using_database()
 		std::string mesh_filepath = std::string(file_info.filePath().toLocal8Bit());
 		std::string mesh_label_filepath = FLAGS_data_root_path + FLAGS_mesh_label_path + std::string("/") + mesh_name + std::string(".seg");
 		std::string sample_filepath = FLAGS_data_root_path + FLAGS_sample_path + std::string("/") + mesh_name + std::string(".pts");
+		std::string dense_sample_filepath = FLAGS_data_root_path + FLAGS_dense_sample_path + std::string("/") + mesh_name + std::string(".pts");
 		std::string sample_label_filepath = FLAGS_data_root_path + FLAGS_sample_label_path + std::string("/") + mesh_name + std::string(".arff");
 		std::string snapshot_filepath = FLAGS_output_path + std::string("/") + mesh_name;
 
@@ -1353,6 +1366,10 @@ void MeshViewerCore::reconstruct_using_database()
 		// Find the largest part for each part.
 		cuboid_structure_.find_the_largest_label_cuboids();
 
+		//
+		cuboid_structure_.load_sample_points(dense_sample_filepath.c_str());
+		//
+
 		assert(cuboid_structure_.label_cuboids_[label_index].size() <= 1);
 		MeshCuboid *cuboid = NULL;
 		if (!cuboid_structure_.label_cuboids_[label_index].empty())
@@ -1372,27 +1389,39 @@ void MeshViewerCore::reconstruct_using_database()
 		{
 			const MeshSamplePoint* sample_point = cuboid->get_sample_point(point_index);
 
-			MyMesh::Point pos = sample_point->point_;
-			pos = pos - cuboid->get_bbox_center();
+			MyMesh::Point point = sample_point->point_;
+			MyMesh::Normal normal = sample_point->normal_;
 
 			//
-			MyMesh::Point relative_pos;
+			MyMesh::Point relative_point;
+			MyMesh::Normal relative_normal;
+			point = point - cuboid->get_bbox_center();
+
 			for (unsigned int axis_index = 0; axis_index < 3; ++axis_index)
 			{
 				assert(cuboid->get_bbox_size()[axis_index] > 0);
-				relative_pos[axis_index] = dot(pos, cuboid->get_bbox_axis(axis_index));
-				relative_pos[axis_index] *= 
+				relative_point[axis_index] = dot(point, cuboid->get_bbox_axis(axis_index));
+				relative_point[axis_index] *= 
+					(given_cuboid->get_bbox_size()[axis_index] / cuboid->get_bbox_size()[axis_index]);
+
+				relative_normal[axis_index] = dot(normal, cuboid->get_bbox_axis(axis_index));
+				relative_normal[axis_index] *=
 					(given_cuboid->get_bbox_size()[axis_index] / cuboid->get_bbox_size()[axis_index]);
 			}
 
-			pos = given_cuboid->get_bbox_center();
+			point = given_cuboid->get_bbox_center();
+			normal = MyMesh::Normal(0.0);
+
 			for (unsigned int axis_index = 0; axis_index < 3; ++axis_index)
 			{
-				pos += (relative_pos[axis_index] * given_cuboid->get_bbox_axis(axis_index));
+				point += (relative_point[axis_index] * given_cuboid->get_bbox_axis(axis_index));
+				normal += (relative_normal[axis_index] * given_cuboid->get_bbox_axis(axis_index));
 			}
+
+			normal.normalize();
 			//
 
-			MeshSamplePoint *new_sample_point = given_cuboid_structure.add_sample_point(pos);
+			MeshSamplePoint *new_sample_point = given_cuboid_structure.add_sample_point(point, normal);
 
 			// Copy label confidence values.
 			new_sample_point->label_index_confidence_ = sample_point->label_index_confidence_;
@@ -1404,6 +1433,11 @@ void MeshViewerCore::reconstruct_using_database()
 
 
 	cuboid_structure_ = given_cuboid_structure;
+
+	// NOTICE:
+	// The model view matrix should be recovered.
+	open_modelview_matrix_file(FLAGS_pose_filename.c_str());
+
 	updateGL();
 }
 

@@ -259,10 +259,20 @@ void MeshCuboidSymmetryGroup::get_reflection_plane_corners(
 
 MyMesh::Point MeshCuboidSymmetryGroup::get_symmetric_point(const MyMesh::Point& _point) const
 {
+	// Assume that 'n_' is normalized.
 	MyMesh::Normal plane_to_point = n_ * (dot(n_, _point) - t_);
 	MyMesh::Point symmetric_point = _point - (plane_to_point * 2);
 	CHECK_NUMERICAL_ERROR(__FUNCTION__, t_ - dot(n_, 0.5 * (_point + symmetric_point)));
 	return symmetric_point;
+}
+
+MyMesh::Normal MeshCuboidSymmetryGroup::get_symmetric_normal(const MyMesh::Normal& _normal) const
+{
+	// Assume that 'n_' and 'normal_' are normalized.
+	MyMesh::Normal n_direction_component = n_ * (dot(n_, _normal));
+	MyMesh::Normal symmetric_normal = _normal - (n_direction_component * 2);
+	CHECK_NUMERICAL_ERROR(__FUNCTION__, dot(n_, 0.5 * (_normal + symmetric_normal)));
+	return symmetric_normal;
 }
 
 void MeshCuboidSymmetryGroup::get_symmetric_sample_point_pairs(

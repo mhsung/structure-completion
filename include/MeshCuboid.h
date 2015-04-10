@@ -27,11 +27,13 @@ public:
 		SamplePointIndex _sample_point_index,
 		FaceIndex _corr_fid,
 		MyMesh::Point _bary_coord,
-		MyMesh::Point _point)
+		MyMesh::Point _point,
+		MyMesh::Normal _normal)
 		: sample_point_index_(_sample_point_index)
 		, corr_fid_(_corr_fid)
 		, bary_coord_(_bary_coord)
 		, point_(_point)
+		, normal_(_normal)
 	{}
 
 	MeshSamplePoint(
@@ -40,6 +42,7 @@ public:
 		, corr_fid_(_other.corr_fid_)
 		, bary_coord_(_other.bary_coord_)
 		, point_(_other.point_)
+		, normal_(_other.normal_)
 		, label_index_confidence_(_other.label_index_confidence_)
 	{}
 
@@ -47,6 +50,7 @@ public:
 	FaceIndex corr_fid_;
 	MyMesh::Point bary_coord_;
 	MyMesh::Point point_;
+	MyMesh::Normal normal_;
 	std::vector<Real> label_index_confidence_;
 };
 
@@ -138,6 +142,8 @@ public:
 	unsigned int num_cuboid_surface_points()const {
 		return static_cast<unsigned int>(cuboid_surface_points_.size());
 	}
+
+	bool is_point_inside_cuboid(const MyMesh::Point& _point)const;
 
 	bool is_group_cuboid()const { return is_group_cuboid_;  }
 

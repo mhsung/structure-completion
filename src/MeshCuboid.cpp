@@ -972,6 +972,19 @@ Real MeshCuboid::get_cuboid_overvall_visibility()
 	return sum_visibility;
 }
 
+bool MeshCuboid::is_point_inside_cuboid(const MyMesh::Point& _point) const
+{
+	MyMesh::Point p = _point - bbox_center_;
+	for (unsigned int axis_index = 0; axis_index < 3; ++axis_index)
+	{
+		MyMesh::Normal axis = bbox_axes_[axis_index].normalized();
+		if (std::abs(dot(axis, p)) > 0.5 * bbox_size_[axis_index])
+			return false;
+	}
+
+	return true;
+}
+
 void MeshCuboid::update_corner_points()
 {
 	for (unsigned int corner_index = 0; corner_index < k_num_corners; ++corner_index)
