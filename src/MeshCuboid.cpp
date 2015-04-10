@@ -599,6 +599,21 @@ void MeshCuboid::add_sample_points(const std::vector<MeshSamplePoint *> _points)
 	sample_points_.insert(sample_points_.end(), _points.begin(), _points.end());
 }
 
+void MeshCuboid::remove_sample_points(const bool *is_sample_point_removed)
+{
+	assert(is_sample_point_removed);
+
+	for (std::vector<MeshSamplePoint *>::iterator it = sample_points_.begin();
+		it != sample_points_.end(); )	// No increment.
+	{
+		assert(*it);
+		if (is_sample_point_removed[(*it)->sample_point_index_])
+			it = sample_points_.erase(it);
+		else
+			++it;
+	}
+}
+
 void MeshCuboid::clear_cuboid_surface_points()
 {
 	for (std::vector<MeshCuboidSurfacePoint *>::iterator it = cuboid_surface_points_.begin();
@@ -974,11 +989,10 @@ Real MeshCuboid::get_cuboid_overvall_visibility()
 
 bool MeshCuboid::is_point_inside_cuboid(const MyMesh::Point& _point) const
 {
-	MyMesh::Point p = _point - bbox_center_;
 	for (unsigned int axis_index = 0; axis_index < 3; ++axis_index)
 	{
 		MyMesh::Normal axis = bbox_axes_[axis_index].normalized();
-		if (std::abs(dot(axis, p)) > 0.5 * bbox_size_[axis_index])
+		if (std::abs(dot(axis, _point - bbox_center_)) > 0.5 * bbox_size_[axis_index])
 			return false;
 	}
 

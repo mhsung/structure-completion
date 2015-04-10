@@ -1,6 +1,7 @@
 #include "MeshCuboidStructure.h"
 
 #include "MeshCuboidParameters.h"
+#include "ICP.h"
 
 #include <deque>
 #include <fstream>
@@ -111,6 +112,18 @@ void MeshCuboidStructure::clear_sample_points()
 		it != sample_points_.end(); ++it)
 		delete (*it);
 	sample_points_.clear();
+
+	//
+	for (std::vector< std::vector<MeshCuboid *> >::iterator it = label_cuboids_.begin();
+		it != label_cuboids_.end(); ++it)
+	{
+		for (std::vector<MeshCuboid *>::iterator jt = (*it).begin(); jt != (*it).end(); ++jt)
+		{
+			MeshCuboid* cuboid = (*jt);
+			cuboid->clear_sample_points();
+		}
+	}
+	//
 
 	translation_ = MyMesh::Normal(0.0);
 	scale_ = 1.0;
@@ -700,6 +713,7 @@ bool MeshCuboidStructure::load_sample_points(const char *_filename,
 
 	apply_mesh_transformation();
 	
+	//
 	if (_update_cuboid_memberships)
 	{
 		std::cout << "Update cuboid memberships..." << std::endl;
@@ -710,7 +724,7 @@ bool MeshCuboidStructure::load_sample_points(const char *_filename,
 			for (std::vector<MeshCuboid *>::iterator jt = (*it).begin(); jt != (*it).end(); ++jt)
 			{
 				MeshCuboid* cuboid = (*jt);
-				cuboid->clear_sample_points();
+				assert(cuboid->num_sample_points() == 0);
 
 				for (std::vector<MeshSamplePoint *>::iterator kt = sample_points_.begin();
 					kt != sample_points_.end(); ++kt)
@@ -724,6 +738,166 @@ bool MeshCuboidStructure::load_sample_points(const char *_filename,
 			}
 		}
 	}
+	//
+
+	std::cout << "Done." << std::endl;
+
+	return true;
+}
+
+bool MeshCuboidStructure::load_dense_sample_points(const char *_filename, bool _verbose)
+{
+	// Compute segmentation of dense samples using segmented sparse samples.
+	std::ifstream file(_filename);
+	if (!file)
+	{
+		std::cerr << "Can't open file: \"" << _filename << "\"" << std::endl;
+		return false;
+	}
+
+	if (_verbose)
+		std::cout << "Loading " << _filename << "..." << std::endl;
+
+
+	//
+	std::vector< std::list<MeshCuboid *> > sparse_sample_to_cuboids(num_sample_points());
+
+	for (std::vector< std::vector<MeshCuboid *> >::iterator it = label_cuboids_.begin();
+		it != label_cuboids_.end(); ++it)
+	{
+		for (std::vector<MeshCuboid *>::iterator jt = (*it).begin(); jt != (*it).end(); ++jt)
+		{
+			MeshCuboid* cuboid = (*jt);
+			const std::vector<MeshSamplePoint *> cuboid_sample_points = cuboid->get_sample_points();
+
+			for (std::vector<MeshSamplePoint *>::const_iterator kt = cuboid_sample_points.begin();
+				kt != cuboid_sample_points.end(); ++kt)
+			{
+				MeshSamplePoint* sample_point = (*kt);
+				assert(sample_point);
+				SamplePointIndex sample_point_index = sample_point->sample_point_index_;
+				assert(sample_point_index < num_sample_points());
+				sparse_sample_to_cuboids[sample_point_index].push_back(cuboid);
+			}
+		}
+	}
+
+	Eigen::MatrixXd sparse_sample_points(3, num_sample_points());
+
+	// FIXME:
+	// The type of indices should integer.
+	// But, it causes compile errors in the 'ICP::get_closest_points' function.
+	Eigen::MatrixXd sparse_sample_point_indices(1, num_sample_points());
+
+	for (SamplePointIndex sample_point_index = 0; sample_point_index < num_sample_points();
+		++sample_point_index)
+	{
+		assert(sample_points_[sample_point_index]);
+
+		for (unsigned int i = 0; i < 3; ++i)
+			sparse_sample_points.col(sample_point_index)(i) =
+			sample_points_[sample_point_index]->point_[i];
+
+		sparse_sample_point_indices.col(sample_point_index)(0) = 
+			static_cast<double>(sample_point_index);
+	}
+
+	ANNpointArray sparse_sample_ann_points;
+	ANNkd_tree *sparse_sample_ann_kd_tree = ICP::create_kd_tree(sparse_sample_points,
+		sparse_sample_ann_points);
+	assert(sparse_sample_ann_points);
+	assert(sparse_sample_ann_kd_tree);
+	//
+
+
+	clear_sample_points();
+
+
+	assert(mesh_);
+	assert(mesh_->has_face_normals());
+
+	std::string buffer;
+
+	for (SamplePointIndex sample_point_index = 0; !file.eof(); ++sample_point_index)
+	{
+		std::getline(file, buffer);
+
+		std::stringstream strstr(buffer);
+		std::string token;
+		std::getline(strstr, token, ' ');
+		FaceIndex corr_fid = atoi(token.c_str());
+		assert(corr_fid >= 0);
+		assert(corr_fid < mesh_->n_faces());
+
+		if (strstr.eof())
+			continue;
+
+		Real bx, by, bz;
+		std::getline(strstr, token, ' ');
+		bx = std::stof(token);
+		std::getline(strstr, token, ' ');
+		by = std::stof(token);
+		std::getline(strstr, token, ' ');
+		bz = std::stof(token);
+		MyMesh::Point bary_coord = MyMesh::Point(bx, by, bz);
+
+		Real px, py, pz;
+		std::getline(strstr, token, ' ');
+		px = std::stof(token);
+		std::getline(strstr, token, ' ');
+		py = std::stof(token);
+		std::getline(strstr, token, ' ');
+		pz = std::stof(token);
+		MyMesh::Point point = MyMesh::Point(px, py, pz);
+
+		MyMesh::Normal normal = mesh_->normal(mesh_->face_handle(corr_fid));
+
+		MeshSamplePoint *sample_point = new MeshSamplePoint(sample_point_index, corr_fid, bary_coord, point, normal);
+		sample_points_.push_back(sample_point);
+		assert(sample_points_[sample_point_index] == sample_point);
+	}
+
+	file.close();
+
+	apply_mesh_transformation();
+
+
+	//
+	Eigen::MatrixXd dense_sample_points(3, num_sample_points());
+	Eigen::MatrixXd dense_sample_point_indices(1, num_sample_points());
+
+	for (SamplePointIndex sample_point_index = 0; sample_point_index < num_sample_points();
+		++sample_point_index)
+	{
+		assert(sample_points_[sample_point_index]);
+		for (unsigned int i = 0; i < 3; ++i)
+			dense_sample_points.col(sample_point_index)(i) =
+			sample_points_[sample_point_index]->point_[i];
+	}
+
+	ICP::get_closest_points(sparse_sample_ann_kd_tree, dense_sample_points,
+		sparse_sample_point_indices, dense_sample_point_indices);
+	assert(dense_sample_point_indices.rows() == 1);
+	assert(dense_sample_point_indices.cols() == num_sample_points());
+
+	for (SamplePointIndex sample_point_index = 0; sample_point_index < num_sample_points();
+		++sample_point_index)
+	{
+		SamplePointIndex sparse_sample_point_index =
+			static_cast<SamplePointIndex>(dense_sample_point_indices.col(sample_point_index)(0));
+
+		for (std::list<MeshCuboid *>::iterator it = sparse_sample_to_cuboids[sparse_sample_point_index].begin();
+			it != sparse_sample_to_cuboids[sparse_sample_point_index].end(); ++it)
+		{
+			MeshCuboid *cuboid = (*it);
+			cuboid->add_sample_point(sample_points_[sample_point_index]);
+		}
+	}
+
+
+	annDeallocPts(sparse_sample_ann_points);
+	delete sparse_sample_ann_kd_tree;
+	//
 
 	std::cout << "Done." << std::endl;
 
@@ -1143,6 +1317,41 @@ void MeshCuboidStructure::add_sample_points_from_mesh_vertices()
 	assert(sample_point_index == num_sample_points());
 }
 
+void MeshCuboidStructure::remove_sample_points(const bool *is_sample_point_removed)
+{
+	assert(is_sample_point_removed);
+
+	//
+	for (std::vector< std::vector<MeshCuboid *> >::iterator it = label_cuboids_.begin();
+		it != label_cuboids_.end(); ++it)
+	{
+		for (std::vector<MeshCuboid *>::iterator jt = (*it).begin(); jt != (*it).end(); ++jt)
+		{
+			MeshCuboid* cuboid = (*jt);
+			cuboid->remove_sample_points(is_sample_point_removed);
+		}
+	}
+	//
+
+	SamplePointIndex new_sample_point_index = 0;
+	for (std::vector<MeshSamplePoint *>::iterator it = sample_points_.begin();
+		it != sample_points_.end();)	// No increment.
+	{
+		assert(*it);
+		if (is_sample_point_removed[(*it)->sample_point_index_])
+		{
+			delete (*it);
+			it = sample_points_.erase(it);
+		}
+		else
+		{
+			(*it)->sample_point_index_ = new_sample_point_index;
+			++new_sample_point_index;
+			++it;
+		}
+	}
+}
+
 void MeshCuboidStructure::apply_mesh_face_labels_to_sample_points()
 {
 	assert(mesh_);
@@ -1554,42 +1763,6 @@ Label MeshCuboidStructure::get_new_label()const
 }
 
 /*
-void MeshCuboidStructure::remove_occluded_sample_points(
-	const std::set<FaceIndex>& _visible_face_indices)
-{
-	assert(mesh_);
-
-	unsigned int num_faces = mesh_->n_faces();
-	bool *is_face_visible = new bool[num_faces];
-	memset(is_face_visible, false, num_faces * sizeof(bool));
-
-	for (std::set<FaceIndex>::const_iterator it = _visible_face_indices.begin();
-		it != _visible_face_indices.end(); ++it)
-	{
-		FaceIndex fid = (*it);
-		assert(fid < num_faces);
-		is_face_visible[fid] = true;
-	}
-
-	for (std::vector<MeshSamplePoint *>::iterator it = sample_points_.begin();
-		it != sample_points_.end();)	// No increment.
-	{
-		if (!is_face_visible[(*it)->corr_fid_])
-			it = sample_points_.erase(it);
-		else
-			++it;
-	}
-
-	// Re-numbering.
-	for (SamplePointIndex sample_point_index = 0; sample_point_index < num_sample_points(); ++sample_point_index)
-	{
-		MeshSamplePoint *sample_point = sample_points_[sample_point_index];
-		sample_point->sample_point_index_ = sample_point_index;
-	}
-
-	delete[] is_face_visible;
-}
-
 bool MeshCuboidStructure::is_label_group(LabelIndex _label_index)
 {
 	assert(_label_index < label_children_.size());

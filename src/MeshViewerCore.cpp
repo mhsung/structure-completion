@@ -598,6 +598,7 @@ void MeshViewerCore::draw_openmesh(const std::string& _drawmode)
 		Mesh::ConstFaceIter f_it(mesh_.faces_begin()), f_end(mesh_.faces_end());
 		Mesh::ConstFaceVertexIter fv_it;
 
+		/*
 		// Draw faces.
 		glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
 		glDepthRange(0.01, 1.0);
@@ -653,7 +654,6 @@ void MeshViewerCore::draw_openmesh(const std::string& _drawmode)
 			glPopMatrix();
 		}
 
-		/*
 		// Draw a query vertex (Blue).
 		if( mesh_.query_vertex_index_ < mesh_.n_vertices() )
 		{
@@ -707,7 +707,7 @@ void MeshViewerCore::draw_openmesh(const std::string& _drawmode)
 					radius = (*it)->label_index_confidence_[cuboid_structure_.query_label_index_];
 				}
 
-				radius = radius * (mesh_.get_object_diameter() * 0.01) * point_size_;
+				radius = radius * (mesh_.get_object_diameter() * 0.005) * point_size_;
 				if (radius > 0)
 				{
 					glPushMatrix();
@@ -1150,8 +1150,8 @@ void MeshViewerCore::remove_occluded_points()
 
 	std::vector<GLubyte> fbuffer(3 * w*h);
 	unsigned int num_sample_points = cuboid_structure_.num_sample_points();
-	bool *is_sample_point_visible = new bool[num_sample_points];
-	memset(is_sample_point_visible, false, num_sample_points * sizeof(bool));
+	bool *is_sample_point_removed = new bool[num_sample_points];
+	memset(is_sample_point_removed, true, num_sample_points * sizeof(bool));
 
 	//qApp->processEvents();
 	makeCurrent();
@@ -1181,29 +1181,12 @@ void MeshViewerCore::remove_occluded_points()
 
 			int index = r + 256 * g + 65536 * b;
 			if(index < num_sample_points)
-				is_sample_point_visible[index] = true;
+				is_sample_point_removed[index] = false;
 		}
 	}
 
-	// Remove occluded sample points.
-	std::vector<MeshSamplePoint *> new_sample_points;
-	new_sample_points.reserve(num_sample_points);
-
-	for (SamplePointIndex sample_point_index = 0; sample_point_index < num_sample_points; ++sample_point_index)
-	{
-		if (is_sample_point_visible[sample_point_index])
-		{
-			cuboid_structure_.sample_points_[sample_point_index]->sample_point_index_ = new_sample_points.size();
-			new_sample_points.push_back(cuboid_structure_.sample_points_[sample_point_index]);
-		}
-		else
-		{
-			delete cuboid_structure_.sample_points_[sample_point_index];
-		}
-	}
-
-	cuboid_structure_.sample_points_.swap(new_sample_points);
-	delete[] is_sample_point_visible;
+	cuboid_structure_.remove_sample_points(is_sample_point_removed);
+	delete[] is_sample_point_removed;
 
 	setDrawMode(curr_draw_mode);
 

@@ -61,6 +61,9 @@ public:
 	bool load_sample_points(const char *_filename,
 		bool _update_cuboid_memberships = true, bool _verbose = true);
 
+	// Compute segmentation of dense samples using segmented sparse samples.
+	bool load_dense_sample_points(const char *_filename, bool _verbose = true);
+
 	bool save_sample_points(const char *_filename, bool _verbose = true);
 
 	bool save_sample_points_to_ply(const char *_filename, bool _verbose = true);
@@ -75,6 +78,8 @@ public:
 	MeshSamplePoint *add_sample_point(const MyMesh::Point& _point, const MyMesh::Normal& _normal);
 
 	void add_sample_points_from_mesh_vertices();
+
+	void remove_sample_points(const bool *is_sample_point_removed);
 
 	void compute_label_cuboids();
 
@@ -118,8 +123,6 @@ public:
 	// TEST.
 	bool test_load_cuboids(const char *_filename, bool _verbose = true);
 
-
-	//void remove_occluded_sample_points(const std::set<FaceIndex>& _visible_face_indices);
 
 	// Apply labels in new indices.
 	//bool set_new_label_indices(const std::vector<Label>& _labels);

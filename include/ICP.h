@@ -17,10 +17,14 @@ namespace ICP {
 		const Eigen::MatrixXd &_points,
 		ANNpointArray &_ann_points);
 
-	// _X_points: Query points.
-	// _Y_values: Data values.
-	// _closest_Y_value: Associated Y values for each X (based on the closest distance between X and Y).
-	// _Y_ann_kd_tree: KD-tree of Y points. If it is not given, it is created by considering _Y as Y points.
+	// NOTE:
+	// In all matrices, "column" is an instance.
+	
+	// _data_ann_kd_tree: KD-tree of data points. If it is not given,
+	//    it is created by considering 'data_values' as data points.
+	// _query_points: Query points.
+	// _data_values: Data values.
+	// _closest_data_value: Associated data values for each query (based on the closest distance between query and data).
 	template<typename T>
 	void get_closest_points(
 		ANNkd_tree *_data_ann_kd_tree,

@@ -671,13 +671,14 @@ void MeshViewerCore::predict()
 	{
 		set_random_view_direction(true);
 		remove_occluded_points();
+		//set_view_direction();
 	}
 	else
 	{
 		open_modelview_matrix_file(FLAGS_occlusion_pose_filename.c_str());
 		remove_occluded_points();
 		//do_occlusion_test();
-		set_view_direction();
+		//set_view_direction();
 	}
 
 	double occlusion_modelview_matrix[16];
@@ -873,14 +874,20 @@ void MeshViewerCore::predict()
 			MeshCuboidStructure cuboid_structure_copy_1(cuboid_structure_);
 
 			//
-			cuboid_structure_.load_sample_points(dense_sample_filepath.c_str());
-			remove_occluded_points();
-			updateGL();
+			cuboid_structure_.load_dense_sample_points(dense_sample_filepath.c_str());
 
+			set_modelview_matrix(occlusion_modelview_matrix);
+			remove_occluded_points();
+			
+			updateGL();
 			snapshot_filename_sstr.clear(); snapshot_filename_sstr.str("");
 			snapshot_filename_sstr << FLAGS_output_path << filename_prefix
-				<< num_final_cuboid_structure_candidates << std::string("_view");
+				<< num_final_cuboid_structure_candidates << std::string("_view_dense");
+			snapshot(snapshot_filename_sstr.str().c_str());
 			cuboid_structure_.save_sample_points_to_ply(snapshot_filename_sstr.str().c_str());
+
+			open_modelview_matrix_file(FLAGS_pose_filename.c_str());
+			updateGL();
 			//
 
 			cuboid_structure_.copy_sample_points_to_symmetric_position();

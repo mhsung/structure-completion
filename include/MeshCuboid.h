@@ -133,6 +133,8 @@ public:
 
 	void add_sample_points(const std::vector<MeshSamplePoint *> _points);
 
+	void remove_sample_points(const bool *is_sample_point_removed);
+
 	bool compute_bbox();
 
 
