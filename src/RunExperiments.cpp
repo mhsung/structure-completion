@@ -20,12 +20,12 @@ DEFINE_bool(run_prediction, false, "");
 //DEFINE_bool(use_symmetric_group_cuboids, false, "");
 
 DEFINE_string(data_root_path, "D:/Data/shape2pose/", "");
-DEFINE_string(label_info_path, "data/0_body/coseg_chairs/", "");
-DEFINE_string(mesh_path, "data/1_input/coseg_chairs/off/", "");
-DEFINE_string(sample_path, "data/2_analysis/coseg_chairs/points/even1000/", "");
-DEFINE_string(dense_sample_path, "data/2_analysis/coseg_chairs/points/random100000/", "");
-DEFINE_string(mesh_label_path, "data/1_input/coseg_chairs/gt/", "");
-DEFINE_string(sample_label_path, "data/4_experiments/exp1_coseg_two_types/1_prediction/", "");
+DEFINE_string(label_info_path, "data/0_body/assembly_chairs/", "");
+DEFINE_string(mesh_path, "data/1_input/assembly_chairs/off/", "");
+DEFINE_string(sample_path, "data/2_analysis/assembly_chairs/points/even1000/", "");
+DEFINE_string(dense_sample_path, "data/2_analysis/assembly_chairs/points/random100000/", "");
+DEFINE_string(mesh_label_path, "data/1_input/assembly_chairs/gt/", "");
+DEFINE_string(sample_label_path, "data/4_experiments/exp1_assembly_chairs/1_prediction/", "");
 DEFINE_string(output_path, "output", "");
 
 DEFINE_string(mesh_filename, "", "");
@@ -870,26 +870,25 @@ void MeshViewerCore::predict()
 			}
 			*/
 
-			// Reconstruction.
-			MeshCuboidStructure cuboid_structure_copy_1(cuboid_structure_);
+			MeshCuboidStructure cuboid_structure_copy(cuboid_structure_);
 
-			//
+			// Reconstruction using symmetry.
 			cuboid_structure_.load_dense_sample_points(dense_sample_filepath.c_str());
 
 			set_modelview_matrix(occlusion_modelview_matrix);
 			remove_occluded_points();
 			
+			//
 			updateGL();
 			snapshot_filename_sstr.clear(); snapshot_filename_sstr.str("");
 			snapshot_filename_sstr << FLAGS_output_path << filename_prefix
 				<< num_final_cuboid_structure_candidates << std::string("_view_dense");
 			snapshot(snapshot_filename_sstr.str().c_str());
 			cuboid_structure_.save_sample_points_to_ply(snapshot_filename_sstr.str().c_str());
+			//
 
 			open_modelview_matrix_file(FLAGS_pose_filename.c_str());
 			updateGL();
-			//
-
 			cuboid_structure_.copy_sample_points_to_symmetric_position();
 			cuboid_structure_.clear_cuboids();
 
@@ -899,11 +898,17 @@ void MeshViewerCore::predict()
 				<< num_final_cuboid_structure_candidates << std::string("_reconstructed");
 			snapshot(snapshot_filename_sstr.str().c_str());
 			cuboid_structure_.save_sample_points_to_ply(snapshot_filename_sstr.str().c_str());
-			cuboid_structure_ = cuboid_structure_copy_1;
+			cuboid_structure_ = cuboid_structure_copy;
 
-			//
-			MeshCuboidStructure cuboid_structure_copy_2(cuboid_structure_);
+
+			// Reconstruction using database.
 			reconstruct_using_database();
+			// NOTE:
+			// Recover the original mesh after call 'reconstruct_using_database()'.
+			open_mesh(mesh_filepath.c_str());
+			open_modelview_matrix_file(FLAGS_pose_filename.c_str());
+			updateGL();
+
 			cuboid_structure_.clear_cuboids();
 
 			updateGL();
@@ -912,8 +917,37 @@ void MeshViewerCore::predict()
 				<< num_final_cuboid_structure_candidates << std::string("_database");
 			snapshot(snapshot_filename_sstr.str().c_str());
 			cuboid_structure_.save_sample_points_to_ply(snapshot_filename_sstr.str().c_str());
-			cuboid_structure_ = cuboid_structure_copy_2;
-			//
+			cuboid_structure_ = cuboid_structure_copy;
+
+
+			// [TEST] Fusion.
+			cuboid_structure_.load_dense_sample_points(dense_sample_filepath.c_str());
+
+			set_modelview_matrix(occlusion_modelview_matrix);
+			remove_occluded_points();
+			open_modelview_matrix_file(FLAGS_pose_filename.c_str());
+			updateGL();
+
+			cuboid_structure_.copy_sample_points_to_symmetric_position();
+			std::vector<LabelIndex> reconstructed_label_indices;
+			reconstructed_label_indices.push_back(0);
+			reconstructed_label_indices.push_back(1);
+			reconstruct_using_database(&reconstructed_label_indices);
+			// NOTE:
+			// Recover the original mesh after call 'reconstruct_using_database()'.
+			open_mesh(mesh_filepath.c_str());
+			open_modelview_matrix_file(FLAGS_pose_filename.c_str());
+			updateGL();
+
+			cuboid_structure_.clear_cuboids();
+
+			updateGL();
+			snapshot_filename_sstr.clear(); snapshot_filename_sstr.str("");
+			snapshot_filename_sstr << FLAGS_output_path << filename_prefix
+				<< num_final_cuboid_structure_candidates << std::string("_fusion");
+			snapshot(snapshot_filename_sstr.str().c_str());
+			cuboid_structure_.save_sample_points_to_ply(snapshot_filename_sstr.str().c_str());
+			cuboid_structure_ = cuboid_structure_copy;
 
 
 			++num_final_cuboid_structure_candidates;
@@ -1208,10 +1242,13 @@ void MeshViewerCore::run_test()
 	setDrawMode(CUSTOM_VIEW);
 	updateGL();
 
-	reconstruct_using_database();
+	std::vector<LabelIndex> reconstructed_label_indices;
+	reconstructed_label_indices.push_back(0);
+	reconstructed_label_indices.push_back(1);
+	reconstruct_using_database(&reconstructed_label_indices);
 }
 
-void MeshViewerCore::reconstruct_using_database()
+void MeshViewerCore::reconstruct_using_database(const std::vector<LabelIndex> *_reconstructed_label_indices)
 {
 	MeshCuboidStructure given_cuboid_structure(cuboid_structure_);
 	cuboid_structure_.clear();
@@ -1251,9 +1288,9 @@ void MeshViewerCore::reconstruct_using_database()
 
 
 	// (Dissimilarity, File information)
-	std::vector< std::pair<Real, QFileInfo> > matched_object(num_labels);
+	std::vector< std::pair<Real, QFileInfo> > label_matched_object(num_labels);
 	for (unsigned int label_index = 0; label_index < num_labels; ++label_index)
-		matched_object[label_index].first = std::numeric_limits<Real>::max();
+		label_matched_object[label_index].first = std::numeric_limits<Real>::max();
 
 
 	QFileInfoList dir_list = input_dir.entryInfoList();
@@ -1316,16 +1353,16 @@ void MeshViewerCore::reconstruct_using_database()
 					// Measure similarity.
 					MyMesh::Normal cuboid_size = cuboid->get_bbox_size();
 					MyMesh::Normal given_cuboid_size = given_cuboid->get_bbox_size();
-
 					MyMesh::Normal diff_size = (cuboid_size - given_cuboid_size);
+
 					Real dissimilarity = 0.0;
 					for (unsigned int i = 0; i < 3; ++i)
 						dissimilarity += std::abs(diff_size[i]);
 
-					if (dissimilarity < matched_object[label_index].first)
+					if (dissimilarity < label_matched_object[label_index].first)
 					{
-						matched_object[label_index].first = dissimilarity;
-						matched_object[label_index].second = file_info;
+						label_matched_object[label_index].first = dissimilarity;
+						label_matched_object[label_index].second = file_info;
 					}
 				}
 			}
@@ -1334,13 +1371,40 @@ void MeshViewerCore::reconstruct_using_database()
 
 
 	// ---- //
-	given_cuboid_structure.clear_sample_points();
+	if (_reconstructed_label_indices)
+	{
+		given_cuboid_structure.clear_label_sample_points(*_reconstructed_label_indices);
+	}
+	else
+	{
+		given_cuboid_structure.clear_sample_points();
+	}
+
 	for (LabelIndex label_index = 0; label_index < num_labels; ++label_index)
 	{
-		if (matched_object[label_index].first == std::numeric_limits<Real>::max())
+		//
+		// Reconstruct designated labels only if '_reconstructed_label_indices' is provided.
+		if (_reconstructed_label_indices)
+		{
+			bool exist = false;
+			for (std::vector<LabelIndex>::const_iterator it = (*_reconstructed_label_indices).begin();
+				it != (*_reconstructed_label_indices).end(); ++it)
+			{
+				if ((*it) == label_index)
+				{
+					exist = true;
+					break;
+				}
+			}
+
+			if (!exist) continue;
+		}
+		//
+
+		if (label_matched_object[label_index].first == std::numeric_limits<Real>::max())
 			continue;
 
-		QFileInfo file_info = matched_object[label_index].second;
+		QFileInfo file_info = label_matched_object[label_index].second;
 		std::string mesh_name = std::string(file_info.baseName().toLocal8Bit());
 		std::string mesh_filepath = std::string(file_info.filePath().toLocal8Bit());
 		std::string mesh_label_filepath = FLAGS_data_root_path + FLAGS_mesh_label_path + std::string("/") + mesh_name + std::string(".seg");
@@ -1374,7 +1438,7 @@ void MeshViewerCore::reconstruct_using_database()
 		cuboid_structure_.find_the_largest_label_cuboids();
 
 		//
-		cuboid_structure_.load_sample_points(dense_sample_filepath.c_str());
+		cuboid_structure_.load_dense_sample_points(dense_sample_filepath.c_str());
 		//
 
 		assert(cuboid_structure_.label_cuboids_[label_index].size() <= 1);
@@ -1438,14 +1502,7 @@ void MeshViewerCore::reconstruct_using_database()
 	}
 	// ---- //
 
-
 	cuboid_structure_ = given_cuboid_structure;
-
-	// NOTICE:
-	// The model view matrix should be recovered.
-	open_modelview_matrix_file(FLAGS_pose_filename.c_str());
-
-	updateGL();
 }
 
 /*

@@ -92,6 +92,8 @@ public:
 	MeshCuboid(const MeshCuboid& _other);	// Copy constructor.
 	virtual ~MeshCuboid();
 
+	friend class MeshCuboidStructure;
+
 	MeshCuboid& operator=(const MeshCuboid& _other);	// Copy assignment.
 	void deep_copy(const MeshCuboid& _other);
 

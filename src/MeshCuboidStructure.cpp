@@ -77,10 +77,21 @@ void MeshCuboidStructure::deep_copy(const MeshCuboidStructure& _other)
 		{
 			MeshCuboid *cuboid = new MeshCuboid(**it);
 
-			// FIXME:
-			// Since sample points are deep-copied, clear sample point pointers in cuboids.
-			// Should use smart pointers for sample points.
-			cuboid->clear_sample_points();
+			const std::vector<MeshSamplePoint *> &cuboid_sample_points = cuboid->get_sample_points();
+			std::vector<MeshSamplePoint *> new_cuboid_sample_points;
+
+			for (std::vector<MeshSamplePoint *>::const_iterator it = cuboid_sample_points.begin();
+				it != cuboid_sample_points.end(); ++it)
+			{
+				SamplePointIndex sample_point_index = (*it)->sample_point_index_;
+				assert(sample_point_index < num_sample_points());
+				assert(sample_points_[sample_point_index]->sample_point_index_ == sample_point_index);
+				new_cuboid_sample_points.push_back(sample_points_[sample_point_index]);
+			}
+
+			// NOTICE:
+			// 'MeshCuboidStructure' class is a friend of 'MeshCuboid'.
+			cuboid->sample_points_.swap(new_cuboid_sample_points);
 
 			this->label_cuboids_[label_index].push_back(cuboid);
 		}
@@ -127,6 +138,64 @@ void MeshCuboidStructure::clear_sample_points()
 
 	translation_ = MyMesh::Normal(0.0);
 	scale_ = 1.0;
+}
+
+void MeshCuboidStructure::clear_label_sample_points(const std::vector<LabelIndex> &_label_indices)
+{
+	std::list<SamplePointIndex> deleted_sample_point_indices;
+
+	// Collect sample points to be deleted.
+	for (std::vector<LabelIndex>::const_iterator it = _label_indices.begin();
+		it != _label_indices.end(); ++it)
+	{
+		LabelIndex label_index = (*it);
+		for (std::vector<MeshCuboid *>::iterator jt = label_cuboids_[label_index].begin();
+			jt != label_cuboids_[label_index].end(); ++jt)
+		{
+			MeshCuboid* cuboid = (*jt);
+
+			const std::vector<MeshSamplePoint *> cuboid_sample_points = cuboid->get_sample_points();
+
+			for (std::vector<MeshSamplePoint *>::const_iterator kt = cuboid_sample_points.begin();
+				kt != cuboid_sample_points.end(); ++kt)
+			{
+				MeshSamplePoint* sample_point = (*kt);
+				assert(sample_point);
+				SamplePointIndex sample_point_index = sample_point->sample_point_index_;
+				deleted_sample_point_indices.push_back(sample_point_index);
+			}
+
+			cuboid->clear_sample_points();
+		}
+	}
+
+	// Delete sample points.
+	for (std::list<SamplePointIndex>::iterator it = deleted_sample_point_indices.begin();
+		it != deleted_sample_point_indices.end(); ++it)
+	{
+		SamplePointIndex sample_point_index = (*it);
+		MeshSamplePoint* sample_point = this->sample_points_[sample_point_index];
+		assert(sample_point);
+		assert(sample_point->sample_point_index_ == sample_point_index);
+		delete sample_point;
+		this->sample_points_[sample_point_index] = NULL;
+	}
+
+	// Re-number sample points.
+	SamplePointIndex new_sample_point_index = 0;
+	for (std::vector<MeshSamplePoint *>::iterator it = sample_points_.begin();
+		it != sample_points_.end(); )	// No increment.
+	{
+		if (!(*it))
+		{
+			it = sample_points_.erase(it);
+		}
+		else
+		{
+			(*it)->sample_point_index_ = new_sample_point_index;
+			++it;
+		}
+	}
 }
 
 void MeshCuboidStructure::clear_cuboids()

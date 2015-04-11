@@ -31,6 +31,8 @@ public:
 	void clear_cuboids();
 	void clear_labels();
 
+	void clear_label_sample_points(const std::vector<LabelIndex> &_label_indices);
+
 	bool load_cuboids(const std::string _filename, bool _verbose = true);
 	bool save_cuboids(const std::string _filename, bool _verbose = true) const;
 

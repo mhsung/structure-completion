@@ -65,7 +65,8 @@ public:
 	void set_random_view_direction(bool _set_modelview_matrix = false);
 	void parse_arguments();
 	void print_mesh_info();
-	void reconstruct_using_database();
+	void reconstruct_using_database(
+		const std::vector<LabelIndex> *_reconstructed_label_indices = NULL);
 	//void do_occlusion_test();
 	void run_test();
 	//
