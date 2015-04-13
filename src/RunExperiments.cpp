@@ -868,8 +868,7 @@ void MeshViewerCore::predict()
 
 			// Reconstruction using symmetry.
 			cuboid_structure_.load_dense_sample_points(dense_sample_filepath.c_str());
-
-			set_modelview_matrix(occlusion_modelview_matrix);
+			set_modelview_matrix(occlusion_modelview_matrix, false);
 			remove_occluded_points();
 			
 			//
@@ -882,10 +881,9 @@ void MeshViewerCore::predict()
 			//
 
 			open_modelview_matrix_file(FLAGS_pose_filename.c_str());
-			updateGL();
 			cuboid_structure_.copy_sample_points_to_symmetric_position();
-			cuboid_structure_.clear_cuboids();
 
+			cuboid_structure_.clear_cuboids();
 			updateGL();
 			snapshot_filename_sstr.clear(); snapshot_filename_sstr.str("");
 			snapshot_filename_sstr << FLAGS_output_path << filename_prefix
@@ -901,10 +899,8 @@ void MeshViewerCore::predict()
 			// Recover the original mesh after call 'reconstruct_using_database()'.
 			open_mesh(mesh_filepath.c_str());
 			open_modelview_matrix_file(FLAGS_pose_filename.c_str());
-			updateGL();
 
 			cuboid_structure_.clear_cuboids();
-
 			updateGL();
 			snapshot_filename_sstr.clear(); snapshot_filename_sstr.str("");
 			snapshot_filename_sstr << FLAGS_output_path << filename_prefix
@@ -916,13 +912,12 @@ void MeshViewerCore::predict()
 
 			// [TEST] Fusion.
 			cuboid_structure_.load_dense_sample_points(dense_sample_filepath.c_str());
-
-			set_modelview_matrix(occlusion_modelview_matrix);
+			set_modelview_matrix(occlusion_modelview_matrix, false);
 			remove_occluded_points();
-			open_modelview_matrix_file(FLAGS_pose_filename.c_str());
-			updateGL();
 
+			open_modelview_matrix_file(FLAGS_pose_filename.c_str());
 			cuboid_structure_.copy_sample_points_to_symmetric_position();
+
 			std::vector<LabelIndex> reconstructed_label_indices;
 			reconstructed_label_indices.push_back(0);
 			reconstructed_label_indices.push_back(1);
@@ -931,10 +926,8 @@ void MeshViewerCore::predict()
 			// Recover the original mesh after call 'reconstruct_using_database()'.
 			open_mesh(mesh_filepath.c_str());
 			open_modelview_matrix_file(FLAGS_pose_filename.c_str());
-			updateGL();
 
 			cuboid_structure_.clear_cuboids();
-
 			updateGL();
 			snapshot_filename_sstr.clear(); snapshot_filename_sstr.str("");
 			snapshot_filename_sstr << FLAGS_output_path << filename_prefix

@@ -124,7 +124,7 @@ protected:
 	const GLdouble* modelview_matrix() const  { return modelview_matrix_; }
 	const GLdouble* projection_matrix() const { return projection_matrix_; }
 
-	void set_modelview_matrix(GLdouble *matrix);
+	void set_modelview_matrix(GLdouble *matrix, bool update = true);
 
 	float fovy() const { return 45.0f; }
 

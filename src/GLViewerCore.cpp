@@ -570,7 +570,7 @@ GLViewerCore::set_scene_pos(const OpenMesh::Vec3f& _cog, float _radius)
 //=============================================================================
 
 
-void GLViewerCore::set_modelview_matrix(GLdouble *matrix)
+void GLViewerCore::set_modelview_matrix(GLdouble *matrix, bool update)
 {
 	for (unsigned int i = 0; i < 16; i++)
 		modelview_matrix_[i] = matrix[i];
@@ -579,7 +579,8 @@ void GLViewerCore::set_modelview_matrix(GLdouble *matrix)
 	glLoadIdentity();
 	glMultMatrixd(modelview_matrix_);
 
-	updateGL();
+	if (update)
+		updateGL();
 }
 
 
