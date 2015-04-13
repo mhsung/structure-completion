@@ -852,23 +852,6 @@ void MeshViewerCore::predict()
 				<< num_final_cuboid_structure_candidates << std::string(".arff");
 			cuboid_structure_.save_cuboids(cuboid_filename_sstr.str());
 
-			// To be removed.
-			//if (FLAGS_use_symmetric_group_cuboids)
-			//{
-			//	symmetrize_cuboids(cuboid_structure_);
-
-			//	updateGL();
-			//	snapshot_filename_sstr.clear(); snapshot_filename_sstr.str("");
-			//	snapshot_filename_sstr << FLAGS_output_path << filename_prefix
-			//		<< num_final_cuboid_structure_candidates << std::string("_symmetrized");
-			//	snapshot(snapshot_filename_sstr.str().c_str());
-
-			//	cuboid_filename_sstr.clear(); cuboid_filename_sstr.str("");
-			//	cuboid_filename_sstr << FLAGS_output_path << filename_prefix
-			//		<< num_final_cuboid_structure_candidates << std::string("_symmetrized.arff");
-			//	cuboid_structure_.save_cuboids(cuboid_filename_sstr.str());
-			//}
-
 			/*
 			if (mesh_label_file.exists())
 			{
