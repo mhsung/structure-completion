@@ -814,20 +814,31 @@ void MeshViewerCore::predict()
 
 		std::list< std::list<LabelIndex> > missing_label_index_groups;
 		trainer.get_missing_label_index_groups(given_label_indices, missing_label_index_groups);
-
-
-		unsigned int missing_label_index_group_index = 0;
-
-		// NOTE:
-		// If there is no missing label, the next iteration becomes the last one.
-		if (missing_label_index_groups.empty())
+		
+		if (!missing_label_index_groups.empty())
 		{
-			//std::stringstream new_cuboid_structure_name;
-			//new_cuboid_structure_name << cuboid_structure_name << missing_label_index_group_index;
-			//cuboid_structure_candidates.push_front(
-			//	std::make_pair(new_cuboid_structure_name.str(), cuboid_structure_));
-			//last_iteration = true;
+			unsigned int missing_label_index_group_index = 0;
 
+			for (std::list< std::list<LabelIndex> >::iterator it = missing_label_index_groups.begin();
+				it != missing_label_index_groups.end(); ++it)
+			{
+				std::list<LabelIndex> &missing_label_indices = (*it);
+				MeshCuboidStructure new_cuboid_structure = cuboid_structure_;
+
+				add_missing_cuboids(new_cuboid_structure, occlusion_modelview_matrix,
+					missing_label_indices, joint_normal_predictor);
+
+				std::stringstream new_cuboid_structure_name;
+				new_cuboid_structure_name << cuboid_structure_name << missing_label_index_group_index;
+				cuboid_structure_candidates.push_front(
+					std::make_pair(new_cuboid_structure_name.str(), new_cuboid_structure));
+				++missing_label_index_group_index;
+			}
+		}
+		else
+		{
+			// NOTE:
+			// If there is no missing label, the next iteration becomes the last one.
 
 			// Escape loop.
 			updateGL();
@@ -951,24 +962,6 @@ void MeshViewerCore::predict()
 
 
 			++num_final_cuboid_structure_candidates;
-		}
-		else
-		{
-			for (std::list< std::list<LabelIndex> >::iterator it = missing_label_index_groups.begin();
-				it != missing_label_index_groups.end(); ++it)
-			{
-				std::list<LabelIndex> &missing_label_indices = (*it);
-				MeshCuboidStructure new_cuboid_structure = cuboid_structure_;
-
-				add_missing_cuboids(new_cuboid_structure, occlusion_modelview_matrix,
-					missing_label_indices, joint_normal_predictor);
-
-				std::stringstream new_cuboid_structure_name;
-				new_cuboid_structure_name << cuboid_structure_name << missing_label_index_group_index;
-				cuboid_structure_candidates.push_front(
-					std::make_pair(new_cuboid_structure_name.str(), new_cuboid_structure));
-				++missing_label_index_group_index;
-			}
 		}
 	}
 
