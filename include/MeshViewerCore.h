@@ -65,8 +65,6 @@ public:
 	void set_random_view_direction(bool _set_modelview_matrix = false);
 	void parse_arguments();
 	void print_mesh_info();
-	void reconstruct_using_database(
-		const std::vector<LabelIndex> *_reconstructed_label_indices = NULL);
 	//void do_occlusion_test();
 	void run_test();
 	//
@@ -78,6 +76,16 @@ public:
 	void test_rotate(const Real _angle);
 	void test_optimize();
 	//
+
+
+private:
+	void reconstruct(
+		const char *mesh_filepath,
+		const char *dense_sample_filepath,
+		const GLdouble *occlusion_modelview_matrix,
+		const char *output_file_prefix);
+	void reconstruct_using_database(
+		const std::vector<LabelIndex> *_reconstructed_label_indices = NULL);
 
 
 public:
