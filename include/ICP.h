@@ -32,6 +32,11 @@ namespace ICP {
 		const Eigen::MatrixBase<T> &_data_values,
 		Eigen::MatrixBase<T> &_closest_data_values);
 
+	void get_closest_points(
+		ANNkd_tree *_data_ann_kd_tree,
+		const Eigen::MatrixXd &_query_points,
+		Eigen::VectorXd &_distances);
+
 	double compute_rigid_transformation(const Eigen::MatrixXd &_X, const Eigen::MatrixXd &_Y,
 		Eigen::Matrix3d &_rotation_mat, Eigen::Vector3d &_translation_vec);
 

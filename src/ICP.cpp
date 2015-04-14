@@ -42,15 +42,16 @@ namespace ICP {
 		const Eigen::MatrixBase<T> &_data_values,
 		Eigen::MatrixBase<T> &_closest_data_values)
 	{
+		assert(_data_ann_kd_tree->nPoints() > 0);
 		assert(_query_points.rows() == 3);
 		assert(_query_points.cols() > 0);
-		assert(_data_values.cols() > 0);
+		assert(_data_values.rows() > 0);
+		assert(_data_values.cols() == _data_ann_kd_tree->nPoints());
 
-		int num_data = static_cast<int>(_data_values.rows());
-		int dimension = static_cast<int>(_query_points.cols());
-
-		_closest_data_values = Eigen::MatrixBase<T>::Zero(num_data, dimension);
-		assert(_data_ann_kd_tree->nPoints() == _data_values.cols());
+		int num_queries = static_cast<int>(_query_points.cols());
+		int num_data = static_cast<int>(_data_values.cols());
+		int dimension = static_cast<int>(_data_values.rows());
+		_closest_data_values = Eigen::MatrixBase<T>::Zero(dimension, num_queries);
 
 		ANNpoint q = annAllocPt(3);
 		ANNidxArray nn_idx = new ANNidx[1];
@@ -63,8 +64,40 @@ namespace ICP {
 
 			_data_ann_kd_tree->annkSearch(q, 1, nn_idx, dd);
 			int closest_Y_point_index = nn_idx[0];
+			assert(closest_Y_point_index < num_data);
 
 			_closest_data_values.col(point_index) = _data_values.col(closest_Y_point_index);
+		}
+
+		// Deallocate ANN.
+		annDeallocPt(q);
+		delete[] nn_idx;
+		delete[] dd;
+	}
+
+	void get_closest_points(
+		ANNkd_tree *_data_ann_kd_tree,
+		const Eigen::MatrixXd &_query_points,
+		Eigen::VectorXd &_distances)
+	{
+		assert(_data_ann_kd_tree->nPoints() > 0);
+		assert(_query_points.rows() == 3);
+		assert(_query_points.cols() > 0);
+
+		int num_queries = static_cast<int>(_query_points.rows());
+		_distances = Eigen::VectorXd::Zero(num_queries);
+
+		ANNpoint q = annAllocPt(3);
+		ANNidxArray nn_idx = new ANNidx[1];
+		ANNdistArray dd = new ANNdist[1];
+
+		for (int point_index = 0; point_index < _query_points.cols(); point_index++)
+		{
+			for (unsigned int i = 0; i < 3; ++i)
+				q[i] = _query_points.col(point_index)(i);
+
+			_data_ann_kd_tree->annkSearch(q, 1, nn_idx, dd);
+			_distances[point_index] = dd[0];
 		}
 
 		// Deallocate ANN.
