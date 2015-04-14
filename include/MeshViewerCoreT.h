@@ -99,9 +99,9 @@ public:
 
 public:
 
-	OpenMesh::IO::Options& options() { return options_; }
-	const OpenMesh::IO::Options& options() const { return options_; }
-	void setOptions(const OpenMesh::IO::Options& opts) { options_ = opts; }
+	OpenMesh::IO::Options& options() { return mesh_.options(); }
+	const OpenMesh::IO::Options& options() const { return mesh_.options(); }
+	void setOptions(const OpenMesh::IO::Options& opts) { mesh_.setOptions(opts); }
 
 	/// open mesh
 	virtual bool open_mesh(const char* _filename);
@@ -202,7 +202,6 @@ protected:
 	bool                   f_strips_; // enable/disable strip usage
 	GLuint                 tex_id_;
 	GLint                  tex_mode_;
-	OpenMesh::IO::Options  opt_; // mesh file contained texcoords?
 
 	Mesh                   mesh_;
 	MyStripifier           strips_;
@@ -211,8 +210,6 @@ protected:
 	bool                   show_fnormals_;
 	double                 normal_scale_;
 	OpenMesh::FPropHandleT< typename Mesh::Point > fp_normal_base_;
-
-	OpenMesh::IO::Options options_;
 };
 
 

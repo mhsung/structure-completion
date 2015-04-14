@@ -35,8 +35,6 @@ public:
 	MeshViewerCore(GLViewerBase &_widget);
 	virtual ~MeshViewerCore();
 
-	virtual bool open_mesh(const char* _filename);
-
 	void open_modelview_matrix_file(const char* _filename);
 	void save_modelview_matrix_file(const char* _filename);
 	void save_projection_matrix_file(const char* _filename);

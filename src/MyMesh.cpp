@@ -1,5 +1,4 @@
 #include "MyMesh.h"
-
 //#include "ConvertFromOpenMesh.h"
 
 #include <fstream>
@@ -135,6 +134,62 @@ void MyMesh::initialize()
 	}
 
 	object_diameter_ = 2 * object_diameter_;
+
+
+	// NOTE:
+	// Change scale so that the object diameter becomes 1.
+	std::cout << "Object diameter: " << get_object_diameter() << std::endl;
+	std::cout << "Now scaled to become 1..." << std::endl;
+	scale(1.0 / get_object_diameter());
+
+	// Move mesh so that the object stands on the z = 0 plane.
+	MyMesh::Point translation = -get_bbox_center();
+	translation[2] += 0.5 * get_bbox_size()[2];
+	translate(translation);
+}
+
+bool MyMesh::open_mesh(const char *_filename, bool _verbose)
+{
+	request_face_normals();
+	request_face_colors();
+	request_vertex_normals();
+	request_vertex_colors();
+	request_vertex_texcoords2D();
+
+	if (_verbose) std::cout << "Loading from file '" << _filename << "'\n";
+	bool ret = OpenMesh::IO::read_mesh(*this, _filename, options_);
+	if (!ret) return false;
+
+	// update face and vertex normals     
+	if (!options_.check(OpenMesh::IO::Options::FaceNormal))
+		update_face_normals();
+	else if (_verbose)
+		std::cout << "File provides face normals\n";
+	assert(has_face_normals());
+
+	if (!options_.check(OpenMesh::IO::Options::VertexNormal))
+		update_vertex_normals();
+	else if (_verbose)
+		std::cout << "File provides vertex normals\n";
+	assert(has_vertex_normals());
+
+	// check for possible color information
+	if (!options_.check(OpenMesh::IO::Options::VertexColor))
+		release_vertex_colors();
+	else if (_verbose)
+		std::cout << "File provides vertex colors\n";
+
+	if (!options_.check(OpenMesh::IO::Options::FaceColor))
+		release_face_colors();
+	else if (_verbose)
+		std::cout << "File provides face colors\n";
+
+	if (options_.check(OpenMesh::IO::Options::VertexTexCoord)
+		&& _verbose)
+		std::cout << "File provides texture coordinates\n";
+
+	initialize();
+	return true;
 }
 
 void MyMesh::request_vertex_areas()

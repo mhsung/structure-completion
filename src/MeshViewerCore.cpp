@@ -37,41 +37,6 @@ MeshViewerCore::~MeshViewerCore()
 	//
 }
 
-bool MeshViewerCore::open_mesh(const char* _filename)
-{
-	bool ret = MeshViewerCoreT<MyMesh>::open_mesh(_filename);
-	if (!ret) return false;
-
-	mesh_.initialize();
-
-	// NOTE:
-	// Change scale so that the object diameter becomes 1.
-	std::cout << "Object diameter: " << mesh_.get_object_diameter() << std::endl;
-	std::cout << "Now scaled to become 1..." << std::endl;
-	double scale = 1 / mesh_.get_object_diameter();
-	mesh_.scale(scale);
-
-	// Move mesh so that the object stands on the z = 0 plane.
-	Vec3d translation = -mesh_.get_bbox_center();
-	translation[2] += 0.5 * mesh_.get_bbox_size()[2];
-	mesh_.translate(translation);
-
-	Vec3f center(static_cast<float>(mesh_.get_bbox_center()[0]),
-		static_cast<float>(mesh_.get_bbox_center()[1]),
-		static_cast<float>(mesh_.get_bbox_center()[2]));
-	float diagonal_size = static_cast<float>(mesh_.get_bbox_size().norm());
-	float min_size = static_cast<float>(mesh_.get_bbox_size().min());
-
-	// set center and radius
-	set_scene_pos(center, diagonal_size * 0.5f);
-
-	// for normal display
-	normal_scale_ = min_size * 0.05f;
-
-	updateGL();
-	return true;
-}
-
 void MeshViewerCore::open_modelview_matrix_file(const char* _filename)
 {
 	assert(_filename);

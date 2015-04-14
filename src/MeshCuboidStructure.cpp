@@ -785,7 +785,8 @@ bool MeshCuboidStructure::load_sample_points(const char *_filename,
 	//
 	if (_update_cuboid_memberships)
 	{
-		std::cout << "Update cuboid memberships..." << std::endl;
+		if (_verbose)
+			std::cout << "Update cuboid memberships..." << std::endl;
 
 		for (std::vector< std::vector<MeshCuboid *> >::iterator it = label_cuboids_.begin();
 			it != label_cuboids_.end(); ++it)
@@ -809,7 +810,8 @@ bool MeshCuboidStructure::load_sample_points(const char *_filename,
 	}
 	//
 
-	std::cout << "Done." << std::endl;
+	if (_verbose)
+		std::cout << "Done." << std::endl;
 
 	return true;
 }
@@ -1693,8 +1695,6 @@ void MeshCuboidStructure::split_label_cuboids()
 		}
 
 		cuboids.swap(new_cuboids);
-
-		print_label_cuboids(label_index);
 	}
 }
 

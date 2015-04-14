@@ -72,104 +72,76 @@ MeshViewerCoreT<M>::open_mesh(const char* _filename)
 {
 	// load mesh
 	// calculate normals
-	// set scene center and radius   
+	// set scene center and radius  
 
-	mesh_.request_face_normals();
-	mesh_.request_face_colors();
-	mesh_.request_vertex_normals();
-	mesh_.request_vertex_colors();
-	mesh_.request_vertex_texcoords2D();
+	bool ret = mesh_.open_mesh(_filename);
+	if (!ret) return false;
 
-	std::cout << "Loading from file '" << _filename << "'\n";
-	if (IO::read_mesh(mesh_, _filename, options_))
+	OpenMesh::IO::Options opt_ = mesh_.options();
+
+	// check for possible color information
+	//if (opt_.check(IO::Options::VertexColor))
+	//{
+	//	add_draw_mode("Colored Vertices");
+	//}
+
+	//if (options_.check(IO::Options::FaceColor))
+	//{
+	//	add_draw_mode("Solid Colored Faces");
+	//	add_draw_mode("Smooth Colored Faces");
+	//}
+
+
+	// bounding box
+	typename Mesh::ConstVertexIter vIt(mesh_.vertices_begin());
+	typename Mesh::ConstVertexIter vEnd(mesh_.vertices_end());
+
+	typedef typename Mesh::Point Point;
+	using OpenMesh::Vec3f;
+
+	Vec3f bbMin, bbMax;
+
+	bbMin = bbMax = OpenMesh::vector_cast<Vec3f>(mesh_.point(*vIt));
+
+	for (size_t count = 0; vIt != vEnd; ++vIt, ++count)
 	{
-		// store read option
-		opt_ = options_;
-
-		// update face and vertex normals     
-		if (!opt_.check(IO::Options::FaceNormal))
-			mesh_.update_face_normals();
-		else
-			std::cout << "File provides face normals\n";
-
-		if (!opt_.check(IO::Options::VertexNormal))
-			mesh_.update_vertex_normals();
-		else
-			std::cout << "File provides vertex normals\n";
+		bbMin.minimize(OpenMesh::vector_cast<Vec3f>(mesh_.point(*vIt)));
+		bbMax.maximize(OpenMesh::vector_cast<Vec3f>(mesh_.point(*vIt)));
+	}
 
 
-		// check for possible color information
-		if (opt_.check(IO::Options::VertexColor))
+	// set center and radius
+	set_scene_pos((bbMin + bbMax)*0.5, (bbMin - bbMax).norm()*0.5);
+
+	// for normal display
+	normal_scale_ = (bbMax - bbMin).min()*0.05f;
+
+	// info
+	std::clog << mesh_.n_vertices() << " vertices, "
+		<< mesh_.n_edges() << " edge, "
+		<< mesh_.n_faces() << " faces\n";
+
+	// base point for displaying face normals
+	{
+		OpenMesh::Utils::Timer t;
+		t.start();
+		mesh_.add_property(fp_normal_base_);
+		typename M::FaceIter f_it = mesh_.faces_begin();
+		typename M::FaceVertexIter fv_it;
+		for (; f_it != mesh_.faces_end(); ++f_it)
 		{
-			std::cout << "File provides vertex colors\n";
-			//add_draw_mode("Colored Vertices");
+			typename Mesh::Point v(0, 0, 0);
+			for (fv_it = mesh_.fv_iter(*f_it); fv_it.is_valid(); ++fv_it)
+				v += OpenMesh::vector_cast<typename Mesh::Normal>(mesh_.point(*fv_it));
+			v *= 1.0f / 3.0f;
+			mesh_.property(fp_normal_base_, *f_it) = v;
 		}
-		else
-			mesh_.release_vertex_colors();
+		t.stop();
+		std::clog << "Computed base point for displaying face normals ["
+			<< t.as_string() << "]" << std::endl;
+	}
 
-		if (options_.check(IO::Options::FaceColor))
-		{
-			std::cout << "File provides face colors\n";
-			//add_draw_mode("Solid Colored Faces");
-			//add_draw_mode("Smooth Colored Faces");
-		}
-		else
-			mesh_.release_face_colors();
-
-		if (options_.check(IO::Options::VertexTexCoord))
-			std::cout << "File provides texture coordinates\n";
-
-
-		// bounding box
-		typename Mesh::ConstVertexIter vIt(mesh_.vertices_begin());
-		typename Mesh::ConstVertexIter vEnd(mesh_.vertices_end());
-
-		typedef typename Mesh::Point Point;
-		using OpenMesh::Vec3f;
-
-		Vec3f bbMin, bbMax;
-
-		bbMin = bbMax = OpenMesh::vector_cast<Vec3f>(mesh_.point(*vIt));
-
-		for (size_t count = 0; vIt != vEnd; ++vIt, ++count)
-		{
-			bbMin.minimize(OpenMesh::vector_cast<Vec3f>(mesh_.point(*vIt)));
-			bbMax.maximize(OpenMesh::vector_cast<Vec3f>(mesh_.point(*vIt)));
-		}
-
-
-		// set center and radius
-		set_scene_pos((bbMin + bbMax)*0.5, (bbMin - bbMax).norm()*0.5);
-
-		// for normal display
-		normal_scale_ = (bbMax - bbMin).min()*0.05f;
-
-		// info
-		std::clog << mesh_.n_vertices() << " vertices, "
-			<< mesh_.n_edges() << " edge, "
-			<< mesh_.n_faces() << " faces\n";
-
-		// base point for displaying face normals
-		{
-			OpenMesh::Utils::Timer t;
-			t.start();
-			mesh_.add_property(fp_normal_base_);
-			typename M::FaceIter f_it = mesh_.faces_begin();
-			typename M::FaceVertexIter fv_it;
-			for (; f_it != mesh_.faces_end(); ++f_it)
-			{
-				typename Mesh::Point v(0, 0, 0);
-				for (fv_it = mesh_.fv_iter(*f_it); fv_it.is_valid(); ++fv_it)
-					v += OpenMesh::vector_cast<typename Mesh::Normal>(mesh_.point(*fv_it));
-				v *= 1.0f / 3.0f;
-				mesh_.property(fp_normal_base_, *f_it) = v;
-			}
-			t.stop();
-			std::clog << "Computed base point for displaying face normals ["
-				<< t.as_string() << "]" << std::endl;
-		}
-
-		//      
+	//      
 	{
 		std::clog << "Computing strips.." << std::flush;
 		OpenMesh::Utils::Timer t;
@@ -189,8 +161,6 @@ MeshViewerCoreT<M>::open_mesh(const char* _filename)
 
 	// loading done
 	return true;
-	}
-	return false;
 }
 
 

@@ -18,6 +18,8 @@
 #define PREV(i) ((i)>0 ? (i)-1 : (i)+2)
 
 
+#include <OpenMesh/Core/IO/MeshIO.hh>
+#include <OpenMesh/Core/IO/Options.hh>
 #include <OpenMesh/Core/Mesh/TriMesh_ArrayKernelT.hh>
 #include <list>
 #include <vector>
@@ -85,6 +87,11 @@ public:
 
 	virtual void clear();
 	void initialize();
+	bool open_mesh(const char* _filename, bool _verbose = true);
+
+	OpenMesh::IO::Options& options() { return options_; }
+	const OpenMesh::IO::Options& options() const { return options_; }
+	void setOptions(const OpenMesh::IO::Options& opts) { options_ = opts; }
 
 	void translate(const Normal _translate);
 	void scale(const Real _scale);
@@ -204,6 +211,8 @@ private:
 
 	MyMesh::Normal translation_;
 	Real scale_;
+
+	OpenMesh::IO::Options options_;
 };
 
 /*
