@@ -82,7 +82,7 @@ bool MeshViewerCore::load_training_data(
 {
 	QFileInfo file_info(_mesh_filepath);
 
-	std::string mesh_name = file_info.baseName().toLocal8Bit();
+	std::string mesh_name(file_info.baseName().toLocal8Bit());
 	std::string mesh_label_filepath = FLAGS_data_root_path + FLAGS_mesh_label_path + std::string("/") + mesh_name + std::string(".seg");
 	std::string sample_filepath = FLAGS_data_root_path + FLAGS_sample_path + std::string("/") + mesh_name + std::string(".pts");
 	std::string dense_sample_filepath = FLAGS_data_root_path + FLAGS_dense_sample_path + std::string("/") + mesh_name + std::string(".pts");
@@ -141,7 +141,7 @@ bool MeshViewerCore::load_training_data(
 {
 	QFileInfo file_info(_mesh_filepath);
 
-	std::string mesh_name = file_info.baseName().toLocal8Bit();
+	std::string mesh_name(file_info.baseName().toLocal8Bit());
 	std::string mesh_label_filepath = FLAGS_data_root_path + FLAGS_mesh_label_path + std::string("/") + mesh_name + std::string(".seg");
 	std::string sample_filepath = FLAGS_data_root_path + FLAGS_sample_path + std::string("/") + mesh_name + std::string(".pts");
 	std::string dense_sample_filepath = FLAGS_data_root_path + FLAGS_dense_sample_path + std::string("/") + mesh_name + std::string(".pts");
