@@ -1164,7 +1164,7 @@ void MeshViewerCore::reconstruct_using_database(const std::vector<LabelIndex> *_
 
 		std::string mesh_filepath = label_matched_object[label_index].second;
 		QFileInfo file_info(mesh_filepath.c_str());
-		std::string mesh_name = file_info.baseName().toLocal8Bit();
+		std::string mesh_name(file_info.baseName().toLocal8Bit());
 
 		// NOTICE:
 		// Load dense sample points.
