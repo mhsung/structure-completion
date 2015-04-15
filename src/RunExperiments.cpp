@@ -77,7 +77,7 @@ void MeshViewerCore::parse_arguments()
 }
 
 bool MeshViewerCore::load_training_data(
-	const const char* _mesh_filepath,
+	const char* _mesh_filepath,
 	bool _load_dense_samples)
 {
 	QFileInfo file_info(_mesh_filepath);
@@ -134,7 +134,7 @@ bool MeshViewerCore::load_training_data(
 }
 
 bool MeshViewerCore::load_training_data(
-	const const char* _mesh_filepath,
+	const char* _mesh_filepath,
 	MyMesh &_mesh,
 	MeshCuboidStructure &_cuboid_structure,
 	bool _load_dense_samples)
@@ -946,6 +946,21 @@ void MeshViewerCore::reconstruct(
 	//
 	MyMesh ground_truth_mesh;
 	MeshCuboidStructure ground_truth_cuboid_structure(&ground_truth_mesh);
+
+	ret = true;
+	ret = ret & ground_truth_cuboid_structure.load_labels((FLAGS_data_root_path +
+		FLAGS_label_info_path + FLAGS_label_info_filename).c_str());
+	ret = ret & ground_truth_cuboid_structure.load_label_symmetries((FLAGS_data_root_path +
+		FLAGS_label_info_path + FLAGS_label_symmetry_info_filename).c_str());
+
+	if (!ret)
+	{
+		do {
+			std::cout << "Error: Cannot open label information files.";
+			std::cout << '\n' << "Press the Enter key to continue.";
+		} while (std::cin.get() != '\n');
+	}
+
 	// NOTICE:
 	// Load dense sample points.
 	ret = load_training_data(_mesh_filepath, ground_truth_mesh, ground_truth_cuboid_structure, true);
@@ -974,38 +989,29 @@ void MeshViewerCore::reconstruct(
 	open_modelview_matrix_file(FLAGS_pose_filename.c_str());
 	cuboid_structure_.copy_sample_points_to_symmetric_position();
 
-	cuboid_structure_.clear_cuboids();
-	updateGL();
 	output_filename_sstr.clear(); output_filename_sstr.str("");
 	output_filename_sstr << _output_file_prefix << std::string("_reconstructed");
+	evaluator.evaluate_point_to_point_distances(&cuboid_structure_, output_filename_sstr.str().c_str());
+
+	cuboid_structure_.clear_cuboids();
+	updateGL();
 	snapshot(output_filename_sstr.str().c_str());
 	cuboid_structure_.save_sample_points_to_ply(output_filename_sstr.str().c_str());
-
-	output_filename_sstr.clear(); output_filename_sstr.str("");
-	output_filename_sstr << _output_file_prefix << std::string("_reconstructed.csv");
-	evaluator.save_evaluate_results(&cuboid_structure_, output_filename_sstr.str());
 
 	cuboid_structure_ = cuboid_structure_copy;
 
 
 	// 2. Reconstruction using database.
 	reconstruct_using_database();
-	// NOTE:
-	// Recover the original mesh after call 'reconstruct_using_database()'.
-	ret = open_mesh(_mesh_filepath);
-	assert(ret);
-	open_modelview_matrix_file(FLAGS_pose_filename.c_str());
+
+	output_filename_sstr.clear(); output_filename_sstr.str("");
+	output_filename_sstr << _output_file_prefix << std::string("_database");
+	evaluator.evaluate_point_to_point_distances(&cuboid_structure_, output_filename_sstr.str().c_str());
 
 	cuboid_structure_.clear_cuboids();
 	updateGL();
-	output_filename_sstr.clear(); output_filename_sstr.str("");
-	output_filename_sstr << _output_file_prefix << std::string("_database");
 	snapshot(output_filename_sstr.str().c_str());
 	cuboid_structure_.save_sample_points_to_ply(output_filename_sstr.str().c_str());
-
-	output_filename_sstr.clear(); output_filename_sstr.str("");
-	output_filename_sstr << _output_file_prefix << std::string("_database.csv");
-	evaluator.save_evaluate_results(&cuboid_structure_, output_filename_sstr.str());
 
 	cuboid_structure_ = cuboid_structure_copy;
 
@@ -1023,21 +1029,15 @@ void MeshViewerCore::reconstruct(
 	reconstructed_label_indices.push_back(0);
 	reconstructed_label_indices.push_back(1);
 	reconstruct_using_database(&reconstructed_label_indices);
-	// NOTE:
-	// Recover the original mesh after call 'reconstruct_using_database()'.
-	open_mesh(_mesh_filepath);
-	open_modelview_matrix_file(FLAGS_pose_filename.c_str());
+
+	output_filename_sstr.clear(); output_filename_sstr.str("");
+	output_filename_sstr << _output_file_prefix << std::string("_fusion");
+	evaluator.evaluate_point_to_point_distances(&cuboid_structure_, output_filename_sstr.str().c_str());
 
 	cuboid_structure_.clear_cuboids();
 	updateGL();
-	output_filename_sstr.clear(); output_filename_sstr.str("");
-	output_filename_sstr << _output_file_prefix << std::string("_fusion");
 	snapshot(output_filename_sstr.str().c_str());
 	cuboid_structure_.save_sample_points_to_ply(output_filename_sstr.str().c_str());
-
-	output_filename_sstr.clear(); output_filename_sstr.str("");
-	output_filename_sstr << _output_file_prefix << std::string("_database.csv");
-	evaluator.save_evaluate_results(&cuboid_structure_, output_filename_sstr.str());
 
 	cuboid_structure_ = cuboid_structure_copy;
 }
@@ -1066,6 +1066,7 @@ void MeshViewerCore::reconstruct_using_database(const std::vector<LabelIndex> *_
 	}
 
 	unsigned int num_labels = cuboid_structure_.num_labels();
+	assert(num_labels == example_cuboid_structure.num_labels());
 
 
 	setDrawMode(CUSTOM_VIEW);

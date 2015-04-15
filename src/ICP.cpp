@@ -85,7 +85,7 @@ namespace ICP {
 		assert(_query_points.rows() == 3);
 		assert(_query_points.cols() > 0);
 
-		int num_queries = static_cast<int>(_query_points.rows());
+		int num_queries = static_cast<int>(_query_points.cols());
 		_distances = Eigen::VectorXd::Zero(num_queries);
 
 		ANNpoint q = annAllocPt(3);

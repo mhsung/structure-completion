@@ -76,11 +76,11 @@ public:
 
 private:
 	bool load_training_data(
-		const const char* _mesh_filepath,
+		const char* _mesh_filepath,
 		bool _load_dense_samples = false);
 
 	bool load_training_data(
-		const const char* _mesh_filepath,
+		const char* _mesh_filepath,
 		MyMesh &_mesh,
 		MeshCuboidStructure &_cuboid_structure,
 		bool _load_dense_samples = false);

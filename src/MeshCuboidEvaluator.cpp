@@ -21,13 +21,10 @@ MeshCuboidEvaluator::MeshCuboidEvaluator(
 
 bool MeshCuboidEvaluator::save_evaluate_results(
 	const MeshCuboidStructure *_test_cuboid_structure,
-	const std::string _filename, bool _verbose)
+	const char *_filename, bool _verbose)
 {
 	assert(_test_cuboid_structure);
 
-	evaluate_point_to_point_distances(_test_cuboid_structure, _filename);
-
-	/*
 	std::ofstream file(_filename);
 	if (!file)
 	{
@@ -62,7 +59,7 @@ bool MeshCuboidEvaluator::save_evaluate_results(
 	}
 
 	file.close();
-	*/
+	
 	return true;
 }
 
@@ -193,12 +190,12 @@ void MeshCuboidEvaluator::evaluate_cuboid_distance(
 
 void MeshCuboidEvaluator::evaluate_point_to_point_distances(
 	const MeshCuboidStructure *_test_cuboid_structure,
-	const std::string _filename)
+	const char *_filename)
 {
 	assert(_test_cuboid_structure);
 
-	const unsigned int num_neighbor_ranges = 50;
-	Real max_neighbor_range = 0.5;
+	const unsigned int num_neighbor_ranges = 1000;
+	Real max_neighbor_range = 0.1;
 	Eigen::VectorXd neighbor_ranges;
 	neighbor_ranges.setLinSpaced(num_neighbor_ranges, 0.0, max_neighbor_range);
 
@@ -224,8 +221,7 @@ void MeshCuboidEvaluator::evaluate_point_to_point_distances(
 		const unsigned int num_ground_truth_sample_points = ground_truth_cuboid->num_sample_points();
 		const unsigned int num_test_sample_points = test_cuboid->num_sample_points();
 
-		if (num_ground_truth_sample_points == 0
-			|| num_test_sample_points == 0)
+		if (num_ground_truth_sample_points == 0 || num_test_sample_points == 0)
 			continue;
 
 
@@ -283,26 +279,37 @@ void MeshCuboidEvaluator::evaluate_point_to_point_distances(
 		assert(distance_error >= 0);
 
 
-		Eigen::VectorXd precision_recall(num_neighbor_ranges, 2);
-		Eigen::VectorXd recalls(num_neighbor_ranges);
+		Eigen::MatrixXd precision_recall(2, num_neighbor_ranges);
 
 		for (unsigned int i = 0; i < num_neighbor_ranges; ++i)
 		{
 			// Precision.
-			precision_recall.col(0)(i) = static_cast<double>(
+			precision_recall.row(0)(i) = static_cast<double>(
 				(test_to_ground_truth_distances.array() <= neighbor_ranges[i]).count())
 				/ num_test_sample_points;
 
 			// Recall.
-			precision_recall.col(1)(i) = static_cast<double>(
+			precision_recall.row(1)(i) = static_cast<double>(
 				(ground_truth_to_test_distances.array() <= neighbor_ranges[i]).count())
 				/ num_ground_truth_sample_points;
 		}
 
-		std::ofstream file(_filename);
-		file << precision_recall;
-		file.close();
+		std::stringstream sstr;
+		sstr << _filename << "_" << label_index << ".csv";
+		std::ofstream file(sstr.str());
 
+		if (!file.good())
+		{
+			do {
+				std::cout << "Error: Cannot save file: '" << sstr.str() << "'." << std::endl;
+				std::cout << '\n' << "Press the Enter key to continue.";
+			} while (std::cin.get() != '\n');
+		}
+
+		Eigen::IOFormat csv_format(Eigen::StreamPrecision, 0, ",");
+		file << precision_recall.format(csv_format) << std::endl;
+		file.close();
+		
 
 		annDeallocPts(ground_truth_sample_ann_points);
 		annDeallocPts(test_sample_ann_points);

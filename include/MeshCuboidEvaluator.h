@@ -19,7 +19,11 @@ public:
 
 	bool save_evaluate_results(
 		const MeshCuboidStructure *_test_cuboid_structure,
-		const std::string _filename, bool _verbose = true);
+		const char *_filename, bool _verbose = true);
+
+	void evaluate_point_to_point_distances(
+		const MeshCuboidStructure *_test_cuboid_structure,
+		const char *_filename);
 	
 private:
 	void evaluate_all(
@@ -30,10 +34,6 @@ private:
 
 	//void evaluate_cuboid_distance(
 	//	const MeshCuboidStructure *_test_cuboid_structure);
-
-	void evaluate_point_to_point_distances(
-		const MeshCuboidStructure *_test_cuboid_structure,
-		const std::string _filename);
 
 
 protected:
