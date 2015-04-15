@@ -52,6 +52,7 @@ public:
 	void remove_occluded_points();
 
 	// Experiment functions.
+	void parse_arguments();
 	void train();
 	void train_file_files();
 	void batch_predict();
@@ -59,9 +60,6 @@ public:
 	void batch_render_point_clusters();
 	void batch_render_cuboids();
 	void batch_render_points();
-	void set_view_direction();
-	void set_random_view_direction(bool _set_modelview_matrix = false);
-	void parse_arguments();
 	void print_mesh_info();
 	//void do_occlusion_test();
 	void run_test();
@@ -77,13 +75,28 @@ public:
 
 
 private:
+	bool load_training_data(
+		const const char* _mesh_filepath,
+		bool _load_dense_samples = false);
+
+	bool load_training_data(
+		const const char* _mesh_filepath,
+		MyMesh &_mesh,
+		MeshCuboidStructure &_cuboid_structure,
+		bool _load_dense_samples = false);
+
 	void reconstruct(
-		const char *mesh_filepath,
-		const char *dense_sample_filepath,
-		const GLdouble *occlusion_modelview_matrix,
-		const char *output_file_prefix);
+		const char *_mesh_filepath,
+		const char *_dense_sample_filepath,
+		const GLdouble *_occlusion_modelview_matrix,
+		const char *_output_file_prefix);
+
 	void reconstruct_using_database(
 		const std::vector<LabelIndex> *_reconstructed_label_indices = NULL);
+
+	void set_view_direction();
+
+	void set_random_view_direction(bool _set_modelview_matrix = false);
 
 
 public:

@@ -57,7 +57,7 @@ namespace ICP {
 		ANNidxArray nn_idx = new ANNidx[1];
 		ANNdistArray dd = new ANNdist[1];
 
-		for (int point_index = 0; point_index < _query_points.cols(); point_index++)
+		for (int point_index = 0; point_index < num_queries; point_index++)
 		{
 			for (unsigned int i = 0; i < 3; ++i)
 				q[i] = _query_points.col(point_index)(i);
@@ -65,6 +65,7 @@ namespace ICP {
 			_data_ann_kd_tree->annkSearch(q, 1, nn_idx, dd);
 			int closest_Y_point_index = nn_idx[0];
 			assert(closest_Y_point_index < num_data);
+			assert(point_index < _closest_data_values.cols());
 
 			_closest_data_values.col(point_index) = _data_values.col(closest_Y_point_index);
 		}
@@ -91,12 +92,13 @@ namespace ICP {
 		ANNidxArray nn_idx = new ANNidx[1];
 		ANNdistArray dd = new ANNdist[1];
 
-		for (int point_index = 0; point_index < _query_points.cols(); point_index++)
+		for (int point_index = 0; point_index < num_queries; point_index++)
 		{
 			for (unsigned int i = 0; i < 3; ++i)
 				q[i] = _query_points.col(point_index)(i);
 
 			_data_ann_kd_tree->annkSearch(q, 1, nn_idx, dd);
+			assert(point_index < _distances.rows());
 			_distances[point_index] = dd[0];
 		}
 

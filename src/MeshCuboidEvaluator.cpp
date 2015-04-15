@@ -1,20 +1,33 @@
 #include "MeshCuboidEvaluator.h"
 
+#include "ICP.h"
+
 #include <fstream>
 #include <iostream>
 
 
-MeshCuboidEvaluator::MeshCuboidEvaluator(const MeshCuboidStructure &_cuboid_structure,
-	const std::string _mesh_name,
-	const std::string _cuboid_structure_name)
-	: cuboid_structure_(_cuboid_structure)
-	, mesh_name_(_mesh_name)
-	, cuboid_structure_name_(_cuboid_structure_name)
+MeshCuboidEvaluator::MeshCuboidEvaluator(
+	const MeshCuboidStructure *_ground_truth_cuboid_structure)
+	//const std::string _mesh_name,
+	//const std::string _cuboid_structure_name)
+	: ground_truth_cuboid_structure_(_ground_truth_cuboid_structure)
+	//, mesh_name_(_mesh_name)
+	//, cuboid_structure_name_(_cuboid_structure_name)
+	, mesh_name_("")
+	, cuboid_structure_name_("")
 {
+	assert(ground_truth_cuboid_structure_);
 }
 
-bool MeshCuboidEvaluator::save_evaluate_results(const std::string _filename, bool _verbose)
+bool MeshCuboidEvaluator::save_evaluate_results(
+	const MeshCuboidStructure *_test_cuboid_structure,
+	const std::string _filename, bool _verbose)
 {
+	assert(_test_cuboid_structure);
+
+	evaluate_point_to_point_distances(_test_cuboid_structure, _filename);
+
+	/*
 	std::ofstream file(_filename);
 	if (!file)
 	{
@@ -25,9 +38,8 @@ bool MeshCuboidEvaluator::save_evaluate_results(const std::string _filename, boo
 	if (_verbose)
 		std::cout << "Saving " << _filename << "..." << std::endl;
 
-
-	evaluate_all();
-
+	evaluate_all(_test_cuboid_structure);
+	
 	file << "Mesh name," << mesh_name_ << std::endl;
 	file << "Cuboid structure name," << cuboid_structure_name_ << std::endl;
 
@@ -50,34 +62,42 @@ bool MeshCuboidEvaluator::save_evaluate_results(const std::string _filename, boo
 	}
 
 	file.close();
+	*/
 	return true;
 }
 
-void MeshCuboidEvaluator::evaluate_all()
+void MeshCuboidEvaluator::evaluate_all(
+	const MeshCuboidStructure *_test_cuboid_structure)
 {
-	evaluate_segmentation();
-	evaluate_cuboid_distance();
+	assert(_test_cuboid_structure);
+
+	//evaluate_segmentation(_test_cuboid_structure);
+	//evaluate_cuboid_distance(_test_cuboid_structure);
 }
 
-void MeshCuboidEvaluator::evaluate_segmentation()
+/*
+void MeshCuboidEvaluator::evaluate_segmentation(
+	const MeshCuboidStructure *_test_cuboid_structure)
 {
-	const MyMesh *mesh = cuboid_structure_.mesh_;
+	assert(_test_cuboid_structure);
+
+	const MyMesh *mesh = _test_cuboid_structure->mesh_;
 	assert(mesh);
 
-	const unsigned int num_labels = cuboid_structure_.num_labels();
-	assert(cuboid_structure_.label_cuboids_.size() == num_labels);
+	const unsigned int num_labels = _test_cuboid_structure->num_labels();
+	assert(_test_cuboid_structure->label_cuboids_.size() == num_labels);
 
-	unsigned int num_sample_points = cuboid_structure_.num_sample_points();
+	unsigned int num_sample_points = _test_cuboid_structure->num_sample_points();
 	unsigned int num_cuboid_sample_points = 0;
 	unsigned int num_correct_sample_point_labels = 0;
 	//int num_changed_sample_point_labels = 0;
 
 	for (LabelIndex label_index = 0; label_index < num_labels; ++label_index)
 	{
-		Label label = cuboid_structure_.get_label(label_index);
+		Label label = _test_cuboid_structure->get_label(label_index);
 
-		for (std::vector<MeshCuboid *>::const_iterator c_it = cuboid_structure_.label_cuboids_[label_index].begin();
-			c_it != cuboid_structure_.label_cuboids_[label_index].end(); ++c_it)
+		for (std::vector<MeshCuboid *>::const_iterator c_it = _test_cuboid_structure->label_cuboids_[label_index].begin();
+			c_it != _test_cuboid_structure->label_cuboids_[label_index].end(); ++c_it)
 		{
 			const MeshCuboid *cuboid = (*c_it);
 			assert(cuboid);
@@ -121,16 +141,19 @@ void MeshCuboidEvaluator::evaluate_segmentation()
 	evaluation_results_["correct_sample_point_label_ratio"] = correct_sample_point_label_ratio;
 }
 
-void MeshCuboidEvaluator::evaluate_cuboid_distance()
+void MeshCuboidEvaluator::evaluate_cuboid_distance(
+	const MeshCuboidStructure *_test_cuboid_structure)
 {
-	const MyMesh *mesh = cuboid_structure_.mesh_;
+	assert(_test_cuboid_structure);
+
+	const MyMesh *mesh = _test_cuboid_structure->mesh_;
 	assert(mesh);
 
-	const unsigned int num_labels = cuboid_structure_.num_labels();
+	const unsigned int num_labels = _test_cuboid_structure->num_labels();
 
 	// FIXME:
 	// The cuboid structure should not deep copy all sample points.
-	MeshCuboidStructure ground_truth_cuboid_structure = cuboid_structure_;
+	MeshCuboidStructure ground_truth_cuboid_structure = _test_cuboid_structure;
 	ground_truth_cuboid_structure.clear_cuboids();
 	ground_truth_cuboid_structure.get_mesh_face_label_cuboids();
 
@@ -149,13 +172,13 @@ void MeshCuboidEvaluator::evaluate_cuboid_distance()
 		MeshCuboid *ground_truth_cuboid = ground_truth_cuboid_structure.label_cuboids_[label_index].front();
 		assert(ground_truth_cuboid);
 
-		if (cuboid_structure_.label_cuboids_[label_index].empty())
+		if (_test_cuboid_structure->label_cuboids_[label_index].empty())
 		{
 			++num_missing_labels;
 		}
 		else
 		{
-			MeshCuboid *cuboid = cuboid_structure_.label_cuboids_[label_index].front();
+			MeshCuboid *cuboid = _test_cuboid_structure->label_cuboids_[label_index].front();
 			assert(cuboid);
 
 			Real cuboid_distance = MeshCuboid::distance_between_cuboids(ground_truth_cuboid, cuboid);
@@ -165,4 +188,125 @@ void MeshCuboidEvaluator::evaluate_cuboid_distance()
 
 	evaluation_results_["num_missing_labels"] = static_cast<Real>(num_missing_labels);
 	evaluation_results_["max_cuboid_distance"] = max_cuboid_distance;
+}
+*/
+
+void MeshCuboidEvaluator::evaluate_point_to_point_distances(
+	const MeshCuboidStructure *_test_cuboid_structure,
+	const std::string _filename)
+{
+	assert(_test_cuboid_structure);
+
+	const unsigned int num_neighbor_ranges = 50;
+	Real max_neighbor_range = 0.5;
+	Eigen::VectorXd neighbor_ranges;
+	neighbor_ranges.setLinSpaced(num_neighbor_ranges, 0.0, max_neighbor_range);
+
+	const unsigned int num_labels = ground_truth_cuboid_structure_->num_labels();
+
+	for (LabelIndex label_index = 0; label_index < num_labels; ++label_index)
+	{
+		MeshCuboid *ground_truth_cuboid = NULL, *test_cuboid = NULL;
+
+		// NOTE:
+		// The current implementation assumes that there is only one part for each label.
+		assert(ground_truth_cuboid_structure_->label_cuboids_[label_index].size() <= 1);
+		if (!ground_truth_cuboid_structure_->label_cuboids_[label_index].empty())
+			ground_truth_cuboid = ground_truth_cuboid_structure_->label_cuboids_[label_index].front();
+
+		assert(_test_cuboid_structure->label_cuboids_[label_index].size() <= 1);
+		if (!_test_cuboid_structure->label_cuboids_[label_index].empty())
+			test_cuboid = _test_cuboid_structure->label_cuboids_[label_index].front();
+
+		if (!ground_truth_cuboid || !test_cuboid)
+			continue;
+
+		const unsigned int num_ground_truth_sample_points = ground_truth_cuboid->num_sample_points();
+		const unsigned int num_test_sample_points = test_cuboid->num_sample_points();
+
+		if (num_ground_truth_sample_points == 0
+			|| num_test_sample_points == 0)
+			continue;
+
+
+		// Create a ground truth sample point KD-tree.
+		Eigen::MatrixXd ground_truth_sample_points(3, num_ground_truth_sample_points);
+		for (SamplePointIndex sample_point_index = 0; sample_point_index < num_ground_truth_sample_points;
+			++sample_point_index)
+		{
+			assert(ground_truth_cuboid->get_sample_point(sample_point_index));
+			for (unsigned int i = 0; i < 3; ++i)
+				ground_truth_sample_points.col(sample_point_index)(i) =
+				ground_truth_cuboid->get_sample_point(sample_point_index)->point_[i];
+		}
+
+		ANNpointArray ground_truth_sample_ann_points;
+		ANNkd_tree *ground_truth_sample_ann_kd_tree = ICP::create_kd_tree(ground_truth_sample_points,
+			ground_truth_sample_ann_points);
+		assert(ground_truth_sample_ann_points);
+		assert(ground_truth_sample_ann_kd_tree);
+
+
+		// Create a test sample point KD-tree.
+		Eigen::MatrixXd test_sample_points(3, num_test_sample_points);
+		for (SamplePointIndex sample_point_index = 0; sample_point_index < num_test_sample_points;
+			++sample_point_index)
+		{
+			assert(test_cuboid->get_sample_point(sample_point_index));
+			for (unsigned int i = 0; i < 3; ++i)
+				test_sample_points.col(sample_point_index)(i) =
+				test_cuboid->get_sample_point(sample_point_index)->point_[i];
+		}
+
+		ANNpointArray test_sample_ann_points;
+		ANNkd_tree *test_sample_ann_kd_tree = ICP::create_kd_tree(test_sample_points,
+			test_sample_ann_points);
+		assert(test_sample_ann_points);
+		assert(test_sample_ann_kd_tree);
+
+
+		// Ground truth -> test.
+		Eigen::VectorXd ground_truth_to_test_distances;
+		ICP::get_closest_points(test_sample_ann_kd_tree, ground_truth_sample_points,
+			ground_truth_to_test_distances);
+		assert(ground_truth_to_test_distances.rows() == num_ground_truth_sample_points);
+
+		// Test -> ground truth.
+		Eigen::VectorXd test_to_ground_truth_distances;
+		ICP::get_closest_points(ground_truth_sample_ann_kd_tree, test_sample_points,
+			test_to_ground_truth_distances);
+		assert(test_to_ground_truth_distances.rows() == num_test_sample_points);
+
+
+		Real distance_error = (ground_truth_to_test_distances.squaredNorm() / num_ground_truth_sample_points)
+			+ (test_to_ground_truth_distances.squaredNorm() / num_test_sample_points);
+		assert(distance_error >= 0);
+
+
+		Eigen::VectorXd precision_recall(num_neighbor_ranges, 2);
+		Eigen::VectorXd recalls(num_neighbor_ranges);
+
+		for (unsigned int i = 0; i < num_neighbor_ranges; ++i)
+		{
+			// Precision.
+			precision_recall.col(0)(i) = static_cast<double>(
+				(test_to_ground_truth_distances.array() <= neighbor_ranges[i]).count())
+				/ num_test_sample_points;
+
+			// Recall.
+			precision_recall.col(1)(i) = static_cast<double>(
+				(ground_truth_to_test_distances.array() <= neighbor_ranges[i]).count())
+				/ num_ground_truth_sample_points;
+		}
+
+		std::ofstream file(_filename);
+		file << precision_recall;
+		file.close();
+
+
+		annDeallocPts(ground_truth_sample_ann_points);
+		annDeallocPts(test_sample_ann_points);
+		delete ground_truth_sample_ann_kd_tree;
+		delete test_sample_ann_kd_tree;
+	}
 }

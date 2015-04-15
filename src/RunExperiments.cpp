@@ -76,6 +76,112 @@ void MeshViewerCore::parse_arguments()
 	}
 }
 
+bool MeshViewerCore::load_training_data(
+	const const char* _mesh_filepath,
+	bool _load_dense_samples)
+{
+	QFileInfo file_info(_mesh_filepath);
+
+	std::string mesh_name = file_info.baseName().toLocal8Bit();
+	std::string mesh_label_filepath = FLAGS_data_root_path + FLAGS_mesh_label_path + std::string("/") + mesh_name + std::string(".seg");
+	std::string sample_filepath = FLAGS_data_root_path + FLAGS_sample_path + std::string("/") + mesh_name + std::string(".pts");
+	std::string dense_sample_filepath = FLAGS_data_root_path + FLAGS_dense_sample_path + std::string("/") + mesh_name + std::string(".pts");
+	std::string sample_label_filepath = FLAGS_data_root_path + FLAGS_sample_label_path + std::string("/") + mesh_name + std::string(".arff");
+
+	QFileInfo mesh_file(_mesh_filepath);
+	QFileInfo sample_file(sample_filepath.c_str());
+	QFileInfo sample_label_file(sample_label_filepath.c_str());
+	QFileInfo mesh_label_file(mesh_label_filepath.c_str());
+
+	if (!mesh_file.exists()
+		|| !sample_file.exists()
+		|| !sample_label_file.exists()
+		|| !mesh_label_file.exists())
+		return false;
+
+	cuboid_structure_.clear_cuboids();
+	cuboid_structure_.clear_sample_points();
+
+	bool ret;
+	ret = open_mesh(_mesh_filepath);
+	assert(ret);
+	open_mesh_face_label_file(mesh_label_filepath.c_str());
+	open_sample_point_file(sample_filepath.c_str());
+
+	//if (run_ground_truth)
+	//{
+		cuboid_structure_.get_mesh_face_label_cuboids();
+	//}
+	//else
+	//{
+	//	open_sample_point_label_file(sample_label_filepath.c_str());
+	//	cuboid_structure_.compute_label_cuboids();
+	//	cuboid_structure_.apply_mesh_face_labels_to_cuboids();
+	//}
+
+	if (_load_dense_samples)
+	{
+		cuboid_structure_.load_dense_sample_points(dense_sample_filepath.c_str(), false);
+	}
+
+	// To be removed.
+	//if (FLAGS_use_symmetric_group_cuboids)
+	//{
+	//	cuboid_structure_.create_symmetric_group_cuboids();
+	//}
+
+	return true;
+}
+
+bool MeshViewerCore::load_training_data(
+	const const char* _mesh_filepath,
+	MyMesh &_mesh,
+	MeshCuboidStructure &_cuboid_structure,
+	bool _load_dense_samples)
+{
+	QFileInfo file_info(_mesh_filepath);
+
+	std::string mesh_name = file_info.baseName().toLocal8Bit();
+	std::string mesh_label_filepath = FLAGS_data_root_path + FLAGS_mesh_label_path + std::string("/") + mesh_name + std::string(".seg");
+	std::string sample_filepath = FLAGS_data_root_path + FLAGS_sample_path + std::string("/") + mesh_name + std::string(".pts");
+	std::string dense_sample_filepath = FLAGS_data_root_path + FLAGS_dense_sample_path + std::string("/") + mesh_name + std::string(".pts");
+	std::string sample_label_filepath = FLAGS_data_root_path + FLAGS_sample_label_path + std::string("/") + mesh_name + std::string(".arff");
+
+	QFileInfo mesh_file(_mesh_filepath);
+	QFileInfo sample_file(sample_filepath.c_str());
+	QFileInfo sample_label_file(sample_label_filepath.c_str());
+	QFileInfo mesh_label_file(mesh_label_filepath.c_str());
+
+	if (!mesh_file.exists()
+		|| !sample_file.exists()
+		|| !sample_label_file.exists()
+		|| !mesh_label_file.exists())
+		return false;
+
+	_cuboid_structure.clear_cuboids();
+	_cuboid_structure.clear_sample_points();
+
+	bool ret;
+	ret = _mesh.open_mesh(_mesh_filepath);
+	assert(ret);
+	ret = _mesh.load_face_label_simple(mesh_label_filepath.c_str(), false);
+	assert(ret);
+	ret = _cuboid_structure.load_sample_points(sample_filepath.c_str(), false);
+	assert(ret);
+
+	_cuboid_structure.get_mesh_face_label_cuboids();
+
+	// Find the largest part for each part.
+	_cuboid_structure.find_the_largest_label_cuboids();
+
+	if (_load_dense_samples)
+	{
+		_cuboid_structure.load_dense_sample_points(dense_sample_filepath.c_str(), false);
+	}
+
+	return true;
+}
+
 void MeshViewerCore::open_cuboid_file(const char *_filename)
 {
 	assert(_filename);
@@ -256,65 +362,21 @@ void MeshViewerCore::train()
 			(file_info.suffix().compare("obj") == 0
 			|| file_info.suffix().compare("off") == 0))
 		{
-			std::string mesh_name = std::string(file_info.baseName().toLocal8Bit());
 			std::string mesh_filepath = std::string(file_info.filePath().toLocal8Bit());
-			std::string mesh_label_filepath = FLAGS_data_root_path + FLAGS_mesh_label_path + std::string("/") + mesh_name + std::string(".seg");
-			std::string sample_filepath = FLAGS_data_root_path + FLAGS_sample_path + std::string("/") + mesh_name + std::string(".pts");
-			std::string sample_label_filepath = FLAGS_data_root_path + FLAGS_sample_label_path + std::string("/") + mesh_name + std::string(".arff");
+			std::string mesh_name = std::string(file_info.baseName().toLocal8Bit());
 			std::string snapshot_filepath = FLAGS_output_path + std::string("/") + mesh_name;
 
-			QFileInfo mesh_file(mesh_filepath.c_str());
-			QFileInfo sample_file(sample_filepath.c_str());
-			QFileInfo sample_label_file(sample_label_filepath.c_str());
-			QFileInfo mesh_label_file(mesh_label_filepath.c_str());
-
-			if (!mesh_file.exists()
-				|| !sample_file.exists()
-				|| !sample_label_file.exists()
-				|| !mesh_label_file.exists())
-				continue;
+			bool ret = load_training_data(mesh_filepath.c_str());
+			if (!ret) continue;
 
 			mesh_name_list_file << mesh_name << std::endl;
 
-
-
-			cuboid_structure_.clear_cuboids();
-			cuboid_structure_.clear_sample_points();
-
-			open_mesh(mesh_filepath.c_str());
-			open_mesh_face_label_file(mesh_label_filepath.c_str());
-			open_sample_point_file(sample_filepath.c_str());
-
-			if (run_ground_truth)
-			{
-				//cuboid_structure_.add_sample_points_from_mesh_vertices();
-				cuboid_structure_.get_mesh_face_label_cuboids();
-			}
-			else
-			{
-				open_sample_point_label_file(sample_label_filepath.c_str());
-				cuboid_structure_.compute_label_cuboids();
-				cuboid_structure_.apply_mesh_face_labels_to_cuboids();
-			}
-
-			// Find the largest part for each part.
-			cuboid_structure_.find_the_largest_label_cuboids();
-
-
-			// To be removed.
-			//if (FLAGS_use_symmetric_group_cuboids)
-			//{
-			//	cuboid_structure_.create_symmetric_group_cuboids();
-			//}
-
-
-			open_modelview_matrix_file(FLAGS_pose_filename.c_str());
-
 			mesh_.clear_colors();
+			open_modelview_matrix_file(FLAGS_pose_filename.c_str());
 			updateGL();
 			snapshot(snapshot_filepath.c_str());
 
-			
+
 			assert(cuboid_structure_.num_labels() == num_labels);
 			for (LabelIndex label_index_1 = 0; label_index_1 < num_labels; ++label_index_1)
 			{
@@ -863,44 +925,48 @@ void MeshViewerCore::predict()
 }
 
 void MeshViewerCore::reconstruct(
-	const char *mesh_filepath,
-	const char *dense_sample_filepath,
-	const GLdouble *occlusion_modelview_matrix,
-	const char *output_file_prefix)
+	const char *_mesh_filepath,
+	const char *_dense_sample_filepath,
+	const GLdouble *_occlusion_modelview_matrix,
+	const char *_output_file_prefix)
 {
+	bool ret;
 	std::stringstream output_filename_sstr;
 
 	updateGL();
 	output_filename_sstr.clear(); output_filename_sstr.str("");
-	output_filename_sstr << output_file_prefix;
+	output_filename_sstr << _output_file_prefix;
 	snapshot(output_filename_sstr.str().c_str());
 
 	output_filename_sstr.clear(); output_filename_sstr.str("");
-	output_filename_sstr << output_file_prefix << std::string(".arff");
+	output_filename_sstr << _output_file_prefix << std::string(".arff");
 	cuboid_structure_.save_cuboids(output_filename_sstr.str());
 
-	//if (mesh_label_file.exists())
-	//{
-	//	stats_filename_sstr.clear(); stats_filename_sstr.str("");
-	//	stats_filename_sstr << FLAGS_output_path << filename_prefix
-	//		<< num_final_cuboid_structure_candidates << std::string("_stats.csv");
 
-	//	MeshCuboidEvaluator evaluator(cuboid_structure_, mesh_name, cuboid_structure_name);
-	//	evaluator.save_evaluate_results(stats_filename_sstr.str());
-	//}
+	//
+	MyMesh ground_truth_mesh;
+	MeshCuboidStructure ground_truth_cuboid_structure(&ground_truth_mesh);
+	// NOTICE:
+	// Load dense sample points.
+	ret = load_training_data(_mesh_filepath, ground_truth_mesh, ground_truth_cuboid_structure, true);
+	assert(ret);
+	MeshCuboidEvaluator evaluator(&ground_truth_cuboid_structure);
+	//
+
 
 	MeshCuboidStructure cuboid_structure_copy(cuboid_structure_);
 
 
 	// 1. Reconstruction using symmetry.
-	cuboid_structure_.load_dense_sample_points(dense_sample_filepath);
-	set_modelview_matrix(occlusion_modelview_matrix, false);
+	ret = cuboid_structure_.load_dense_sample_points(_dense_sample_filepath);
+	assert(ret);
+	set_modelview_matrix(_occlusion_modelview_matrix, false);
 	remove_occluded_points();
 
 	//
 	updateGL();
 	output_filename_sstr.clear(); output_filename_sstr.str("");
-	output_filename_sstr << output_file_prefix << std::string("_view_dense");
+	output_filename_sstr << _output_file_prefix << std::string("_view_dense");
 	snapshot(output_filename_sstr.str().c_str());
 	cuboid_structure_.save_sample_points_to_ply(output_filename_sstr.str().c_str());
 	//
@@ -911,9 +977,14 @@ void MeshViewerCore::reconstruct(
 	cuboid_structure_.clear_cuboids();
 	updateGL();
 	output_filename_sstr.clear(); output_filename_sstr.str("");
-	output_filename_sstr << output_file_prefix << std::string("_reconstructed");
+	output_filename_sstr << _output_file_prefix << std::string("_reconstructed");
 	snapshot(output_filename_sstr.str().c_str());
 	cuboid_structure_.save_sample_points_to_ply(output_filename_sstr.str().c_str());
+
+	output_filename_sstr.clear(); output_filename_sstr.str("");
+	output_filename_sstr << _output_file_prefix << std::string("_reconstructed.csv");
+	evaluator.save_evaluate_results(&cuboid_structure_, output_filename_sstr.str());
+
 	cuboid_structure_ = cuboid_structure_copy;
 
 
@@ -921,21 +992,28 @@ void MeshViewerCore::reconstruct(
 	reconstruct_using_database();
 	// NOTE:
 	// Recover the original mesh after call 'reconstruct_using_database()'.
-	open_mesh(mesh_filepath);
+	ret = open_mesh(_mesh_filepath);
+	assert(ret);
 	open_modelview_matrix_file(FLAGS_pose_filename.c_str());
 
 	cuboid_structure_.clear_cuboids();
 	updateGL();
 	output_filename_sstr.clear(); output_filename_sstr.str("");
-	output_filename_sstr << output_file_prefix << std::string("_database");
+	output_filename_sstr << _output_file_prefix << std::string("_database");
 	snapshot(output_filename_sstr.str().c_str());
 	cuboid_structure_.save_sample_points_to_ply(output_filename_sstr.str().c_str());
+
+	output_filename_sstr.clear(); output_filename_sstr.str("");
+	output_filename_sstr << _output_file_prefix << std::string("_database.csv");
+	evaluator.save_evaluate_results(&cuboid_structure_, output_filename_sstr.str());
+
 	cuboid_structure_ = cuboid_structure_copy;
 
 
 	// 3. [TEST] Fusion.
-	cuboid_structure_.load_dense_sample_points(dense_sample_filepath);
-	set_modelview_matrix(occlusion_modelview_matrix, false);
+	ret = cuboid_structure_.load_dense_sample_points(_dense_sample_filepath);
+	assert(ret);
+	set_modelview_matrix(_occlusion_modelview_matrix, false);
 	remove_occluded_points();
 
 	open_modelview_matrix_file(FLAGS_pose_filename.c_str());
@@ -947,15 +1025,20 @@ void MeshViewerCore::reconstruct(
 	reconstruct_using_database(&reconstructed_label_indices);
 	// NOTE:
 	// Recover the original mesh after call 'reconstruct_using_database()'.
-	open_mesh(mesh_filepath);
+	open_mesh(_mesh_filepath);
 	open_modelview_matrix_file(FLAGS_pose_filename.c_str());
 
 	cuboid_structure_.clear_cuboids();
 	updateGL();
 	output_filename_sstr.clear(); output_filename_sstr.str("");
-	output_filename_sstr << output_file_prefix << std::string("_fusion");
+	output_filename_sstr << _output_file_prefix << std::string("_fusion");
 	snapshot(output_filename_sstr.str().c_str());
 	cuboid_structure_.save_sample_points_to_ply(output_filename_sstr.str().c_str());
+
+	output_filename_sstr.clear(); output_filename_sstr.str("");
+	output_filename_sstr << _output_file_prefix << std::string("_database.csv");
+	evaluator.save_evaluate_results(&cuboid_structure_, output_filename_sstr.str());
+
 	cuboid_structure_ = cuboid_structure_copy;
 }
 
@@ -998,8 +1081,8 @@ void MeshViewerCore::reconstruct_using_database(const std::vector<LabelIndex> *_
 	output_dir.mkpath(FLAGS_output_path.c_str());
 
 
-	// (Dissimilarity, File information)
-	std::vector< std::pair<Real, QFileInfo> > label_matched_object(num_labels);
+	// (Dissimilarity, mesh_filepath)
+	std::vector< std::pair<Real, std::string> > label_matched_object(num_labels);
 	for (unsigned int label_index = 0; label_index < num_labels; ++label_index)
 		label_matched_object[label_index].first = std::numeric_limits<Real>::max();
 
@@ -1012,42 +1095,9 @@ void MeshViewerCore::reconstruct_using_database(const std::vector<LabelIndex> *_
 			(file_info.suffix().compare("obj") == 0
 			|| file_info.suffix().compare("off") == 0))
 		{
-			std::string mesh_name = std::string(file_info.baseName().toLocal8Bit());
 			std::string mesh_filepath = std::string(file_info.filePath().toLocal8Bit());
-			std::string mesh_label_filepath = FLAGS_data_root_path + FLAGS_mesh_label_path + std::string("/") + mesh_name + std::string(".seg");
-			std::string sample_filepath = FLAGS_data_root_path + FLAGS_sample_path + std::string("/") + mesh_name + std::string(".pts");
-			std::string dense_sample_filepath = FLAGS_data_root_path + FLAGS_dense_sample_path + std::string("/") + mesh_name + std::string(".pts");
-			std::string sample_label_filepath = FLAGS_data_root_path + FLAGS_sample_label_path + std::string("/") + mesh_name + std::string(".arff");
-			std::string snapshot_filepath = FLAGS_output_path + std::string("/") + mesh_name;
-
-			QFileInfo mesh_file(mesh_filepath.c_str());
-			QFileInfo sample_file(sample_filepath.c_str());
-			QFileInfo sample_label_file(sample_label_filepath.c_str());
-			QFileInfo mesh_label_file(mesh_label_filepath.c_str());
-
-			if (!mesh_file.exists()
-				|| !sample_file.exists()
-				|| !sample_label_file.exists()
-				|| !mesh_label_file.exists())
-				continue;
-
-			example_cuboid_structure.clear_cuboids();
-			example_cuboid_structure.clear_sample_points();
-
-			//
-			ret = example_mesh.open_mesh(mesh_filepath.c_str());
-			assert(ret);
-			ret = example_mesh.load_face_label_simple(mesh_label_filepath.c_str(), false);
-			assert(ret);
-			ret = example_cuboid_structure.load_sample_points(sample_filepath.c_str(), false);
-			assert(ret);
-			//
-
-			example_cuboid_structure.get_mesh_face_label_cuboids();
-
-			// Find the largest part for each part.
-			example_cuboid_structure.find_the_largest_label_cuboids();
-
+			bool ret = load_training_data(mesh_filepath.c_str(), example_mesh, example_cuboid_structure);
+			if (!ret) continue;
 
 			assert(example_cuboid_structure.num_labels() == num_labels);
 			for (LabelIndex label_index = 0; label_index < num_labels; ++label_index)
@@ -1076,7 +1126,7 @@ void MeshViewerCore::reconstruct_using_database(const std::vector<LabelIndex> *_
 					if (dissimilarity < label_matched_object[label_index].first)
 					{
 						label_matched_object[label_index].first = dissimilarity;
-						label_matched_object[label_index].second = file_info;
+						label_matched_object[label_index].second = mesh_filepath;
 					}
 				}
 			}
@@ -1085,17 +1135,12 @@ void MeshViewerCore::reconstruct_using_database(const std::vector<LabelIndex> *_
 
 
 	if (_reconstructed_label_indices)
-	{
 		cuboid_structure_.clear_label_sample_points(*_reconstructed_label_indices);
-	}
 	else
-	{
 		cuboid_structure_.clear_sample_points();
-	}
 
 	for (LabelIndex label_index = 0; label_index < num_labels; ++label_index)
 	{
-		//
 		// Reconstruct designated labels only if '_reconstructed_label_indices' is provided.
 		if (_reconstructed_label_indices)
 		{
@@ -1112,51 +1157,18 @@ void MeshViewerCore::reconstruct_using_database(const std::vector<LabelIndex> *_
 
 			if (!exist) continue;
 		}
-		//
 
 		if (label_matched_object[label_index].first == std::numeric_limits<Real>::max())
 			continue;
 
-		QFileInfo file_info = label_matched_object[label_index].second;
-		std::string mesh_name = std::string(file_info.baseName().toLocal8Bit());
-		std::string mesh_filepath = std::string(file_info.filePath().toLocal8Bit());
-		std::string mesh_label_filepath = FLAGS_data_root_path + FLAGS_mesh_label_path + std::string("/") + mesh_name + std::string(".seg");
-		std::string sample_filepath = FLAGS_data_root_path + FLAGS_sample_path + std::string("/") + mesh_name + std::string(".pts");
-		std::string dense_sample_filepath = FLAGS_data_root_path + FLAGS_dense_sample_path + std::string("/") + mesh_name + std::string(".pts");
-		std::string sample_label_filepath = FLAGS_data_root_path + FLAGS_sample_label_path + std::string("/") + mesh_name + std::string(".arff");
-		std::string snapshot_filepath = FLAGS_output_path + std::string("/") + mesh_name;
+		std::string mesh_filepath = label_matched_object[label_index].second;
+		QFileInfo file_info(mesh_filepath.c_str());
+		std::string mesh_name = file_info.baseName().toLocal8Bit();
 
-		QFileInfo mesh_file(mesh_filepath.c_str());
-		QFileInfo sample_file(sample_filepath.c_str());
-		QFileInfo sample_label_file(sample_label_filepath.c_str());
-		QFileInfo mesh_label_file(mesh_label_filepath.c_str());
-
-		if (!mesh_file.exists()
-			|| !sample_file.exists()
-			|| !sample_label_file.exists()
-			|| !mesh_label_file.exists())
-			continue;
-
-		example_cuboid_structure.clear_cuboids();
-		example_cuboid_structure.clear_sample_points();
-
-		//
-		ret = example_mesh.open_mesh(mesh_filepath.c_str());
+		// NOTICE:
+		// Load dense sample points.
+		bool ret = load_training_data(mesh_filepath.c_str(), example_mesh, example_cuboid_structure, true);
 		assert(ret);
-		ret = example_mesh.load_face_label_simple(mesh_label_filepath.c_str(), false);
-		assert(ret);
-		ret = example_cuboid_structure.load_sample_points(sample_filepath.c_str(), false);
-		assert(ret);
-		//
-
-		example_cuboid_structure.get_mesh_face_label_cuboids();
-
-		// Find the largest part for each part.
-		example_cuboid_structure.find_the_largest_label_cuboids();
-
-		//
-		example_cuboid_structure.load_dense_sample_points(dense_sample_filepath.c_str(), false);
-		//
 
 		assert(cuboid_structure_.label_cuboids_[label_index].size() <= 1);
 		MeshCuboid *cuboid = NULL;
