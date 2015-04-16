@@ -1,9 +1,11 @@
 #include "MyMesh.h"
+#include "simplerandom.h"
 //#include "ConvertFromOpenMesh.h"
 
 #include <fstream>
 #include <iostream>
 #include <limits>
+#include <QColor>
 
 
 MyMesh::MyMesh()
@@ -844,14 +846,35 @@ MyMesh::Color MyMesh::get_label_color(const Label _label)
 	// Negative index indicates undefined.
 	assert(_label >= 0);
 
-	srand(LABEL_COLORING_RANDOM_SEED * _label);
+	//static SimpleRandomCong_t rng_cong;
+	//simplerandom_cong_seed(&rng_cong, LABEL_COLORING_RANDOM_SEED * _label);
 
-	Real r = rand() / (Real)RAND_MAX;
-	Real g = rand() / (Real)RAND_MAX;
-	Real b = rand() / (Real)RAND_MAX;
+	//Real r = static_cast<Real>(simplerandom_cong_next(&rng_cong))
+	//	/ std::numeric_limits<uint32_t>::max();
+	//Real g = static_cast<Real>(simplerandom_cong_next(&rng_cong))
+	//	/ std::numeric_limits<uint32_t>::max();
+	//Real b = static_cast<Real>(simplerandom_cong_next(&rng_cong))
+	//	/ std::numeric_limits<uint32_t>::max();
 
-	MyMesh::Color label_color(
-		(unsigned char)(r * 255), (unsigned char)(g * 255), (unsigned char)(b * 255));
+	//MyMesh::Color label_color(
+	//	(unsigned char)(r * 255), (unsigned char)(g * 255), (unsigned char)(b * 255));
+
+	// Reference:
+	// http://martin.ankerl.com/2009/12/09/how-to-create-random-colors-programmatically/
+
+	static SimpleRandomCong_t rng_cong;
+	simplerandom_cong_seed(&rng_cong, LABEL_COLORING_RANDOM_SEED);
+	float h = static_cast<float>(simplerandom_cong_next(&rng_cong))
+		/ std::numeric_limits<uint32_t>::max();
+
+	const float golden_ratio_conjugate = 0.618033988749895f;
+	for (int i = 0; i < std::abs(_label); ++i)
+		h += golden_ratio_conjugate;
+	h = fmod(h, 1.0f);
+
+	QColor color;
+	color.setHsvF(h, 0.9, 0.9);
+	MyMesh::Color label_color(color.red(), color.green(), color.blue());
 
 	return label_color;
 }

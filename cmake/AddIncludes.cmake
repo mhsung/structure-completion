@@ -27,25 +27,31 @@ if (MSVC)
 #  source_group("Shader Files" FILES ${SHADER_SOURCES})
 
   file (GLOB IPOPT_SOURCES
-    "${CMAKE_CURRENT_LIST_DIR}/../ipopt/*.h"
-	  "${CMAKE_CURRENT_LIST_DIR}/../ipopt/*.cpp")
+    "${CMAKE_CURRENT_LIST_DIR}/../interface/ipopt/*.h"
+    "${CMAKE_CURRENT_LIST_DIR}/../interface/ipopt/*.cpp")
   source_group("IPOPT" FILES ${IPOPT_SOURCES})
+  
+  file (GLOB SIMPLERANDOM_SOURCE
+    "${CMAKE_CURRENT_LIST_DIR}/../interface/simplerandom/*.h"
+    "${CMAKE_CURRENT_LIST_DIR}/../interface/simplerandom/*.c")
+  source_group("SimpleRandom" FILES ${SIMPLERANDOM_SOURCE})
   
   file (GLOB TRWS_SOURCES
     "${LIBRARY_ROOT_PATH}/TRW_S-v1.3/*.h"
-	  "${LIBRARY_ROOT_PATH}/TRW_S-v1.3/*.cpp")
+    "${LIBRARY_ROOT_PATH}/TRW_S-v1.3/*.cpp")
   source_group("TRW_S" FILES ${TRWS_SOURCES})
   
   file (GLOB EIGENQP_SOURCES
     "${LIBRARY_ROOT_PATH}/wingsit_QP/*.h"
-	  "${LIBRARY_ROOT_PATH}/wingsit_QP/*.cpp")
+    "${LIBRARY_ROOT_PATH}/wingsit_QP/*.cpp")
   source_group("Eigen_QP" FILES ${EIGENQP_SOURCES})
 endif()
 endif()
 
 include_directories (
   ${CMAKE_CURRENT_LIST_DIR}/../src
-  ${CMAKE_CURRENT_LIST_DIR}/../ipopt
+  ${CMAKE_CURRENT_LIST_DIR}/../interface/ipopt
+  ${CMAKE_CURRENT_LIST_DIR}/../interface/simplerandom
   #${CMAKE_CURRENT_LIST_DIR}/../shader
   ${LIBRARY_ROOT_PATH}/ann-1.1.2/include
   ${LIBRARY_ROOT_PATH}/eigen-3.2.2
@@ -56,7 +62,8 @@ include_directories (
 )
 
 set (directories
-  ${CMAKE_CURRENT_LIST_DIR}/../ipopt
+  ${CMAKE_CURRENT_LIST_DIR}/../interface/ipopt
+  ${CMAKE_CURRENT_LIST_DIR}/../interface/simplerandom
   #${CMAKE_CURRENT_LIST_DIR}/../shader
   ${LIBRARY_ROOT_PATH}/TRW_S-v1.3
   ${LIBRARY_ROOT_PATH}/wingsit_QP

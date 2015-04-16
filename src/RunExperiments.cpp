@@ -4,6 +4,7 @@
 #include "MeshCuboidRelation.h"
 #include "MeshCuboidTrainer.h"
 #include "MeshCuboidSolver.h"
+#include "simplerandom.h"
 //#include "QGLOcculsionTestWidget.h"
 
 #include <sstream>
@@ -48,9 +49,7 @@ DEFINE_string(cond_normal_relation_filename_prefix, "conditional_normal_", "");
 DEFINE_string(object_list_filename, "object_list.txt", "");
 
 DEFINE_double(occlusion_test_radius, 0.01, "");
-
-const bool run_ground_truth = true;
-
+DEFINE_int32(random_view_seed, 20150416, "");
 
 
 void MeshViewerCore::parse_arguments()
@@ -244,12 +243,16 @@ void MeshViewerCore::set_random_view_direction(bool _set_modelview_matrix)
 		centering_mat(i, 3) = -mesh().get_bbox_center()[i];
 
 	// Sample points on each face.
-	srand(time(NULL));
+	static SimpleRandomCong_t rng_cong;
+	simplerandom_cong_seed(&rng_cong, FLAGS_random_view_seed);
 
 	// latitude.
 	double x_angle_min = -M_PI;
 	double x_angle_max = 0;
-	double x_angle = static_cast<double>(rand()) / RAND_MAX * (x_angle_max - x_angle_min) + x_angle_min;
+
+	double x_angle = static_cast<double>(simplerandom_cong_next(&rng_cong))
+		/ std::numeric_limits<uint32_t>::max();
+	x_angle = x_angle * (x_angle_max - x_angle_min) + x_angle_min;
 	Eigen::Matrix4d x_axis_random_rotation_mat = Eigen::Matrix4d::Identity();
 	x_axis_random_rotation_mat(1, 1) = cos(x_angle);
 	x_axis_random_rotation_mat(1, 2) = -sin(x_angle);
@@ -259,7 +262,10 @@ void MeshViewerCore::set_random_view_direction(bool _set_modelview_matrix)
 	// longitude.
 	double z_angle_min = 0;
 	double z_angle_max = 2 * M_PI;
-	double z_angle = static_cast<double>(rand()) / RAND_MAX * (z_angle_max - z_angle_min) + z_angle_min;
+
+	double z_angle = static_cast<double>(simplerandom_cong_next(&rng_cong))
+		/ std::numeric_limits<uint32_t>::max();
+	z_angle = z_angle * (z_angle_max - z_angle_min) + z_angle_min;
 	Eigen::Matrix4d z_axis_random_rotation_mat = Eigen::Matrix4d::Identity();
 	z_axis_random_rotation_mat(0, 0) = cos(z_angle);
 	z_axis_random_rotation_mat(0, 1) = -sin(z_angle);
@@ -267,8 +273,14 @@ void MeshViewerCore::set_random_view_direction(bool _set_modelview_matrix)
 	z_axis_random_rotation_mat(1, 1) = cos(z_angle);
 
 
-	const double x_offset = (static_cast<double>(rand()) / RAND_MAX - 0.5) * mesh().get_object_diameter();
-	const double y_offset = (static_cast<double>(rand()) / RAND_MAX - 0.5) * mesh().get_object_diameter();
+	double x_offset = static_cast<double>(simplerandom_cong_next(&rng_cong))
+		/ std::numeric_limits<uint32_t>::max();
+	x_offset = (x_offset - 0.5) * mesh().get_object_diameter();
+
+	double y_offset = static_cast<double>(simplerandom_cong_next(&rng_cong))
+		/ std::numeric_limits<uint32_t>::max();
+	y_offset = (y_offset - 0.5) * mesh().get_object_diameter();
+
 	const double z_offset = -1.5 * mesh().get_object_diameter();
 
 	Eigen::Matrix4d translation_mat = Eigen::Matrix4d::Identity();

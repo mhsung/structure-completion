@@ -2,7 +2,8 @@
 #define _MESH_CUBOID_H_
 
 //#define AXIS_ALIGNED_INITIAL_CUBOID
-#define MIN_CUBOID_SIZE		1.0E-12
+#define MIN_CUBOID_SIZE						1.0E-12
+#define CUBOID_SURFACE_SAMPLING_RANDOM_SEED	20130923
 
 #include "ICP.h"
 #include "MyMesh.h"

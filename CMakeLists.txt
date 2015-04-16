@@ -168,7 +168,11 @@ set (directories
 
 # collect all header and source files
 acg_append_files (headers "*.h" ${directories})
+acg_append_files (headers "*.hpp" ${directories})
+acg_append_files (headers "*.hxx" ${directories})
+acg_append_files (sources "*.c" ${directories})
 acg_append_files (sources "*.cpp" ${directories})
+acg_append_files (sources "*.cxx" ${directories})
 acg_append_files (ui "*.ui" ${directories})
 
 # remove template cc files from source file list

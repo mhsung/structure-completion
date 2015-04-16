@@ -2,6 +2,7 @@
 
 #include "MeshCuboidParameters.h"
 #include "Utilities.h"
+#include "simplerandom.h"
 
 #include <bitset>
 #include <deque>
@@ -635,7 +636,9 @@ void MeshCuboid::create_random_points_on_cuboid_surface(
 	assert(all_faces_area > 0);
 
 	// Sample points on each face.
-	srand (time(NULL));
+	static SimpleRandomCong_t rng_cong;
+	simplerandom_cong_seed(&rng_cong, CUBOID_SURFACE_SAMPLING_RANDOM_SEED);
+	
 
 	for (unsigned int face_index = 0; face_index < k_num_faces; ++face_index)
 	{
@@ -654,8 +657,10 @@ void MeshCuboid::create_random_points_on_cuboid_surface(
 		for (int point_index = 0; point_index < num_face_points
 			&& cuboid_surface_points_.size() < _num_cuboid_surface_points; ++point_index)
 		{
-			Real w1 = static_cast<Real>(rand())/RAND_MAX;
-			Real w2 = static_cast<Real>(rand())/RAND_MAX;
+			Real w1 = static_cast<Real>(simplerandom_cong_next(&rng_cong))
+				/ std::numeric_limits<uint32_t>::max();
+			Real w2 = static_cast<Real>(simplerandom_cong_next(&rng_cong))
+				/ std::numeric_limits<uint32_t>::max();
 
 			MyMesh::Point p1 = w1 * (corner_point[1] - corner_point[0]) + corner_point[0];
 			MyMesh::Point p2 = w1 * (corner_point[2] - corner_point[3]) + corner_point[3];
