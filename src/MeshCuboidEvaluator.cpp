@@ -1,5 +1,6 @@
 #include "MeshCuboidEvaluator.h"
 
+#include "MeshCuboidParameters.h"
 #include "ICP.h"
 
 #include <fstream>
@@ -194,10 +195,9 @@ void MeshCuboidEvaluator::evaluate_point_to_point_distances(
 {
 	assert(_test_cuboid_structure);
 
-	const unsigned int num_neighbor_ranges = 1000;
-	Real max_neighbor_range = 0.1;
 	Eigen::VectorXd neighbor_ranges;
-	neighbor_ranges.setLinSpaced(num_neighbor_ranges, 0.0, max_neighbor_range);
+	neighbor_ranges.setLinSpaced(FLAGS_param_eval_num_neighbor_range_samples,
+		0.0, FLAGS_param_eval_max_neighbor_range);
 
 	const unsigned int num_labels = ground_truth_cuboid_structure_->num_labels();
 
@@ -279,23 +279,28 @@ void MeshCuboidEvaluator::evaluate_point_to_point_distances(
 		assert(distance_error >= 0);
 
 
-		Eigen::MatrixXd precision_recall(2, num_neighbor_ranges);
+		Eigen::VectorXd precision(FLAGS_param_eval_num_neighbor_range_samples);
+		Eigen::VectorXd recall(FLAGS_param_eval_num_neighbor_range_samples);
 
-		for (unsigned int i = 0; i < num_neighbor_ranges; ++i)
+		for (unsigned int i = 0; i < FLAGS_param_eval_num_neighbor_range_samples; ++i)
 		{
 			// Precision.
-			precision_recall.row(0)(i) = static_cast<double>(
+			precision(i) = static_cast<double>(
 				(test_to_ground_truth_distances.array() <= neighbor_ranges[i]).count())
 				/ num_test_sample_points;
 
 			// Recall.
-			precision_recall.row(1)(i) = static_cast<double>(
+			recall(i) = static_cast<double>(
 				(ground_truth_to_test_distances.array() <= neighbor_ranges[i]).count())
 				/ num_ground_truth_sample_points;
 		}
 
+
+		assert(label_index < ground_truth_cuboid_structure_->label_names_.size());
+		std::string label_name = ground_truth_cuboid_structure_->label_names_[label_index];
+
 		std::stringstream sstr;
-		sstr << _filename << "_" << label_index << ".csv";
+		sstr << _filename << "_" << label_name << ".csv";
 		std::ofstream file(sstr.str());
 
 		if (!file.good())
@@ -307,7 +312,9 @@ void MeshCuboidEvaluator::evaluate_point_to_point_distances(
 		}
 
 		Eigen::IOFormat csv_format(Eigen::StreamPrecision, 0, ",");
-		file << precision_recall.format(csv_format) << std::endl;
+		file << neighbor_ranges.transpose().format(csv_format) << std::endl;
+		file << precision.transpose().format(csv_format) << std::endl;
+		file << recall.transpose().format(csv_format) << std::endl;
 		file.close();
 		
 

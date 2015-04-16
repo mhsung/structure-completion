@@ -19,6 +19,10 @@ DECLARE_double(param_observed_point_radius);
 DECLARE_double(param_min_cuboid_overall_visibility);
 DECLARE_double(param_max_potential);
 DECLARE_double(param_dummy_potential);
+
+DECLARE_double(param_eval_max_neighbor_range);
+DECLARE_double(param_eval_num_neighbor_range_samples);
+
 //DECLARE_double(param_sim_abs_attr_tol);
 //DECLARE_double(param_zero_tol);
 
