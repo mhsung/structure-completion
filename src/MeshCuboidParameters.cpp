@@ -17,8 +17,8 @@ DEFINE_double(param_min_cuboid_overall_visibility, 0.8, "");
 DEFINE_double(param_max_potential, 1.0E8, "");
 DEFINE_double(param_dummy_potential, 1.0E4, "");
 
-DEFINE_double(param_eval_max_neighbor_range, 0.02, "");
-DEFINE_double(param_eval_num_neighbor_range_samples, 1000, "");
+DEFINE_double(param_eval_max_neighbor_range, 0.005, "");
+DEFINE_double(param_eval_num_neighbor_range_samples, 1001, "");
 
 //DEFINE_double(param_sim_abs_attr_tol, 0.2, "");
 //DEFINE_double(param_zero_tol, 1.0E-6, "");

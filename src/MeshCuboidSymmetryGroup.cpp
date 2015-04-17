@@ -163,7 +163,7 @@ void MeshCuboidSymmetryGroup::add_symmety_cuboid_corner_points(
 	const unsigned int dimension = 3;
 	assert(_reflection_axis_index < dimension);
 
-	// NOTICE:
+	// NOTE:
 	// Implemented only for 3 dimension.
 	assert(dimension == 3);
 

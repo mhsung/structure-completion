@@ -13,7 +13,7 @@
 class MeshCuboidEvaluator {
 public:
 	MeshCuboidEvaluator(
-		const MeshCuboidStructure *_ground_truth_cuboid_structure);
+		MeshCuboidStructure *_ground_truth_cuboid_structure);
 		//const std::string _mesh_name,
 		//const std::string _cuboid_structure_name);
 
@@ -22,7 +22,7 @@ public:
 		const char *_filename, bool _verbose = true);
 
 	void evaluate_point_to_point_distances(
-		const MeshCuboidStructure *_test_cuboid_structure,
+		MeshCuboidStructure *_test_cuboid_structure,
 		const char *_filename);
 	
 private:
@@ -35,9 +35,13 @@ private:
 	//void evaluate_cuboid_distance(
 	//	const MeshCuboidStructure *_test_cuboid_structure);
 
+	void MeshCuboidEvaluator::evaluate_point_to_point_distances(
+		const std::vector<MeshSamplePoint *> _ground_truth_sample_points,
+		const std::vector<MeshSamplePoint *> _test_sample_points,
+		const char *_filename, bool _record_error = false);
 
 protected:
-	const MeshCuboidStructure *ground_truth_cuboid_structure_;
+	MeshCuboidStructure *ground_truth_cuboid_structure_;
 	const std::string mesh_name_;
 	const std::string cuboid_structure_name_;
 

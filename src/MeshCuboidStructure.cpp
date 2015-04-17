@@ -36,7 +36,7 @@ MeshCuboidStructure& MeshCuboidStructure::operator=(const MeshCuboidStructure& _
 
 void MeshCuboidStructure::deep_copy(const MeshCuboidStructure& _other)
 {
-	// NOTICE:
+	// NOTE:
 	// This instance should be cleaned prior to call this function.
 
 	this->mesh_ = _other.mesh_;
@@ -89,7 +89,7 @@ void MeshCuboidStructure::deep_copy(const MeshCuboidStructure& _other)
 				new_cuboid_sample_points.push_back(sample_points_[sample_point_index]);
 			}
 
-			// NOTICE:
+			// NOTE:
 			// 'MeshCuboidStructure' class is a friend of 'MeshCuboid'.
 			cuboid->sample_points_.swap(new_cuboid_sample_points);
 

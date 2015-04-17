@@ -8,7 +8,7 @@
 
 
 MeshCuboidEvaluator::MeshCuboidEvaluator(
-	const MeshCuboidStructure *_ground_truth_cuboid_structure)
+	MeshCuboidStructure *_ground_truth_cuboid_structure)
 	//const std::string _mesh_name,
 	//const std::string _cuboid_structure_name)
 	: ground_truth_cuboid_structure_(_ground_truth_cuboid_structure)
@@ -190,15 +190,158 @@ void MeshCuboidEvaluator::evaluate_cuboid_distance(
 */
 
 void MeshCuboidEvaluator::evaluate_point_to_point_distances(
-	const MeshCuboidStructure *_test_cuboid_structure,
-	const char *_filename)
+	const std::vector<MeshSamplePoint *> _ground_truth_sample_points,
+	const std::vector<MeshSamplePoint *> _test_sample_points,
+	const char *_filename, bool _record_error)
 {
-	assert(_test_cuboid_structure);
+	const unsigned int num_ground_truth_sample_points = _ground_truth_sample_points.size();
+	const unsigned int num_test_sample_points = _test_sample_points.size();
+
+	if (num_ground_truth_sample_points == 0 || num_test_sample_points == 0)
+		return;
+
 
 	Eigen::VectorXd neighbor_ranges;
 	neighbor_ranges.setLinSpaced(FLAGS_param_eval_num_neighbor_range_samples,
 		0.0, FLAGS_param_eval_max_neighbor_range);
 
+
+	// Create a ground truth sample point KD-tree.
+	Eigen::MatrixXd ground_truth_sample_points(3, num_ground_truth_sample_points);
+	for (SamplePointIndex sample_point_index = 0; sample_point_index < num_ground_truth_sample_points;
+		++sample_point_index)
+	{
+		assert(_ground_truth_sample_points[sample_point_index]);
+		for (unsigned int i = 0; i < 3; ++i)
+			ground_truth_sample_points.col(sample_point_index)(i) =
+			_ground_truth_sample_points[sample_point_index]->point_[i];
+	}
+
+	ANNpointArray ground_truth_sample_ann_points;
+	ANNkd_tree *ground_truth_sample_ann_kd_tree = ICP::create_kd_tree(ground_truth_sample_points,
+		ground_truth_sample_ann_points);
+	assert(ground_truth_sample_ann_points);
+	assert(ground_truth_sample_ann_kd_tree);
+
+
+	// Create a test sample point KD-tree.
+	Eigen::MatrixXd test_sample_points(3, num_test_sample_points);
+	for (SamplePointIndex sample_point_index = 0; sample_point_index < num_test_sample_points;
+		++sample_point_index)
+	{
+		assert(_test_sample_points[sample_point_index]);
+		for (unsigned int i = 0; i < 3; ++i)
+			test_sample_points.col(sample_point_index)(i) =
+			_test_sample_points[sample_point_index]->point_[i];
+	}
+
+	ANNpointArray test_sample_ann_points;
+	ANNkd_tree *test_sample_ann_kd_tree = ICP::create_kd_tree(test_sample_points,
+		test_sample_ann_points);
+	assert(test_sample_ann_points);
+	assert(test_sample_ann_kd_tree);
+
+
+	// Ground truth -> test.
+	Eigen::VectorXd ground_truth_to_test_distances;
+	ICP::get_closest_points(test_sample_ann_kd_tree, ground_truth_sample_points,
+		ground_truth_to_test_distances);
+	assert(ground_truth_to_test_distances.rows() == num_ground_truth_sample_points);
+
+	// Test -> ground truth.
+	Eigen::VectorXd test_to_ground_truth_distances;
+	ICP::get_closest_points(ground_truth_sample_ann_kd_tree, test_sample_points,
+		test_to_ground_truth_distances);
+	assert(test_to_ground_truth_distances.rows() == num_test_sample_points);
+
+
+	if (_record_error)
+	{
+		// Precision.
+		for (SamplePointIndex sample_point_index = 0; sample_point_index < num_test_sample_points;
+			++sample_point_index)
+		{
+			_test_sample_points[sample_point_index]->error_ =
+				std::min((test_to_ground_truth_distances[sample_point_index]
+				/ FLAGS_param_eval_max_neighbor_range), 1.0);
+		}
+
+		// Recall.
+		for (SamplePointIndex sample_point_index = 0; sample_point_index < num_ground_truth_sample_points;
+			++sample_point_index)
+		{
+			_ground_truth_sample_points[sample_point_index]->error_ =
+				std::min((ground_truth_to_test_distances[sample_point_index]
+				/ FLAGS_param_eval_max_neighbor_range), 1.0);
+		}
+	}
+
+
+	Real distance_error = (ground_truth_to_test_distances.squaredNorm() / num_ground_truth_sample_points)
+		+ (test_to_ground_truth_distances.squaredNorm() / num_test_sample_points);
+	assert(distance_error >= 0);
+
+
+	Eigen::VectorXd precision(FLAGS_param_eval_num_neighbor_range_samples);
+	Eigen::VectorXd recall(FLAGS_param_eval_num_neighbor_range_samples);
+
+	for (unsigned int i = 0; i < FLAGS_param_eval_num_neighbor_range_samples; ++i)
+	{
+		// Precision.
+		precision[i] = static_cast<double>(
+			(test_to_ground_truth_distances.array() <= neighbor_ranges[i]).count())
+			/ num_test_sample_points;
+
+		// Recall.
+		recall[i] = static_cast<double>(
+			(ground_truth_to_test_distances.array() <= neighbor_ranges[i]).count())
+			/ num_ground_truth_sample_points;
+	}
+
+	std::ofstream file(_filename);
+	if (!file.good())
+	{
+		do {
+			std::cout << "Error: Cannot save file: '" << _filename << "'." << std::endl;
+			std::cout << '\n' << "Press the Enter key to continue.";
+		} while (std::cin.get() != '\n');
+	}
+
+	std::cout << "Saving '" << _filename << "'..." << std::endl;
+
+	Eigen::IOFormat csv_format(Eigen::StreamPrecision, 0, ",");
+	file << neighbor_ranges.transpose().format(csv_format) << std::endl;
+	file << precision.transpose().format(csv_format) << std::endl;
+	file << recall.transpose().format(csv_format) << std::endl;
+	file.close();
+
+
+	annDeallocPts(ground_truth_sample_ann_points);
+	annDeallocPts(test_sample_ann_points);
+	delete ground_truth_sample_ann_kd_tree;
+	delete test_sample_ann_kd_tree;
+}
+
+void MeshCuboidEvaluator::evaluate_point_to_point_distances(
+	MeshCuboidStructure *_test_cuboid_structure,
+	const char *_filename)
+{
+	assert(_test_cuboid_structure);
+
+	std::stringstream output_filename_sstr;
+
+
+	// For entire object.
+	output_filename_sstr.clear(); output_filename_sstr.str("");
+	output_filename_sstr << _filename << ".csv";
+
+	evaluate_point_to_point_distances(
+		ground_truth_cuboid_structure_->sample_points_,
+		_test_cuboid_structure->sample_points_,
+		output_filename_sstr.str().c_str(), true);
+
+
+	// For each part.
 	const unsigned int num_labels = ground_truth_cuboid_structure_->num_labels();
 
 	for (LabelIndex label_index = 0; label_index < num_labels; ++label_index)
@@ -221,106 +364,15 @@ void MeshCuboidEvaluator::evaluate_point_to_point_distances(
 		const unsigned int num_ground_truth_sample_points = ground_truth_cuboid->num_sample_points();
 		const unsigned int num_test_sample_points = test_cuboid->num_sample_points();
 
-		if (num_ground_truth_sample_points == 0 || num_test_sample_points == 0)
-			continue;
-
-
-		// Create a ground truth sample point KD-tree.
-		Eigen::MatrixXd ground_truth_sample_points(3, num_ground_truth_sample_points);
-		for (SamplePointIndex sample_point_index = 0; sample_point_index < num_ground_truth_sample_points;
-			++sample_point_index)
-		{
-			assert(ground_truth_cuboid->get_sample_point(sample_point_index));
-			for (unsigned int i = 0; i < 3; ++i)
-				ground_truth_sample_points.col(sample_point_index)(i) =
-				ground_truth_cuboid->get_sample_point(sample_point_index)->point_[i];
-		}
-
-		ANNpointArray ground_truth_sample_ann_points;
-		ANNkd_tree *ground_truth_sample_ann_kd_tree = ICP::create_kd_tree(ground_truth_sample_points,
-			ground_truth_sample_ann_points);
-		assert(ground_truth_sample_ann_points);
-		assert(ground_truth_sample_ann_kd_tree);
-
-
-		// Create a test sample point KD-tree.
-		Eigen::MatrixXd test_sample_points(3, num_test_sample_points);
-		for (SamplePointIndex sample_point_index = 0; sample_point_index < num_test_sample_points;
-			++sample_point_index)
-		{
-			assert(test_cuboid->get_sample_point(sample_point_index));
-			for (unsigned int i = 0; i < 3; ++i)
-				test_sample_points.col(sample_point_index)(i) =
-				test_cuboid->get_sample_point(sample_point_index)->point_[i];
-		}
-
-		ANNpointArray test_sample_ann_points;
-		ANNkd_tree *test_sample_ann_kd_tree = ICP::create_kd_tree(test_sample_points,
-			test_sample_ann_points);
-		assert(test_sample_ann_points);
-		assert(test_sample_ann_kd_tree);
-
-
-		// Ground truth -> test.
-		Eigen::VectorXd ground_truth_to_test_distances;
-		ICP::get_closest_points(test_sample_ann_kd_tree, ground_truth_sample_points,
-			ground_truth_to_test_distances);
-		assert(ground_truth_to_test_distances.rows() == num_ground_truth_sample_points);
-
-		// Test -> ground truth.
-		Eigen::VectorXd test_to_ground_truth_distances;
-		ICP::get_closest_points(ground_truth_sample_ann_kd_tree, test_sample_points,
-			test_to_ground_truth_distances);
-		assert(test_to_ground_truth_distances.rows() == num_test_sample_points);
-
-
-		Real distance_error = (ground_truth_to_test_distances.squaredNorm() / num_ground_truth_sample_points)
-			+ (test_to_ground_truth_distances.squaredNorm() / num_test_sample_points);
-		assert(distance_error >= 0);
-
-
-		Eigen::VectorXd precision(FLAGS_param_eval_num_neighbor_range_samples);
-		Eigen::VectorXd recall(FLAGS_param_eval_num_neighbor_range_samples);
-
-		for (unsigned int i = 0; i < FLAGS_param_eval_num_neighbor_range_samples; ++i)
-		{
-			// Precision.
-			precision(i) = static_cast<double>(
-				(test_to_ground_truth_distances.array() <= neighbor_ranges[i]).count())
-				/ num_test_sample_points;
-
-			// Recall.
-			recall(i) = static_cast<double>(
-				(ground_truth_to_test_distances.array() <= neighbor_ranges[i]).count())
-				/ num_ground_truth_sample_points;
-		}
-
-
 		assert(label_index < ground_truth_cuboid_structure_->label_names_.size());
 		std::string label_name = ground_truth_cuboid_structure_->label_names_[label_index];
 
-		std::stringstream sstr;
-		sstr << _filename << "_" << label_name << ".csv";
-		std::ofstream file(sstr.str());
+		output_filename_sstr.clear(); output_filename_sstr.str("");
+		output_filename_sstr << _filename << "_" << label_name << ".csv";
 
-		if (!file.good())
-		{
-			do {
-				std::cout << "Error: Cannot save file: '" << sstr.str() << "'." << std::endl;
-				std::cout << '\n' << "Press the Enter key to continue.";
-			} while (std::cin.get() != '\n');
-		}
-
-		Eigen::IOFormat csv_format(Eigen::StreamPrecision, 0, ",");
-		file << neighbor_ranges.transpose().format(csv_format) << std::endl;
-		file << precision.transpose().format(csv_format) << std::endl;
-		file << recall.transpose().format(csv_format) << std::endl;
-		file.close();
-		
-
-		annDeallocPts(ground_truth_sample_ann_points);
-		annDeallocPts(test_sample_ann_points);
-		delete ground_truth_sample_ann_kd_tree;
-		delete test_sample_ann_kd_tree;
+		evaluate_point_to_point_distances(
+			ground_truth_cuboid->get_sample_points(),
+			test_cuboid->get_sample_points(),
+			output_filename_sstr.str().c_str());
 	}
 }

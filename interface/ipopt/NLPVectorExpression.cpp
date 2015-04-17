@@ -110,7 +110,7 @@ NLPVectorExpression NLPVectorExpression::cross_product(
 	assert(_vector_1.dimension() == _vector_2.dimension());
 	const Index dimension = _vector_1.dimension();
 
-	// NOTICE:
+	// NOTE:
 	// Implemented only for 3 dimension.
 	assert(dimension == 3);
 

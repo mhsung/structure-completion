@@ -846,19 +846,6 @@ MyMesh::Color MyMesh::get_label_color(const Label _label)
 	// Negative index indicates undefined.
 	assert(_label >= 0);
 
-	//static SimpleRandomCong_t rng_cong;
-	//simplerandom_cong_seed(&rng_cong, LABEL_COLORING_RANDOM_SEED * _label);
-
-	//Real r = static_cast<Real>(simplerandom_cong_next(&rng_cong))
-	//	/ std::numeric_limits<uint32_t>::max();
-	//Real g = static_cast<Real>(simplerandom_cong_next(&rng_cong))
-	//	/ std::numeric_limits<uint32_t>::max();
-	//Real b = static_cast<Real>(simplerandom_cong_next(&rng_cong))
-	//	/ std::numeric_limits<uint32_t>::max();
-
-	//MyMesh::Color label_color(
-	//	(unsigned char)(r * 255), (unsigned char)(g * 255), (unsigned char)(b * 255));
-
 	// Reference:
 	// http://martin.ankerl.com/2009/12/09/how-to-create-random-colors-programmatically/
 
@@ -876,6 +863,19 @@ MyMesh::Color MyMesh::get_label_color(const Label _label)
 	color.setHsvF(h, 0.9, 0.9);
 	MyMesh::Color label_color(color.red(), color.green(), color.blue());
 
+	//static SimpleRandomCong_t rng_cong;
+	//simplerandom_cong_seed(&rng_cong, LABEL_COLORING_RANDOM_SEED * _label);
+
+	//Real r = static_cast<Real>(simplerandom_cong_next(&rng_cong))
+	//	/ std::numeric_limits<uint32_t>::max();
+	//Real g = static_cast<Real>(simplerandom_cong_next(&rng_cong))
+	//	/ std::numeric_limits<uint32_t>::max();
+	//Real b = static_cast<Real>(simplerandom_cong_next(&rng_cong))
+	//	/ std::numeric_limits<uint32_t>::max();
+
+	//MyMesh::Color label_color(
+	//	(unsigned char)(r * 255), (unsigned char)(g * 255), (unsigned char)(b * 255));
+
 	return label_color;
 }
 
@@ -883,9 +883,22 @@ void MyMesh::gray_to_rgb_color(const Real _gray, Real &_r, Real &_g, Real &_b)
 {
 	// Assume that the input gray value and the output RGB value has range [0, 1].
 	Real value = std::min(std::max(_gray, 0.0), 1.0);
+	value = 1.0 - value;
 
+	QColor color;
+	// (hue = 0 -> red, hue = 240 -> blue);
+	int hue = static_cast<int>(value * 240);
+	color.setHsv(hue, 255, 255);
+
+	_r = static_cast<Real>(color.red()) / 255.0;
+	_g = static_cast<Real>(color.green()) / 255.0;
+	_b = static_cast<Real>(color.blue()) / 255.0;
+
+	/*
 	// Inverse gray value.
 	value = 1.0 - value;
+
+	value *= 255.0f;
 
 	// Red value.
 	if (value >= 128 && value <= 192)	_r = (value - 128.0) / 65.0;
@@ -901,6 +914,7 @@ void MyMesh::gray_to_rgb_color(const Real _gray, Real &_r, Real &_g, Real &_b)
 	if (value <= 64)	_b = 1.0;
 	else if (value > 64 && value <= 128)	_b = 1.0 - ((value - 64.0) / 65.0);
 	else	_b = 0.0;
+	*/
 }
 
 void MyMesh::clear_colors()

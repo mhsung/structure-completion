@@ -1,5 +1,6 @@
 #include "MeshViewerCore.h"
 
+#include <QColor>
 #include "glut_geometry.h"
 
 
@@ -532,7 +533,7 @@ void MeshViewerCore::draw_scene(const std::string& _draw_mode)
 {
 	MeshViewerCoreT<MyMesh>::draw_scene(_draw_mode);
 
-	if (_draw_mode == CUSTOM_VIEW)
+	if (_draw_mode == CUSTOM_VIEW || _draw_mode == COLORED_POINT_SAMPLES)
 	{
 		glDisable(GL_LIGHTING);
 		glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
@@ -657,12 +658,13 @@ void MeshViewerCore::draw_openmesh(const std::string& _drawmode)
 
 		bool draw_all_labels = (cuboid_structure_.query_label_index_ == cuboid_structure_.num_labels());
 
-		// Draw sample points (Black).
+		// Draw sample points (Gray).
 		if (draw_all_labels)
 		{
 			for (std::vector<MeshSamplePoint *>::iterator it = cuboid_structure_.sample_points_.begin();
 				it != cuboid_structure_.sample_points_.end(); it++)
 			{
+				assert(*it);
 				GLdouble *point = &(*it)->point_[0];
 
 				Real radius = 1.0;
@@ -677,7 +679,7 @@ void MeshViewerCore::draw_openmesh(const std::string& _drawmode)
 				{
 					glPushMatrix();
 					glTranslatef(point[0], point[1], point[2]);
-					black_color();
+					gray_color();
 
 					glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
 					glutSolidSphere(radius, 20, 20);
@@ -1047,6 +1049,23 @@ void MeshViewerCore::draw_openmesh(const std::string& _drawmode)
 			}
 		}
 #endif
+	}
+	else if (_drawmode == COLORED_POINT_SAMPLES)
+	{
+		for (std::vector<MeshSamplePoint *>::iterator it = cuboid_structure_.sample_points_.begin();
+			it != cuboid_structure_.sample_points_.end(); it++)
+		{
+			assert(*it);
+			GLdouble *point = &(*it)->point_[0];
+			Real r, g, b;
+			MyMesh::gray_to_rgb_color((*it)->error_, r, g, b);
+
+			glPointSize(2);
+			glBegin(GL_POINTS);
+			glColor4f(r, g, b, 1.0f);
+			glVertex3dv(&point[0]);
+			glEnd();
+		}
 	}
 	else if (_drawmode == FACE_INDEX_RENDERING)
 	{

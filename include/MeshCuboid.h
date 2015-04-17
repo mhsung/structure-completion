@@ -35,6 +35,7 @@ public:
 		, bary_coord_(_bary_coord)
 		, point_(_point)
 		, normal_(_normal)
+		, error_(0)
 	{}
 
 	MeshSamplePoint(
@@ -45,6 +46,7 @@ public:
 		, point_(_other.point_)
 		, normal_(_other.normal_)
 		, label_index_confidence_(_other.label_index_confidence_)
+		, error_(_other.error_)
 	{}
 
 	SamplePointIndex sample_point_index_;
@@ -53,6 +55,7 @@ public:
 	MyMesh::Point point_;
 	MyMesh::Normal normal_;
 	std::vector<Real> label_index_confidence_;
+	Real error_;
 };
 
 class MeshCuboidSurfacePoint

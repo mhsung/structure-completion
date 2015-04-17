@@ -102,7 +102,7 @@ public:
 
 	void remove_symmetric_cuboids();
 
-	// NOTICE:
+	// NOTE:
 	// Symmetry group functions are replaced with 'MeshCuboidSymmetryGroup' class.
 	//bool is_label_group(LabelIndex _label_index);
 	//void clear_symmetric_group_labels();

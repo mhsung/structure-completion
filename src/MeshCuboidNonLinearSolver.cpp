@@ -255,7 +255,7 @@ void MeshCuboidNonLinearSolver::add_symmetry_group_energy_functions(
 
 	_quadratic_term.block<3, 3>(index_size_pair.first, index_size_pair.first) += A1;
 	
-	// NOTICE:
+	// NOTE:
 	// Variables 'n' and 't' are adjacent in the variable list.
 	_quadratic_term.block<3 + 1, 3 + 1>(index_size_pair.first, index_size_pair.first) += A2;
 }
@@ -324,7 +324,7 @@ void MeshCuboidNonLinearSolver::add_symmetry_group_constraints(
 	if (single_cuboid_indices.empty())
 	{
 		// Unit vector constraint.
-		// NOTICE:
+		// NOTE:
 		// If there is an identical cuboid axis,
 		// the unit vector constraint is added from the cuboid constraint.
 		NLPExpression expression = NLPVectorExpression::dot_product(
@@ -361,7 +361,7 @@ void MeshCuboidNonLinearSolver::add_cuboid_constraints(
 
 	for (int axis_index = 0; axis_index < dimension; ++axis_index)
 	{
-		// NOTICE:
+		// NOTE:
 		// Implemented only for 3 dimension.
 		assert(dimension == 3);
 
@@ -415,7 +415,7 @@ void MeshCuboidNonLinearSolver::add_reflection_constraints(
 		_x_variable + _y_variable)
 		+ (_t_variable[0] * -2);
 
-	// NOTICE:
+	// NOTE:
 	// Relaxing equality constraint.
 	// The equality constraints cause "too few degrees" errors.
 	_formulation.add_constraint(expression_1, -1.0E-12, 1.0E-12);
@@ -428,7 +428,7 @@ void MeshCuboidNonLinearSolver::add_reflection_constraints(
 	// (I - nn^T)(x - y) = (x - y) - n(n^T(x - y)) = 0.
 	NLPVectorExpression expression_2 = (_x_variable - _y_variable) - (_n_variable * temp);
 
-	// NOTICE:
+	// NOTE:
 	// Relaxing equality constraint.
 	// The equality constraints cause "too few degrees" errors.
 	_formulation.add_constraint(expression_2, -1.0E-12, 1.0E-12);
@@ -444,7 +444,7 @@ void MeshCuboidNonLinearSolver::add_cuboid_reflection_constraints(
 	const unsigned int dimension = 3;
 	assert(_reflection_axis_index < dimension);
 
-	// NOTICE:
+	// NOTE:
 	// Implemented only for 3 dimension.
 	assert(dimension == 3);
 

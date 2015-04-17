@@ -64,7 +64,7 @@ void NLPSparseFunction::eval_gradient(const Number* _x, Number* _output) const
 void NLPSparseFunction::eval_hessian(const Number* _x,
 	const Number _weight, Number* _output) const
 {
-	// NOTICE:
+	// NOTE:
 	// Make dense Hessian matrix.
 
 	assert(_output != NULL);
@@ -133,7 +133,7 @@ void NLPSparseConstraint::eval_gradient(const Number* _x,
 		const NLPExpression &expression = gradient_.expressions_[i];
 		assert(index <= num_vars_);
 
-		// NOTICE:
+		// NOTE:
 		// If '_x' is NULL, ignore the output value.
 		Number value = 0;
 		if (_x) value = expression.eval(_x);
@@ -145,7 +145,7 @@ void NLPSparseConstraint::eval_gradient(const Number* _x,
 void NLPSparseConstraint::eval_hessian(const Number* _x,
 	const Number _weight, Number* _output) const
 {
-	// NOTICE:
+	// NOTE:
 	// Make dense Hessian matrix.
 
 	assert(_output != NULL);
@@ -208,7 +208,7 @@ Number NLPFormulation::nnz_constraint_gradients() const
 
 Number NLPFormulation::nnz_hessian() const
 {
-	// NOTICE:
+	// NOTE:
 	// Make dense Hessian matrix.
 	return num_vars_ * (num_vars_ + 1) / 2;
 }
@@ -389,7 +389,7 @@ void NLPFormulation::eval_hessian(const Number* _x,
 	const Number _obj_factor, const Number* _lambda,
 	Index* _variable_indices_i, Index *_variable_indices_j, Number* _output) const
 {
-	// NOTICE:
+	// NOTE:
 	// Make dense Hessian matrix.
 
 	if (_output == NULL)

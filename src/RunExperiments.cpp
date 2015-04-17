@@ -273,19 +273,20 @@ void MeshViewerCore::set_random_view_direction(bool _set_modelview_matrix)
 	z_axis_random_rotation_mat(1, 1) = cos(z_angle);
 
 
-	double x_offset = static_cast<double>(simplerandom_cong_next(&rng_cong))
-		/ std::numeric_limits<uint32_t>::max();
-	x_offset = (x_offset - 0.5) * mesh().get_object_diameter();
+	// No XY-plane translation.
+	//double x_offset = static_cast<double>(simplerandom_cong_next(&rng_cong))
+	//	/ std::numeric_limits<uint32_t>::max();
+	//x_offset = (x_offset - 0.5) * mesh().get_object_diameter();
 
-	double y_offset = static_cast<double>(simplerandom_cong_next(&rng_cong))
-		/ std::numeric_limits<uint32_t>::max();
-	y_offset = (y_offset - 0.5) * mesh().get_object_diameter();
+	//double y_offset = static_cast<double>(simplerandom_cong_next(&rng_cong))
+	//	/ std::numeric_limits<uint32_t>::max();
+	//y_offset = (y_offset - 0.5) * mesh().get_object_diameter();
 
 	const double z_offset = -1.5 * mesh().get_object_diameter();
 
 	Eigen::Matrix4d translation_mat = Eigen::Matrix4d::Identity();
-	translation_mat(0, 3) = x_offset;
-	translation_mat(1, 3) = y_offset;
+	//translation_mat(0, 3) = x_offset;
+	//translation_mat(1, 3) = y_offset;
 	translation_mat(2, 3) = z_offset;
 
 	Eigen::Matrix4d transformation_mat = translation_mat
@@ -973,7 +974,7 @@ void MeshViewerCore::reconstruct(
 		} while (std::cin.get() != '\n');
 	}
 
-	// NOTICE:
+	// NOTE:
 	// Load dense sample points.
 	ret = load_training_data(_mesh_filepath, ground_truth_mesh, ground_truth_cuboid_structure, true);
 	assert(ret);
@@ -981,8 +982,9 @@ void MeshViewerCore::reconstruct(
 	//
 
 
+	setDrawMode(COLORED_POINT_SAMPLES);
 	MeshCuboidStructure cuboid_structure_copy(cuboid_structure_);
-
+	
 
 	// 1. Reconstruction using symmetry.
 	ret = cuboid_structure_.load_dense_sample_points(_dense_sample_filepath);
@@ -991,11 +993,13 @@ void MeshViewerCore::reconstruct(
 	remove_occluded_points();
 
 	//
-	updateGL();
-	output_filename_sstr.clear(); output_filename_sstr.str("");
-	output_filename_sstr << _output_file_prefix << std::string("_view_dense");
-	snapshot(output_filename_sstr.str().c_str());
-	cuboid_structure_.save_sample_points_to_ply(output_filename_sstr.str().c_str());
+	// FIXME:
+	// Should be captured before starting the optimization.
+	//updateGL();
+	//output_filename_sstr.clear(); output_filename_sstr.str("");
+	//output_filename_sstr << _output_file_prefix << std::string("_view_dense");
+	//snapshot(output_filename_sstr.str().c_str());
+	//cuboid_structure_.save_sample_points_to_ply(output_filename_sstr.str().c_str());
 	//
 
 	open_modelview_matrix_file(FLAGS_pose_filename.c_str());
@@ -1003,12 +1007,19 @@ void MeshViewerCore::reconstruct(
 
 	output_filename_sstr.clear(); output_filename_sstr.str("");
 	output_filename_sstr << _output_file_prefix << std::string("_reconstructed");
-	evaluator.evaluate_point_to_point_distances(&cuboid_structure_, output_filename_sstr.str().c_str());
-
-	cuboid_structure_.clear_cuboids();
-	updateGL();
-	snapshot(output_filename_sstr.str().c_str());
 	cuboid_structure_.save_sample_points_to_ply(output_filename_sstr.str().c_str());
+	evaluator.evaluate_point_to_point_distances(&cuboid_structure_, output_filename_sstr.str().c_str());
+	
+	updateGL();
+	output_filename_sstr.clear(); output_filename_sstr.str("");
+	output_filename_sstr << _output_file_prefix << std::string("_reconstructed_precision");
+	snapshot(output_filename_sstr.str().c_str());
+	
+	cuboid_structure_ = ground_truth_cuboid_structure;
+	updateGL();
+	output_filename_sstr.clear(); output_filename_sstr.str("");
+	output_filename_sstr << _output_file_prefix << std::string("_reconstructed_recall");
+	snapshot(output_filename_sstr.str().c_str());
 
 	cuboid_structure_ = cuboid_structure_copy;
 
@@ -1019,11 +1030,18 @@ void MeshViewerCore::reconstruct(
 	output_filename_sstr.clear(); output_filename_sstr.str("");
 	output_filename_sstr << _output_file_prefix << std::string("_database");
 	evaluator.evaluate_point_to_point_distances(&cuboid_structure_, output_filename_sstr.str().c_str());
-
-	cuboid_structure_.clear_cuboids();
-	updateGL();
-	snapshot(output_filename_sstr.str().c_str());
 	cuboid_structure_.save_sample_points_to_ply(output_filename_sstr.str().c_str());
+
+	updateGL();
+	output_filename_sstr.clear(); output_filename_sstr.str("");
+	output_filename_sstr << _output_file_prefix << std::string("_database_precision");
+	snapshot(output_filename_sstr.str().c_str());
+
+	cuboid_structure_ = ground_truth_cuboid_structure;
+	updateGL();
+	output_filename_sstr.clear(); output_filename_sstr.str("");
+	output_filename_sstr << _output_file_prefix << std::string("_database_recall");
+	snapshot(output_filename_sstr.str().c_str());
 
 	cuboid_structure_ = cuboid_structure_copy;
 
@@ -1045,13 +1063,23 @@ void MeshViewerCore::reconstruct(
 	output_filename_sstr.clear(); output_filename_sstr.str("");
 	output_filename_sstr << _output_file_prefix << std::string("_fusion");
 	evaluator.evaluate_point_to_point_distances(&cuboid_structure_, output_filename_sstr.str().c_str());
-
-	cuboid_structure_.clear_cuboids();
-	updateGL();
-	snapshot(output_filename_sstr.str().c_str());
 	cuboid_structure_.save_sample_points_to_ply(output_filename_sstr.str().c_str());
 
+	updateGL();
+	output_filename_sstr.clear(); output_filename_sstr.str("");
+	output_filename_sstr << _output_file_prefix << std::string("_fusion_precision");
+	snapshot(output_filename_sstr.str().c_str());
+
+	cuboid_structure_ = ground_truth_cuboid_structure;
+	updateGL();
+	output_filename_sstr.clear(); output_filename_sstr.str("");
+	output_filename_sstr << _output_file_prefix << std::string("_fusion_recall");
+	snapshot(output_filename_sstr.str().c_str());
+
 	cuboid_structure_ = cuboid_structure_copy;
+
+
+	setDrawMode(CUSTOM_VIEW);
 }
 
 void MeshViewerCore::reconstruct_using_database(const std::vector<LabelIndex> *_reconstructed_label_indices)
@@ -1081,7 +1109,6 @@ void MeshViewerCore::reconstruct_using_database(const std::vector<LabelIndex> *_
 	assert(num_labels == example_cuboid_structure.num_labels());
 
 
-	setDrawMode(CUSTOM_VIEW);
 	open_modelview_matrix_file(FLAGS_pose_filename.c_str());
 
 	// For every file in the base path.
@@ -1178,7 +1205,7 @@ void MeshViewerCore::reconstruct_using_database(const std::vector<LabelIndex> *_
 		QFileInfo file_info(mesh_filepath.c_str());
 		std::string mesh_name(file_info.baseName().toLocal8Bit());
 
-		// NOTICE:
+		// NOTE:
 		// Load dense sample points.
 		bool ret = load_training_data(mesh_filepath.c_str(), example_mesh, example_cuboid_structure, true);
 		assert(ret);

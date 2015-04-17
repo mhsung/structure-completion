@@ -15,9 +15,10 @@
 
 #define RECENT_LOAD				"recent_load.ini"
 #define AUTO_LOAD_LB_OPERATOR	".laplacian.eigendata.dat"
-#define CUSTOM_VIEW				"Custom_View"
-#define	COLORED_RENDERING		"Colored_Rendering"
-#define	FACE_INDEX_RENDERING	"Face_Index_Rendering"
+#define CUSTOM_VIEW				"Custom view"
+#define	COLORED_RENDERING		"Colored rendering"
+#define	FACE_INDEX_RENDERING	"Face index rendering"
+#define	COLORED_POINT_SAMPLES	"Colored point samples"
 //#define COLOR_RANDOM_SEED		20091129
 #define COLOR_RANDOM_SEED		20091130
 
@@ -113,14 +114,14 @@ protected:
 	void render_selection_mode();
 	VertexIndex select_object(int x, int y);
 
-	//Added: Minhyuk Sung. 2009-08-11
-	void red_color()	{ glColor4f(192.0f / 256.0f, 0.0f / 256.0f, 0.0f / 256.0f, 1.0f); }
-	void green_color()	{ glColor4f(0.0f / 256.0f, 176.0f / 256.0f, 80.0f / 256.0f, 1.0f); }
-	void blue_color()	{ glColor4f(0.0f / 256.0f, 112.0f / 256.0f, 192.0f / 256.0f, 1.0f); }
-	void yellow_color()	{ glColor4f(255.0f / 256.0f, 192.0f / 256.0f, 0.0f / 256.0f, 1.0f); }
-	void violet_color()	{ glColor4f(112.0f / 256.0f, 48.0f / 256.0f, 160.0f / 256.0f, 1.0f); }
-	void black_color()	{ glColor4f(0.0f / 256.0f, 32.0f / 256.0f, 96.0f / 256.0f, 1.0f); }
-	void gray_color()	{ glColor4f(127.0f / 256.0f, 127.0f / 256.0f, 127.0f / 256.0f, 1.0f); }
+	//Added: Minhyuk Sung. 2009-08-11 (Last modified: 2015-04-16)
+	void red_color()	{ glColor4ub(192, 0, 0, 255); }
+	void green_color()	{ glColor4ub(0, 176, 80, 255); }
+	void blue_color()	{ glColor4ub(0, 112, 192, 255); }
+	void yellow_color()	{ glColor4ub(255, 192, 0, 255); }
+	void violet_color()	{ glColor4ub(112, 48, 160, 255); }
+	void black_color()	{ glColor4ub(0, 32, 96, 255); }
+	void gray_color()	{ glColor4ub(96, 96, 96, 255); }
 
 	/// draw the mesh
 	virtual void draw_scene(const std::string& _draw_mode);
@@ -138,6 +139,7 @@ private:
 	selection_mode_;
 
 	MeshCuboidStructure cuboid_structure_;
+
 	bool draw_cuboid_axes_;
 
 	//QGLOcculsionTestWidget *occlusion_test_widget_;

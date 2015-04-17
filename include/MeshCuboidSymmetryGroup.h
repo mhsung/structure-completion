@@ -31,7 +31,7 @@ struct MeshCuboidSymmetryGroupInfo
 class MeshCuboidSymmetryGroup
 {
 public:
-	// NOTICE:
+	// NOTE:
 	// Use factory constructor.
 	static MeshCuboidSymmetryGroup* constructor(
 		const MeshCuboidSymmetryGroupInfo &_info,

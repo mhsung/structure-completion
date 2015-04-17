@@ -126,6 +126,7 @@ int main(int argc, char **argv)
 	a->setShortcut(QKeySequence(Qt::Key_D));
 	a = w.add_draw_mode(COLORED_RENDERING);
 	a = w.add_draw_mode(FACE_INDEX_RENDERING);
+	a = w.add_draw_mode(COLORED_POINT_SAMPLES);
 
 	mainWin.resize(800, 600 + 21);
 	mainWin.show();
