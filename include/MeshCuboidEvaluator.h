@@ -35,7 +35,7 @@ private:
 	//void evaluate_cuboid_distance(
 	//	const MeshCuboidStructure *_test_cuboid_structure);
 
-	void MeshCuboidEvaluator::evaluate_point_to_point_distances(
+	void evaluate_point_to_point_distances(
 		const std::vector<MeshSamplePoint *> _ground_truth_sample_points,
 		const std::vector<MeshSamplePoint *> _test_sample_points,
 		const char *_filename, bool _record_error = false);

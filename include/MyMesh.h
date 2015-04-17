@@ -159,7 +159,7 @@ public:
 
 	static Color get_label_color(const Label _label);
 
-	inline static void gray_to_rgb_color(const Real _gray, Real &_r, Real &_g, Real &_b);
+	static void gray_to_rgb_color(const Real _gray, Real &_r, Real &_g, Real &_b);
 
 
 private:
