@@ -4,9 +4,10 @@
 // Implemented based on the following paper:
 // Olga Sorkine, "Least-Squares Rigid Motion Using SVD".
 
-#define MAX_BBOX_ORIENTATION_NUM_ITERATIONS		100
-#define MIN_BBOX_ORIENTATION_ANGLE_DIFFERENCE	1
-#define MIN_BBOX_ORIENTATION_TRANSLATION		1.0E-6
+#define MIN_NUM_ICP_POINT_PAIRS		10
+#define MAX_NUM_ICP_ITERATIONS		100
+#define MIN_ICP_ANGLE_DIFFERENCE	1
+#define MIN_ICP_TRANSLATION			1.0E-6
 
 #include <ANN/ANN.h>
 #include <Eigen/Core>
@@ -37,13 +38,16 @@ namespace ICP {
 		const Eigen::MatrixXd &_query_points,
 		Eigen::VectorXd &_distances);
 
+	// Return: error (Minus error means that the computation is failed.)
 	double compute_rigid_transformation(const Eigen::MatrixXd &_X, const Eigen::MatrixXd &_Y,
-		Eigen::Matrix3d &_rotation_mat, Eigen::Vector3d &_translation_vec);
+		Eigen::Matrix3d &_rotation_mat, Eigen::Vector3d &_translation_vec,
+		const double *_distance_threshold = NULL);
 
-	// NOTE:
-	// '_X' and '_Y' are modified.
-	double run_iterative_closest_points(Eigen::MatrixXd &_X, Eigen::MatrixXd &_Y,
-		Eigen::Matrix3d &_rotation_mat, Eigen::Vector3d &_translation_vec);
+	// Return: error (Minus error means that the computation is failed.)
+	// '_X' is modified.
+	double run_iterative_closest_points(Eigen::MatrixXd &_X, const Eigen::MatrixXd &_Y,
+		Eigen::Matrix3d &_rotation_mat, Eigen::Vector3d &_translation_vec,
+		const double *_distance_threshold = NULL);
 }
 
 #endif	// _ICP_H_

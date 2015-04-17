@@ -109,8 +109,11 @@ namespace ICP {
 	}
 
 	double compute_rigid_transformation(const Eigen::MatrixXd &_X, const Eigen::MatrixXd &_Y,
-		Eigen::Matrix3d &_rotation_mat, Eigen::Vector3d &_translation_vec)
+		Eigen::Matrix3d &_rotation_mat, Eigen::Vector3d &_translation_vec,
+		const double *_distance_threshold)
 	{
+		// Return: error (Minus error means that the computation is failed.)
+
 		assert(_X.rows() == 3);
 		assert(_X.cols() > 0);
 
@@ -150,8 +153,51 @@ namespace ICP {
 
 		Eigen::MatrixXd diff = all_X - all_Y;
 		Eigen::RowVectorXd squared_dists = (diff.array() * diff.array()).colwise().sum();
-		// hausdorff distance.
-		//double prev_error = std::sqrt(squared_dists.maxCoeff());
+
+		// Hausdorff distance.
+		double prev_error = std::sqrt(squared_dists.maxCoeff());
+
+		// Partial ICP.
+		if (_distance_threshold)
+		{
+			std::cout << "max_squared_dists = " << squared_dists.maxCoeff() << std::endl;
+			std::cout << "avg_squared_dists = " << squared_dists.sum() / n << std::endl;
+
+			double squared_distance_threshold = (*_distance_threshold) * (*_distance_threshold);
+			Eigen::MatrixXd::Index subset_n = (squared_dists.array() <= squared_distance_threshold).count();
+			Eigen::MatrixXd subset_all_X(3, subset_n);
+			Eigen::MatrixXd subset_all_Y(3, subset_n);
+			Eigen::MatrixXd subset_diff(3, subset_n);
+			Eigen::RowVectorXd subset_squared_dists(subset_n);
+
+			int count = 0;
+			for (int i = 0; i < n; ++i)
+			{
+				if (squared_dists[i] <= squared_distance_threshold)
+				{
+					assert(count < subset_n);
+					subset_all_X.col(count) = all_X.col(i);
+					subset_all_Y.col(count) = all_Y.col(i);
+					subset_diff.col(count) = diff.col(i);
+					subset_squared_dists.col(count) = squared_dists.col(i);
+					++count;
+				}
+			}
+			assert(count == subset_n);
+
+			n = subset_n;
+			all_X.swap(subset_all_X);
+			all_Y.swap(subset_all_Y);
+			diff.swap(subset_diff);
+			squared_dists.swap(subset_squared_dists);
+		}
+
+
+		if (n < MIN_NUM_ICP_POINT_PAIRS)
+		{
+			std::cerr << "Warning: Too few point pairs." << std::endl;
+			return -1;
+		}
 
 		Eigen::Vector3d all_X_mean = all_X.rowwise().mean();
 		Eigen::Vector3d all_Y_mean = all_Y.rowwise().mean();
@@ -173,28 +219,39 @@ namespace ICP {
 
 		diff = ((_rotation_mat * all_X).colwise() + _translation_vec) - all_Y;
 		squared_dists = (diff.array() * diff.array()).colwise().sum();
-		// hausdorff distance.
+
+		// Hausdorff distance.
 		double error = std::sqrt(squared_dists.maxCoeff());
+		if (error > prev_error)
+			return -1;
 
 		return error;
 	}
 
-	double run_iterative_closest_points(Eigen::MatrixXd &_X, Eigen::MatrixXd &_Y,
-		Eigen::Matrix3d &_rotation_mat, Eigen::Vector3d &_translation_vec)
+	double run_iterative_closest_points(Eigen::MatrixXd &_X, const Eigen::MatrixXd &_Y,
+		Eigen::Matrix3d &_rotation_mat, Eigen::Vector3d &_translation_vec,
+		const double *_distance_threshold)
 	{
 		_rotation_mat = Eigen::Matrix3d::Identity();
 		_translation_vec = Eigen::Vector3d::Zero();
 		double prev_error = std::numeric_limits<double>::max();
 
-		const unsigned int max_num_iterations = MAX_BBOX_ORIENTATION_NUM_ITERATIONS;
-		const double min_angle_difference = static_cast<double>(MIN_BBOX_ORIENTATION_ANGLE_DIFFERENCE) / 180.0 * M_PI;
-		const double min_translation = MIN_BBOX_ORIENTATION_TRANSLATION;
+		const unsigned int max_num_iterations = MAX_NUM_ICP_ITERATIONS;
+		const double min_angle_difference = static_cast<double>(MIN_ICP_ANGLE_DIFFERENCE) / 180.0 * M_PI;
+		const double min_translation = MIN_ICP_TRANSLATION;
 
 		for (unsigned int iteration = 0; iteration < max_num_iterations; ++iteration)
 		{
 			Eigen::Matrix3d new_rotation_mat;
 			Eigen::Vector3d new_translation_vec;
-			double error = compute_rigid_transformation(_X, _Y, new_rotation_mat, new_translation_vec);
+			double error = compute_rigid_transformation(_X, _Y,
+				new_rotation_mat, new_translation_vec, _distance_threshold);
+
+			if (error < 0)
+			{
+				// The transformation computation is failed.
+				return error;
+			}
 
 			// NOTE:
 			// Continue only when the error value is decreasing.

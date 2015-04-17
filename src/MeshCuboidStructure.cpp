@@ -1800,15 +1800,67 @@ void MeshCuboidStructure::copy_sample_points_to_symmetric_position(
 	if (!_cuboid_1 || !_cuboid_2)
 		return;
 
+	/*
+	//
+	Eigen::MatrixXd symmetric_sample_points_1(3, _cuboid_1->num_sample_points());
+	Eigen::MatrixXd sample_points_2(3, _cuboid_2->num_sample_points());
+
+	for (SamplePointIndex sample_point_index = 0; sample_point_index < _cuboid_1->num_sample_points();
+		++sample_point_index)
+	{
+		assert(_cuboid_1->get_sample_point(sample_point_index));
+		MyMesh::Point point_1 = _cuboid_1->get_sample_point(sample_point_index)->point_;
+		//
+		MyMesh::Point symmetric_point_1 = _symmetry_group->get_symmetric_point(point_1);
+		//
+		for (unsigned int i = 0; i < 3; ++i)
+			symmetric_sample_points_1.col(sample_point_index)(i) = symmetric_point_1[i];
+	}
+
+	for (SamplePointIndex sample_point_index = 0; sample_point_index < _cuboid_2->num_sample_points();
+		++sample_point_index)
+	{
+		assert(_cuboid_2->get_sample_point(sample_point_index));
+		MyMesh::Point point_2 = _cuboid_2->get_sample_point(sample_point_index)->point_;
+		for (unsigned int i = 0; i < 3; ++i)
+			sample_points_2.col(sample_point_index)(i) = point_2[i];
+	}
+
+	const Real neighbor_distance = 10 * FLAGS_param_sample_point_neighbor_distance * mesh_->get_object_diameter();
+
+	Eigen::Matrix3d rotation_mat;
+	Eigen::Vector3d translation_vec;
+	double icp_error = ICP::run_iterative_closest_points(symmetric_sample_points_1, sample_points_2,
+		rotation_mat, translation_vec, &neighbor_distance);
+
+	printf("%d -> %d: %lf\n", _cuboid_1->label_index_, _cuboid_2->label_index_, icp_error);
+	//
+	*/
+
+
 	const int num_points_1 = _cuboid_1->num_sample_points();
 
 	for (int point_index_1 = 0; point_index_1 < num_points_1; ++point_index_1)
 	{
 		const MeshSamplePoint* sample_point_1 = _cuboid_1->get_sample_point(point_index_1);
+		assert(sample_point_1);
 		MyMesh::Point point_1 = sample_point_1->point_;
 		MyMesh::Normal normal_1 = sample_point_1->normal_;
 
-		MyMesh::Point symmetric_point_1 = _symmetry_group->get_symmetric_point(point_1);
+		MyMesh::Point symmetric_point_1;
+		//if (icp_error >= 0)
+		//{
+		//	// If ICP succeeded, copy the aligned point.
+		//	for (unsigned int i = 0; i < 3; ++i)
+		//		symmetric_point_1[i] = symmetric_sample_points_1.col(point_index_1)[i];
+		//}
+		//else
+		{
+			symmetric_point_1 = _symmetry_group->get_symmetric_point(point_1);
+		}
+
+		// FIXME:
+		// IF ICP succeeded, how to compute the symmetric normal direction?
 		MyMesh::Normal symmetric_normal_1 = _symmetry_group->get_symmetric_normal(normal_1);
 
 		MeshSamplePoint *symmetric_sample_point = add_sample_point(symmetric_point_1, symmetric_normal_1);

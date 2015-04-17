@@ -604,7 +604,7 @@ bool MyMesh::load_face_label_simple(const char *_filename, bool _verbose)
 	file.close();
 
 	//set_vertex_label_from_face_label();
-	set_face_label_colors();
+	set_face_label_colors(_verbose);
 
 	std::cout << "Done." << std::endl;
 
@@ -711,7 +711,7 @@ bool MyMesh::load_face_label(const char *_filename, bool _verbose)
 	file.close();
 
 	//set_vertex_label_from_face_label();
-	set_face_label_colors();
+	set_face_label_colors(_verbose);
 
 	if (_verbose)
 		std::cout << "Done." << std::endl;

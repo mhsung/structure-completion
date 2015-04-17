@@ -253,11 +253,11 @@ void MeshCuboidNonLinearSolver::add_symmetry_group_energy_functions(
 	std::pair<Index, Index> index_size_pair;
 	index_size_pair = get_symmetry_group_variable_n_index_size(_symmetry_group_index);
 
-	_quadratic_term.block<3, 3>(index_size_pair.first, index_size_pair.first) += A1;
+	_quadratic_term.block<3, 3>(index_size_pair.first, index_size_pair.first) += 1000 * A1;
 	
 	// NOTE:
 	// Variables 'n' and 't' are adjacent in the variable list.
-	_quadratic_term.block<3 + 1, 3 + 1>(index_size_pair.first, index_size_pair.first) += A2;
+	_quadratic_term.block<3 + 1, 3 + 1>(index_size_pair.first, index_size_pair.first) += 1000 * A2;
 }
 
 void MeshCuboidNonLinearSolver::add_cuboid_constraints(NLPFormulation &_formulation)
