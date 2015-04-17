@@ -10,6 +10,7 @@ DECLARE_int32(param_min_num_cuboid_sample_points);
 DECLARE_int32(param_num_cuboid_surface_points);
 DECLARE_int32(param_intra_cuboid_symmetry_axis);
 DECLARE_int32(param_eval_num_neighbor_range_samples);
+DECLARE_int32(param_opt_max_iterations);
 
 DECLARE_double(param_min_sample_point_confidence);
 DECLARE_double(param_min_num_confidence_tol_sample_points);
@@ -20,9 +21,9 @@ DECLARE_double(param_observed_point_radius);
 DECLARE_double(param_min_cuboid_overall_visibility);
 DECLARE_double(param_max_potential);
 DECLARE_double(param_dummy_potential);
-
-// Expected to be similar with 'param_sample_point_neighbor_distance'.
 DECLARE_double(param_eval_max_neighbor_range);
+DECLARE_double(param_opt_single_energy_term_weight);
+DECLARE_double(param_opt_symmetry_energy_term_weight);
 
 //DECLARE_double(param_sim_abs_attr_tol);
 //DECLARE_double(param_zero_tol);

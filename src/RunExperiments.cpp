@@ -1,5 +1,6 @@
 #include "MeshViewerCore.h"
 #include "MeshCuboidEvaluator.h"
+#include "MeshCuboidParameters.h"
 #include "MeshCuboidPredictor.h"
 #include "MeshCuboidRelation.h"
 #include "MeshCuboidTrainer.h"
@@ -862,12 +863,10 @@ void MeshViewerCore::predict()
 
 
 		std::cout << "\n3. Optimize cuboid attributes." << std::endl;
-		const double quadprog_ratio = 1E4;
-		const unsigned int max_optimization_iteration = 5;
 
-		optimize_attributes(cuboid_structure_, occlusion_modelview_matrix,
-			joint_normal_predictor, quadprog_ratio, log_filename_sstr.str(),
-			max_optimization_iteration, this);
+		optimize_attributes(cuboid_structure_, occlusion_modelview_matrix, joint_normal_predictor,
+			FLAGS_param_opt_single_energy_term_weight, FLAGS_param_opt_symmetry_energy_term_weight,
+			FLAGS_param_opt_max_iterations, log_filename_sstr.str(), this);
 
 		updateGL();
 		snapshot_filename_sstr.clear(); snapshot_filename_sstr.str("");

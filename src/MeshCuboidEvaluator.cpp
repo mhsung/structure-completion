@@ -257,7 +257,7 @@ void MeshCuboidEvaluator::evaluate_point_to_point_distances(
 
 	if (_record_error)
 	{
-		// Precision.
+		// Accuracy.
 		for (SamplePointIndex sample_point_index = 0; sample_point_index < num_test_sample_points;
 			++sample_point_index)
 		{
@@ -266,7 +266,7 @@ void MeshCuboidEvaluator::evaluate_point_to_point_distances(
 				/ FLAGS_param_eval_max_neighbor_range), 1.0);
 		}
 
-		// Recall.
+		// Completeness.
 		for (SamplePointIndex sample_point_index = 0; sample_point_index < num_ground_truth_sample_points;
 			++sample_point_index)
 		{
@@ -282,18 +282,16 @@ void MeshCuboidEvaluator::evaluate_point_to_point_distances(
 	assert(distance_error >= 0);
 
 
-	Eigen::VectorXd precision(FLAGS_param_eval_num_neighbor_range_samples);
-	Eigen::VectorXd recall(FLAGS_param_eval_num_neighbor_range_samples);
+	Eigen::VectorXd accuracy(FLAGS_param_eval_num_neighbor_range_samples);
+	Eigen::VectorXd completeness(FLAGS_param_eval_num_neighbor_range_samples);
 
 	for (unsigned int i = 0; i < FLAGS_param_eval_num_neighbor_range_samples; ++i)
 	{
-		// Precision.
-		precision[i] = static_cast<double>(
+		accuracy[i] = static_cast<double>(
 			(test_to_ground_truth_distances.array() <= neighbor_ranges[i]).count())
 			/ num_test_sample_points;
 
-		// Recall.
-		recall[i] = static_cast<double>(
+		completeness[i] = static_cast<double>(
 			(ground_truth_to_test_distances.array() <= neighbor_ranges[i]).count())
 			/ num_ground_truth_sample_points;
 	}
@@ -311,8 +309,8 @@ void MeshCuboidEvaluator::evaluate_point_to_point_distances(
 
 	Eigen::IOFormat csv_format(Eigen::StreamPrecision, 0, ",");
 	file << neighbor_ranges.transpose().format(csv_format) << std::endl;
-	file << precision.transpose().format(csv_format) << std::endl;
-	file << recall.transpose().format(csv_format) << std::endl;
+	file << accuracy.transpose().format(csv_format) << std::endl;
+	file << completeness.transpose().format(csv_format) << std::endl;
 	file.close();
 
 

@@ -294,7 +294,7 @@ Eigen::VectorXd solve_quadratic_programming(
 		//else
 		//{
 		//	// Initial Prior.
-		//	if (_quadprog_ratio > 0)
+		//	if (_single_energy_term_weight > 0)
 		//	{
 		//		std::cout << "quadprog_ratio = " << _quadprog_ratio << std::endl;
 		//		G = (1.0 / init_error) * G + _quadprog_ratio * Eigen::MatrixXd::Identity(dimension, dimension);
@@ -1304,7 +1304,7 @@ void get_optimization_error(
 void optimize_attributes_once(
 	const std::vector<MeshCuboid *>& _cuboids,
 	const MeshCuboidPredictor& _predictor,
-	const double _quadprog_ratio)
+	const double _single_energy_term_weight)
 {
 	const unsigned int num_attributes = MeshCuboidAttributes::k_num_attributes;
 	unsigned int num_cuboids = _cuboids.size();
@@ -1323,9 +1323,9 @@ void optimize_attributes_once(
 		single_total_energy, pair_total_energy);
 
 
-	Eigen::MatrixXd quadratic_term = pair_quadratic_term + _quadprog_ratio * single_quadratic_term;
-	Eigen::VectorXd linear_term = pair_linear_term + _quadprog_ratio * single_linear_term;
-	double constant_term = pair_constant_term + _quadprog_ratio * single_constant_term;
+	Eigen::MatrixXd quadratic_term = pair_quadratic_term + _single_energy_term_weight * single_quadratic_term;
+	Eigen::VectorXd linear_term = pair_linear_term + _single_energy_term_weight * single_linear_term;
+	double constant_term = pair_constant_term + _single_energy_term_weight * single_constant_term;
 
 
 	// Solve quadratic programming.
@@ -1380,7 +1380,8 @@ void optimize_attributes_once(
 void optimize_attributes_once_with_constraints(
 	MeshCuboidStructure &_cuboid_structure,
 	const MeshCuboidPredictor& _predictor,
-	const double _quadprog_ratio)
+	const double _single_energy_term_weight,
+	const double _symmetry_energy_term_weight)
 {
 	const Real neighbor_distance = FLAGS_param_sample_point_neighbor_distance *
 		_cuboid_structure.mesh_->get_object_diameter();
@@ -1405,11 +1406,13 @@ void optimize_attributes_once_with_constraints(
 		single_total_energy, pair_total_energy);
 
 
-	Eigen::MatrixXd quadratic_term = pair_quadratic_term + _quadprog_ratio * single_quadratic_term;
-	Eigen::VectorXd linear_term = pair_linear_term + _quadprog_ratio * single_linear_term;
-	double constant_term = pair_constant_term + _quadprog_ratio * single_constant_term;
+	Eigen::MatrixXd quadratic_term = pair_quadratic_term + _single_energy_term_weight * single_quadratic_term;
+	Eigen::VectorXd linear_term = pair_linear_term + _single_energy_term_weight * single_linear_term;
+	double constant_term = pair_constant_term + _single_energy_term_weight * single_constant_term;
 
-	MeshCuboidNonLinearSolver non_linear_solver(all_cuboids, all_symmetry_groups, neighbor_distance);
+	MeshCuboidNonLinearSolver non_linear_solver(all_cuboids, all_symmetry_groups, neighbor_distance,
+		_symmetry_energy_term_weight);
+
 	non_linear_solver.optimize(quadratic_term, linear_term, constant_term, &init_values);
 }
 
@@ -1417,9 +1420,10 @@ void optimize_attributes(
 	MeshCuboidStructure &_cuboid_structure,
 	const Real _modelview_matrix[16],
 	const MeshCuboidPredictor &_predictor,
-	const double _quadprog_ratio,
-	const std::string _log_filename,
+	const double _single_energy_term_weight,
+	const double _symmetry_energy_term_weight,
 	const unsigned int _max_num_iterations,
+	const std::string _log_filename,
 	GLViewerCore *_viewer)
 {
 	std::ofstream log_file(_log_filename, std::ofstream::out | std::ofstream::app);
@@ -1449,10 +1453,10 @@ void optimize_attributes(
 	//
 	get_optimization_error(all_cuboids, _predictor,
 		single_total_energy, pair_total_energy);
-	total_energy = pair_total_energy + _quadprog_ratio * single_total_energy;
+	total_energy = pair_total_energy + _single_energy_term_weight * single_total_energy;
 	sstr.str(std::string());
 	sstr << "Energy: (pair = " << pair_total_energy
-		<< ", single = " << _quadprog_ratio * single_total_energy
+		<< ", single = " << _single_energy_term_weight * single_total_energy
 		<< ", total = " << total_energy << ")" << std::endl;
 	std::cout << sstr.str(); log_file << sstr.str();
 	//
@@ -1470,11 +1474,12 @@ void optimize_attributes(
 		if (FLAGS_param_optimize_with_non_linear_constraints)
 		{
 			optimize_attributes_once_with_constraints(
-				_cuboid_structure, _predictor, _quadprog_ratio);
+				_cuboid_structure, _predictor,
+				_single_energy_term_weight, _symmetry_energy_term_weight);
 		}
 		else
 		{
-			optimize_attributes_once(all_cuboids, _predictor, _quadprog_ratio);
+			optimize_attributes_once(all_cuboids, _predictor, _single_energy_term_weight);
 		}
 		
 		
@@ -1483,11 +1488,11 @@ void optimize_attributes(
 		//
 		get_optimization_error(all_cuboids, _predictor,
 			single_total_energy, pair_total_energy);
-		total_energy = pair_total_energy + _quadprog_ratio * single_total_energy;
+		total_energy = pair_total_energy + _single_energy_term_weight * single_total_energy;
 		sstr.str(std::string());
 		sstr << " - After optimization" << std::endl;
 		sstr << "Energy: (pair = " << pair_total_energy
-			<< ", single = " << _quadprog_ratio * single_total_energy
+			<< ", single = " << _single_energy_term_weight * single_total_energy
 			<< ", total = " << total_energy << ")" << std::endl;
 		std::cout << sstr.str(); log_file << sstr.str();
 		//
@@ -1513,11 +1518,11 @@ void optimize_attributes(
 		//
 		get_optimization_error(all_cuboids, _predictor,
 			single_total_energy, pair_total_energy);
-		total_energy = pair_total_energy + _quadprog_ratio * single_total_energy;
+		total_energy = pair_total_energy + _single_energy_term_weight * single_total_energy;
 		sstr.str(std::string());
 		sstr << " - After cuboidization" << std::endl;
 		sstr << "Energy: (pair = " << pair_total_energy
-			<< ", single = " << _quadprog_ratio * single_total_energy
+			<< ", single = " << _single_energy_term_weight * single_total_energy
 			<< ", total = " << total_energy << ")";
 		if (total_energy < final_total_energy)
 			sstr << " - Minimum.";
@@ -1580,10 +1585,10 @@ void optimize_attributes(
 
 	get_optimization_error(all_cuboids, _predictor,
 		single_total_energy, pair_total_energy);
-	total_energy = pair_total_energy + _quadprog_ratio * single_total_energy;
+	total_energy = pair_total_energy + _single_energy_term_weight * single_total_energy;
 	sstr.str(std::string());
 	sstr << "Energy: (pair = " << pair_total_energy
-		<< ", single = " << _quadprog_ratio * single_total_energy
+		<< ", single = " << _single_energy_term_weight * single_total_energy
 		<< ", total = " << total_energy << ")" << std::endl;
 	std::cout << sstr.str(); log_file << sstr.str();
 	//

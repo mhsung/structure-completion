@@ -23,7 +23,7 @@ public:
 	MeshCuboidNonLinearSolver(
 		const std::vector<MeshCuboid *>& _cuboids,
 		const std::vector<MeshCuboidSymmetryGroup *>& _symmetry_groups,
-		const Real _neighbor_distance);
+		const Real _neighbor_distance, const Real _symmetry_energy_term_weight);
 	~MeshCuboidNonLinearSolver();
 
 
@@ -132,6 +132,7 @@ private:
 	const std::vector<MeshCuboid *>& cuboids_;
 	const std::vector<MeshCuboidSymmetryGroup *>& symmetry_groups_;
 	const Real neighbor_distance_;
+	const double symmetry_energy_term_weight_;
 
 	unsigned int num_cuboids_;
 	unsigned int num_symmetry_groups_;

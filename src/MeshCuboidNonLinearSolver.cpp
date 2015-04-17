@@ -8,10 +8,12 @@
 MeshCuboidNonLinearSolver::MeshCuboidNonLinearSolver(
 	const std::vector<MeshCuboid *>& _cuboids,
 	const std::vector<MeshCuboidSymmetryGroup *>& _symmetry_groups,
-	const Real _neighbor_distance)
+	const Real _neighbor_distance,
+	const Real _symmetry_energy_term_weight)
 	: cuboids_(_cuboids)
 	, symmetry_groups_(_symmetry_groups)
 	, neighbor_distance_(_neighbor_distance)
+	, symmetry_energy_term_weight_(_symmetry_energy_term_weight)
 	, num_cuboid_corner_variables_(MeshCuboidAttributes::k_num_attributes)
 	, num_cuboid_axis_variables_(3 * 3)
 	, num_symmetry_group_variables_(3 + 1)
@@ -226,12 +228,23 @@ void MeshCuboidNonLinearSolver::add_symmetry_group_energy_functions(
 
 	Eigen::Matrix3d A1 = Eigen::Matrix3d::Zero();
 	Eigen::MatrixXd A2 = Eigen::MatrixXd::Zero(3 + 1, 3 + 1);
+
 	Real sum_weight = 0.0;
+	for (std::list<MeshCuboidSymmetryGroup::WeightedPointPair>::iterator it = sample_point_pairs.begin();
+		it != sample_point_pairs.end(); ++it)
+	{
+		assert((*it).weight_ >= 0);
+		sum_weight += (*it).weight_;
+	}
+
+	if (sum_weight == 0)
+		return;
 
 	for (std::list<MeshCuboidSymmetryGroup::WeightedPointPair>::iterator it = sample_point_pairs.begin();
 		it != sample_point_pairs.end(); ++it)
 	{
-		assert((*it).weight_ > 0);
+		Real weight = (*it).weight_ / sum_weight;
+
 		Eigen::Vector3d sum_p, diff_p;
 		for (int i = 0; i < 3; ++i)
 		{
@@ -239,25 +252,25 @@ void MeshCuboidNonLinearSolver::add_symmetry_group_energy_functions(
 			diff_p[i] = (*it).p1_[i] - (*it).p2_[i];
 		}
 
-		A1 += ((*it).weight_ * (-1) * diff_p * diff_p.transpose());
+		A1 += (weight * (-1) * diff_p * diff_p.transpose());
 
 		_constant_term += (diff_p.transpose() * diff_p);
 
 		Eigen::VectorXd b(3 + 1);
 		b << sum_p, -2;
-		A2 += ((*it).weight_ * b * b.transpose());
-
-		sum_weight += (*it).weight_;
+		A2 += (weight * b * b.transpose());
 	}
 
 	std::pair<Index, Index> index_size_pair;
 	index_size_pair = get_symmetry_group_variable_n_index_size(_symmetry_group_index);
 
-	_quadratic_term.block<3, 3>(index_size_pair.first, index_size_pair.first) += 1000 * A1;
+	_quadratic_term.block<3, 3>(index_size_pair.first, index_size_pair.first) +=
+		symmetry_energy_term_weight_ * A1;
 	
 	// NOTE:
 	// Variables 'n' and 't' are adjacent in the variable list.
-	_quadratic_term.block<3 + 1, 3 + 1>(index_size_pair.first, index_size_pair.first) += 1000 * A2;
+	_quadratic_term.block<3 + 1, 3 + 1>(index_size_pair.first, index_size_pair.first) +=
+		symmetry_energy_term_weight_ * A2;
 }
 
 void MeshCuboidNonLinearSolver::add_cuboid_constraints(NLPFormulation &_formulation)

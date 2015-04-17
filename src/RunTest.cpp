@@ -1,4 +1,5 @@
 #include "MeshViewerCore.h"
+#include "MeshCuboidParameters.h"
 #include "MeshCuboidSolver.h"
 //#include "MeshCuboidNonLinearSolver.h"
 
@@ -141,10 +142,7 @@ void MeshViewerCore::test_scale(const Real _scale_x, const Real _scale_y)
 
 void MeshViewerCore::test_optimize()
 {
-	const double quadprog_ratio = 1E4;
-	const unsigned int max_num_iterations = 30;
-
-	optimize_attributes(cuboid_structure_, test_occlusion_modelview_matrix_,
-		*test_joint_normal_predictor_, quadprog_ratio,
-		"log.txt", max_num_iterations, this);
+	optimize_attributes(cuboid_structure_, test_occlusion_modelview_matrix_, *test_joint_normal_predictor_,
+		FLAGS_param_opt_single_energy_term_weight, FLAGS_param_opt_symmetry_energy_term_weight,
+		FLAGS_param_opt_max_iterations, "log.txt", this);
 }
