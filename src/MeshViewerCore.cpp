@@ -1114,6 +1114,7 @@ void MeshViewerCore::draw_openmesh(const std::string& _drawmode)
 			MeshSamplePoint *sample_point = cuboid_structure_.sample_points_[sample_point_index];
 			assert(sample_point);
 			GLdouble *point = &(sample_point->point_[0]);
+
 			Real radius = (mesh_.get_object_diameter() * 0.01) * point_size_;
 			glPushMatrix();
 			glTranslatef(point[0], point[1], point[2]);

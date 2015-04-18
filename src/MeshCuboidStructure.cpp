@@ -553,10 +553,7 @@ bool MeshCuboidStructure::load_label_symmetries(const char *_filename, bool _ver
 	if (_verbose)
 		std::cout << "Loading " << _filename << "..." << std::endl;
 
-
 	label_symmetries_.clear();
-	label_symmetries_.resize(num_labels());
-
 
 	std::string buffer;
 	Label new_label = 0;

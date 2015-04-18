@@ -339,38 +339,54 @@ void MeshCuboidEvaluator::evaluate_point_to_point_distances(
 		output_filename_sstr.str().c_str(), true);
 
 
-	// For each part.
-	const unsigned int num_labels = ground_truth_cuboid_structure_->num_labels();
+	// For each symmetric part sets.
+	const unsigned int num_symmetric_label_sets
+		= ground_truth_cuboid_structure_->label_symmetries_.size();
 
-	for (LabelIndex label_index = 0; label_index < num_labels; ++label_index)
+	
+	for (unsigned int symmetric_label_set_index = 0;
+		symmetric_label_set_index < num_symmetric_label_sets; ++symmetric_label_set_index)
 	{
-		MeshCuboid *ground_truth_cuboid = NULL, *test_cuboid = NULL;
+		const std::list<LabelIndex> &label_symmetry
+			= ground_truth_cuboid_structure_->label_symmetries_[symmetric_label_set_index];
 
-		// NOTE:
-		// The current implementation assumes that there is only one part for each label.
-		assert(ground_truth_cuboid_structure_->label_cuboids_[label_index].size() <= 1);
-		if (!ground_truth_cuboid_structure_->label_cuboids_[label_index].empty())
-			ground_truth_cuboid = ground_truth_cuboid_structure_->label_cuboids_[label_index].front();
+		std::vector<MeshSamplePoint *> ground_truth_sample_points;
+		std::vector<MeshSamplePoint *> test_sample_points;
 
-		assert(_test_cuboid_structure->label_cuboids_[label_index].size() <= 1);
-		if (!_test_cuboid_structure->label_cuboids_[label_index].empty())
-			test_cuboid = _test_cuboid_structure->label_cuboids_[label_index].front();
+		for (std::list<LabelIndex>::const_iterator it = label_symmetry.begin(); it != label_symmetry.end(); ++it)
+		{
+			LabelIndex label_index = (*it);
+			MeshCuboid *ground_truth_cuboid = NULL, *test_cuboid = NULL;
 
-		if (!ground_truth_cuboid || !test_cuboid)
-			continue;
+			// NOTE:
+			// The current implementation assumes that there is only one part for each label.
+			assert(ground_truth_cuboid_structure_->label_cuboids_[label_index].size() <= 1);
+			if (!ground_truth_cuboid_structure_->label_cuboids_[label_index].empty())
+				ground_truth_cuboid = ground_truth_cuboid_structure_->label_cuboids_[label_index].front();
 
-		const unsigned int num_ground_truth_sample_points = ground_truth_cuboid->num_sample_points();
-		const unsigned int num_test_sample_points = test_cuboid->num_sample_points();
+			assert(_test_cuboid_structure->label_cuboids_[label_index].size() <= 1);
+			if (!_test_cuboid_structure->label_cuboids_[label_index].empty())
+				test_cuboid = _test_cuboid_structure->label_cuboids_[label_index].front();
 
-		assert(label_index < ground_truth_cuboid_structure_->label_names_.size());
-		std::string label_name = ground_truth_cuboid_structure_->label_names_[label_index];
+			if (!ground_truth_cuboid || !test_cuboid)
+				continue;
+
+		
+			const std::vector<MeshSamplePoint *>& ground_truth_cuboid_sample_points
+				= ground_truth_cuboid->get_sample_points();
+			const std::vector<MeshSamplePoint *>& test_cuboid_sample_points
+				= test_cuboid->get_sample_points();
+
+			ground_truth_sample_points.insert(ground_truth_sample_points.end(),
+				ground_truth_cuboid_sample_points.begin(), ground_truth_cuboid_sample_points.end());
+			test_sample_points.insert(test_sample_points.end(),
+				test_cuboid_sample_points.begin(), test_cuboid_sample_points.end());
+		}
 
 		output_filename_sstr.clear(); output_filename_sstr.str("");
-		output_filename_sstr << _filename << "_" << label_name << ".csv";
+		output_filename_sstr << _filename << "_" << symmetric_label_set_index << ".csv";
 
-		evaluate_point_to_point_distances(
-			ground_truth_cuboid->get_sample_points(),
-			test_cuboid->get_sample_points(),
+		evaluate_point_to_point_distances( ground_truth_sample_points, test_sample_points,
 			output_filename_sstr.str().c_str());
 	}
 }
