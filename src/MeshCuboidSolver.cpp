@@ -933,8 +933,10 @@ void recognize_labels_and_axes_configurations(
 
 	if (_use_symmetry_info)
 	{
+		std::vector< std::list<LabelIndex> > symmetric_labels;
+		_cuboid_structure.get_symmetric_label_indices_for_each(symmetric_labels);
 		compute_labels_and_axes_configuration_potentials(
-			labels, all_cuboids, _predictor, potential_mat, &_cuboid_structure.label_symmetries_, _add_dummy_label);
+			labels, all_cuboids, _predictor, potential_mat, &symmetric_labels, _add_dummy_label);
 	}
 	else
 	{

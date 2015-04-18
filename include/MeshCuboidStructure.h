@@ -100,6 +100,8 @@ public:
 
 	void print_label_cuboids(const LabelIndex _label_index)const;
 
+	void get_symmetric_label_indices_for_each(std::vector< std::list<LabelIndex> > &_symmetric_labels);
+
 	void remove_symmetric_cuboids();
 
 	// NOTE:

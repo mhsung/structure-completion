@@ -524,7 +524,6 @@ bool MeshCuboidStructure::load_labels(const char *_filename, bool _verbose)
 		// In this file format, labels are defined by the recorded order.
 		labels_.push_back(new_label);
 		label_names_.push_back(tokens[0]);
-		label_symmetries_.push_back(std::list<LabelIndex>());
 		//label_children_.push_back(std::list<LabelIndex>());
 		label_cuboids_.push_back(std::vector<MeshCuboid *>());
 		++new_label;
@@ -580,19 +579,7 @@ bool MeshCuboidStructure::load_label_symmetries(const char *_filename, bool _ver
 			label_symmetry.push_back(label_index);
 		}
 
-		for (std::list<LabelIndex>::iterator it = label_symmetry.begin(); it != label_symmetry.end(); ++it)
-		{
-			LabelIndex label_index = (*it);
-
-			for (std::list<LabelIndex>::iterator jt = label_symmetry.begin(); jt != label_symmetry.end(); ++jt)
-			{
-				LabelIndex n_label_index = (*jt);
-				if (n_label_index != label_index)
-				{
-					label_symmetries_[label_index].push_back(n_label_index);
-				}
-			}
-		}
+		label_symmetries_.push_back(label_symmetry);
 	}
 
 	file.close();
@@ -1698,11 +1685,45 @@ void MeshCuboidStructure::split_label_cuboids()
 	}
 }
 
+void MeshCuboidStructure::get_symmetric_label_indices_for_each(
+	std::vector< std::list<LabelIndex> > &_symmetric_labels)
+{
+	// For each label index, add its symmetric label indices.
+	_symmetric_labels.clear();
+	_symmetric_labels.resize(num_labels());
+
+	for (std::vector< std::list<LabelIndex> >::const_iterator it = label_symmetries_.begin();
+		it != label_symmetries_.end(); ++it)
+	{
+		const std::list<LabelIndex> &label_symmetry = (*it);
+
+		for (std::list<LabelIndex>::const_iterator jt = label_symmetry.begin(); jt != label_symmetry.end(); ++jt)
+		{
+			LabelIndex label_index = (*jt);
+			assert(label_index < num_labels());
+
+			for (std::list<LabelIndex>::const_iterator kt = label_symmetry.begin(); kt != label_symmetry.end(); ++kt)
+			{
+				LabelIndex n_label_index = (*kt);
+				assert(n_label_index < num_labels());
+
+				if (n_label_index != label_index)
+				{
+					_symmetric_labels[label_index].push_back(n_label_index);
+				}
+			}
+		}
+	}
+}
+
 void MeshCuboidStructure::remove_symmetric_cuboids()
 {
 	// Remove cuboids in symmetric labels (when the same cuboids are duplicated for symmetric labels).
 
-	assert(label_symmetries_.size() == num_labels());
+	std::vector< std::list<LabelIndex> > symmetric_labels;
+	get_symmetric_label_indices_for_each(symmetric_labels);
+
+	assert(symmetric_labels.size() == num_labels());
 	assert(label_cuboids_.size() == num_labels());
 
 	bool *is_label_visited = new bool[num_labels()];
@@ -1720,8 +1741,8 @@ void MeshCuboidStructure::remove_symmetric_cuboids()
 		}
 
 		is_label_visited[label_index] = true;
-		for (std::list<LabelIndex>::iterator it = label_symmetries_[label_index].begin();
-			it != label_symmetries_[label_index].end(); ++it)
+		for (std::list<LabelIndex>::iterator it = symmetric_labels[label_index].begin();
+			it != symmetric_labels[label_index].end(); ++it)
 			is_label_visited[*it] = true;
 	}
 
