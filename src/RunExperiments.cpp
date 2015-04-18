@@ -36,8 +36,8 @@ DEFINE_string(label_info_filename, "regions.txt", "");
 DEFINE_string(label_symmetry_info_filename, "regions_symmetry.txt", "");
 DEFINE_string(symmetry_group_info_filename, "symmetry_groups.txt", "");
 DEFINE_string(pose_filename, "pose.txt", "");
-//DEFINE_string(occlusion_pose_filename, "occlusion_pose.txt", "");
-DEFINE_string(occlusion_pose_filename, "", "");
+DEFINE_string(occlusion_pose_filename, "occlusion_pose.txt", "");
+//DEFINE_string(occlusion_pose_filename, "", "");
 
 DEFINE_string(single_feature_filename_prefix, "single_feature_", "");
 DEFINE_string(pair_feature_filename_prefix, "pair_feature_", "");
@@ -753,7 +753,7 @@ void MeshViewerCore::predict()
 
 	std::list< std::pair<std::string, MeshCuboidStructure> > cuboid_structure_candidates;
 	cuboid_structure_candidates.push_back(std::make_pair(std::string("0"), cuboid_structure_));
-
+	std::list<LabelIndex> ignored_label_indices;
 
 	while (!cuboid_structure_candidates.empty())
 	{
@@ -838,7 +838,8 @@ void MeshViewerCore::predict()
 				given_label_indices.push_back(label_index);
 
 		std::list< std::list<LabelIndex> > missing_label_index_groups;
-		trainer.get_missing_label_index_groups(given_label_indices, missing_label_index_groups);
+		trainer.get_missing_label_index_groups(given_label_indices, missing_label_index_groups,
+			&ignored_label_indices);
 		
 		if (!missing_label_index_groups.empty())
 		{
@@ -851,7 +852,7 @@ void MeshViewerCore::predict()
 				MeshCuboidStructure new_cuboid_structure = cuboid_structure_;
 
 				add_missing_cuboids(new_cuboid_structure, occlusion_modelview_matrix,
-					missing_label_indices, joint_normal_predictor);
+					missing_label_indices, joint_normal_predictor, ignored_label_indices);
 
 				std::stringstream new_cuboid_structure_name;
 				new_cuboid_structure_name << cuboid_structure_name << missing_label_index_group_index;
@@ -872,6 +873,7 @@ void MeshViewerCore::predict()
 				occlusion_modelview_matrix,
 				snapshot_filename_sstr.str().c_str());
 
+			ignored_label_indices.clear();
 			++num_final_cuboid_structure_candidates;
 		}
 	}

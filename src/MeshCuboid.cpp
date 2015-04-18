@@ -879,7 +879,8 @@ void MeshCuboid::update_point_correspondences()
 void MeshCuboid::compute_cuboid_surface_point_visibility(
 	const Real _modelview_matrix[16],
 	const Real _radius,
-	const std::vector<MeshSamplePoint *>& _observed_points)
+	const std::vector<MeshSamplePoint *>& _observed_points,
+	bool _use_cuboid_normal)
 {
 	assert(_modelview_matrix);
 	assert(_radius > 0);
@@ -899,7 +900,7 @@ void MeshCuboid::compute_cuboid_surface_point_visibility(
 		visibility = 1.0;
 
 		// Ignore a surface point if its normal is not heading to the viewing direction.
-		if (dot((*it)->normal_, view_direction) >= 0)
+		if (_use_cuboid_normal && dot((*it)->normal_, view_direction) >= 0)
 		{
 			visibility = 0.0;
 			continue;

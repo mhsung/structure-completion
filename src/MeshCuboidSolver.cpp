@@ -8,6 +8,7 @@
 #include <fstream>
 #include <iostream>
 #include <omp.h>
+#include <set>
 #include <Eigen/Core>
 #include <Eigen/Eigenvalues>
 #include <Eigen/SparseCore>
@@ -1757,12 +1758,15 @@ void add_missing_cuboids(
 	MeshCuboidStructure &_cuboid_structure,
 	const Real _modelview_matrix[16],
 	const std::list<LabelIndex> &_missing_label_indices,
-	const MeshCuboidPredictor &_predictor)
+	const MeshCuboidPredictor &_predictor,
+	std::list<LabelIndex> &_ignored_label_indices)
 {
 	if (_missing_label_indices.empty())
 		return;
 
-	const Real radius = FLAGS_param_observed_point_radius * _cuboid_structure.mesh_->get_object_diameter();
+	const Real radius = FLAGS_param_observed_point_radius
+		* _cuboid_structure.mesh_->get_object_diameter();
+	std::set<LabelIndex> add_label_indices;
 
 	// NOTE:
 	// Each existing cuboid creates candidates of missing cuboids.
@@ -1777,7 +1781,8 @@ void add_missing_cuboids(
 
 		add_missing_cuboids_once(given_cuboids, _missing_label_indices, _predictor, new_cuboids);
 
-		for (std::vector<MeshCuboid *>::iterator it = new_cuboids.begin(); it != new_cuboids.end(); ++it)
+		for (std::vector<MeshCuboid *>::iterator it = new_cuboids.begin();
+			it != new_cuboids.end(); ++it)
 		{
 			MeshCuboid *cuboid = (*it);
 			assert(cuboid);
@@ -1785,20 +1790,34 @@ void add_missing_cuboids(
 			cuboid->create_grid_points_on_cuboid_surface(
 				FLAGS_param_num_cuboid_surface_points);
 
+			// NOTE:
+			// Do not use normal directions when computing the overall visibility.
 			cuboid->compute_cuboid_surface_point_visibility(
-				_modelview_matrix, radius, _cuboid_structure.sample_points_);
+				_modelview_matrix, radius, _cuboid_structure.sample_points_, false);
+			if (cuboid->get_cuboid_overvall_visibility() > FLAGS_param_min_cuboid_overall_visibility)
+			{
+				// The cuboid is placed in the visible area.
+				delete cuboid;
+			}
+			else
+			{
+				cuboid->compute_cuboid_surface_point_visibility(
+					_modelview_matrix, radius, _cuboid_structure.sample_points_);
 
-			//if (cuboid->get_cuboid_overvall_visibility() > FLAGS_param_min_cuboid_overall_visibility)
-			//{
-			//	// The cuboid is placed in the visible area.
-			//	delete cuboid;
-			//}
-			//else
-			//{
 				LabelIndex label_index = cuboid->get_label_index();
 				_cuboid_structure.label_cuboids_[label_index].push_back(cuboid);
-			//}
+				add_label_indices.insert(label_index);
+			}
 		}
+	}
+
+	// If some missing labels are not added, these labels are ignored.
+	for (std::list<LabelIndex>::const_iterator it = _missing_label_indices.begin();
+		it != _missing_label_indices.end(); ++it)
+	{
+		LabelIndex label_index = (*it);
+		if (add_label_indices.find(label_index) == add_label_indices.end())
+			_ignored_label_indices.push_back(label_index);
 	}
 }
 

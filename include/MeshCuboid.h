@@ -245,7 +245,8 @@ public:
 	void compute_cuboid_surface_point_visibility(
 		const Real _modelview_matrix[16],
 		const Real _radius,
-		const std::vector<MeshSamplePoint *>& _all_sample_points);
+		const std::vector<MeshSamplePoint *>& _all_sample_points,
+		bool _use_cuboid_normal = true);
 
 	Real get_cuboid_overvall_visibility();
 

@@ -94,7 +94,8 @@ void add_missing_cuboids(
 	MeshCuboidStructure &_cuboid_structure,
 	const Real _modelview_matrix[16],
 	const std::list<LabelIndex> &_missing_label_indices,
-	const MeshCuboidPredictor &_predictor);
+	const MeshCuboidPredictor &_predictor,
+	std::list<LabelIndex> &_ignored_label_indices);
 
 //void symmetrize_cuboids(
 //	MeshCuboidStructure &_cuboid_structure);
