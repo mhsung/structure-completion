@@ -76,19 +76,16 @@ public:
 
 
 private:
-	bool load_training_data(
-		const char* _mesh_filepath,
-		bool _load_dense_samples = false);
-
-	bool load_training_data(
+	bool load_object_info(
 		const char* _mesh_filepath,
 		MyMesh &_mesh,
 		MeshCuboidStructure &_cuboid_structure,
-		bool _load_dense_samples = false);
+		bool _load_training_data,
+		bool _load_dense_samples);
 
 	void reconstruct(
 		const char *_mesh_filepath,
-		const char *_dense_sample_filepath,
+		const GLdouble *_snapshot_modelview_matrix,
 		const GLdouble *_occlusion_modelview_matrix,
 		const char *_output_file_prefix);
 
