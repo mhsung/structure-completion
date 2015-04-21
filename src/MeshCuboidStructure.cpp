@@ -701,8 +701,7 @@ bool MeshCuboidStructure::load_symmetry_groups(const char *_filename, bool _verb
 	return true;
 }
 
-bool MeshCuboidStructure::load_sample_points(const char *_filename,
-	bool _update_cuboid_memberships, bool _verbose)
+bool MeshCuboidStructure::load_sample_points(const char *_filename, bool _verbose)
 {
 	std::ifstream file(_filename);
 	if (!file)
@@ -766,7 +765,7 @@ bool MeshCuboidStructure::load_sample_points(const char *_filename,
 
 	apply_mesh_transformation();
 	
-	//
+	/*
 	if (_update_cuboid_memberships)
 	{
 		if (_verbose)
@@ -792,7 +791,7 @@ bool MeshCuboidStructure::load_sample_points(const char *_filename,
 			}
 		}
 	}
-	//
+	*/
 
 	if (_verbose)
 		std::cout << "Done." << std::endl;
@@ -1142,6 +1141,55 @@ bool MeshCuboidStructure::load_sample_point_labels(const char *_filename, bool _
 	// Draws all points.
 	query_label_index_ = num_labels();
 
+
+	std::cout << "Done." << std::endl;
+	return true;
+}
+
+bool MeshCuboidStructure::save_sample_point_labels(const char *_filename, bool _verbose)
+{
+	if (labels_.empty())
+	{
+		std::cerr << "Error: Load label information first." << std::endl;
+		return false;
+	}
+	else if (sample_points_.empty())
+	{
+		std::cerr << "Error: Load sample points first." << std::endl;
+		return false;
+	}
+
+	std::ofstream file(_filename);
+	if (!file)
+	{
+		std::cerr << "Can't save file: \"" << _filename << "\"" << std::endl;
+		return false;
+	}
+
+	if (_verbose)
+		std::cout << "Saving " << _filename << "..." << std::endl;
+
+	file << "@RELATION pnts - featpnts" << std::endl;
+	for (LabelIndex label_index = 0; label_index < num_labels(); ++label_index)
+		file << "@ATTRIBUTE prediction - " << label_index << " NUMERIC" << std::endl;
+	file << "@DATA" << std::endl;
+
+	for (std::vector<MeshSamplePoint *>::const_iterator it = sample_points_.begin();
+		it != sample_points_.end(); ++it)
+	{
+		const MeshSamplePoint *sample_point = (*it);
+		assert(sample_point->label_index_confidence_.size() == num_labels());
+
+		for (LabelIndex label_index = 0; label_index < num_labels(); ++label_index)
+		{
+			file << sample_point->label_index_confidence_[label_index];
+			if (label_index + 1 < num_labels())
+				file << ",";
+		}
+		file << std::endl;
+	}
+
+	file.close();
 
 	std::cout << "Done." << std::endl;
 	return true;
@@ -1589,6 +1637,38 @@ std::vector<LabelIndex> MeshCuboidStructure::get_sample_point_label_indices()
 	}
 
 	return sample_point_label_indices;
+}
+
+void MeshCuboidStructure::set_sample_point_label_confidence_using_cuboids()
+{
+	for (SamplePointIndex sample_point_index = 0; sample_point_index < num_sample_points(); ++sample_point_index)
+	{
+		MeshSamplePoint* sample_point = sample_points_[sample_point_index];
+		assert(sample_point);
+		sample_point->label_index_confidence_.clear();
+		sample_point->label_index_confidence_.resize(num_labels(), 0.0);
+	}
+
+	for (LabelIndex label_index = 0; label_index < num_labels(); ++label_index)
+	{
+		MeshCuboid *cuboid = NULL;
+		// NOTE:
+		// The current implementation assumes that there is only one part for each label.
+		assert(label_cuboids_[label_index].size() <= 1);
+		if (!label_cuboids_[label_index].empty())
+			cuboid = label_cuboids_[label_index].front();
+
+		if (!cuboid) continue;
+
+		const std::vector<MeshSamplePoint *> &cuboid_sample_points = cuboid->get_sample_points();
+		for (std::vector<MeshSamplePoint *>::const_iterator it = cuboid_sample_points.begin();
+			it != cuboid_sample_points.end(); ++it)
+		{
+			MeshSamplePoint *sample_point = (*it);
+			assert(sample_point);
+			sample_point->label_index_confidence_[label_index] = 1.0;
+		}
+	}
 }
 
 void MeshCuboidStructure::print_label_cuboids(const LabelIndex _label_index)const

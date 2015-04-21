@@ -1,5 +1,7 @@
 #include "MeshCuboidParameters.h"
 
+// -- Parameters -- //
+//
 DEFINE_bool(param_optimize_with_non_linear_constraints, true, "");
 
 DEFINE_int32(param_num_sample_point_neighbors, 8, "");
@@ -14,7 +16,7 @@ DEFINE_double(param_min_num_confidence_tol_sample_points, 0.5, "");
 DEFINE_double(param_sample_point_neighbor_distance, 0.02, "");
 DEFINE_double(param_min_cuboid_bbox_size, 0.1, "");
 DEFINE_double(param_min_cuboid_bbox_diag_length, 0.3, "");
-DEFINE_double(param_observed_point_radius, 1.0E-2, "");
+DEFINE_double(param_observed_point_radius, 0.02, "");
 DEFINE_double(param_min_cuboid_overall_visibility, 0.8, "");
 DEFINE_double(param_max_potential, 1.0E8, "");
 DEFINE_double(param_dummy_potential, 1.0E4, "");
@@ -24,3 +26,46 @@ DEFINE_double(param_opt_symmetry_energy_term_weight, 1.0E6, "");
 
 //DEFINE_double(param_sim_abs_attr_tol, 0.2, "");
 //DEFINE_double(param_zero_tol, 1.0E-6, "");
+//
+// ---- //
+
+
+// -- Experiments -- //
+//
+DEFINE_bool(run_training, false, "");
+DEFINE_bool(run_prediction, false, "");
+DEFINE_string(mesh_filename, "", "");
+
+DEFINE_string(data_root_path, "D:/Data/shape2pose/", "");
+DEFINE_string(label_info_path, "data/0_body/assembly_chairs/", "");
+DEFINE_string(mesh_path, "data/1_input/assembly_chairs/off/", "");
+DEFINE_string(sample_path, "data/2_analysis/assembly_chairs/points/even1000/", "");
+DEFINE_string(dense_sample_path, "data/2_analysis/assembly_chairs/points/random100000/", "");
+DEFINE_string(mesh_label_path, "data/1_input/assembly_chairs/gt/", "");
+DEFINE_string(sample_label_path, "data/4_experiments/exp1_assembly_chairs/1_prediction/", "");
+DEFINE_string(output_path, "output", "");
+
+DEFINE_string(label_info_filename, "regions.txt", "");
+DEFINE_string(label_symmetry_info_filename, "regions_symmetry.txt", "");
+DEFINE_string(symmetry_group_info_filename, "symmetry_groups.txt", "");
+DEFINE_string(pose_filename, "pose.txt", "");
+//DEFINE_string(occlusion_pose_filename, "", "");
+DEFINE_string(occlusion_pose_filename, "occlusion_pose.txt", "");
+
+DEFINE_string(single_feature_filename_prefix, "single_feature_", "");
+DEFINE_string(pair_feature_filename_prefix, "pair_feature_", "");
+DEFINE_string(single_stats_filename_prefix, "single_stats_", "");
+DEFINE_string(pair_stats_filename_prefix, "pair_stats_", "");
+DEFINE_string(feature_filename_prefix, "feature_", "");
+DEFINE_string(transformation_filename_prefix, "transformation_", "");
+DEFINE_string(joint_normal_relation_filename_prefix, "joint_normal_", "");
+DEFINE_string(cond_normal_relation_filename_prefix, "conditional_normal_", "");
+DEFINE_string(object_list_filename, "object_list.txt", "");
+
+DEFINE_double(occlusion_test_radius, 0.01, "");
+DEFINE_int32(random_view_seed, 20150416, "");
+
+// To be removed.
+//DEFINE_bool(use_symmetric_group_cuboids, false, "");
+//
+// ---- //

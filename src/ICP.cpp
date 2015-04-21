@@ -160,8 +160,8 @@ namespace ICP {
 		// Partial ICP.
 		if (_distance_threshold)
 		{
-			std::cout << "max_squared_dists = " << squared_dists.maxCoeff() << std::endl;
-			std::cout << "avg_squared_dists = " << squared_dists.sum() / n << std::endl;
+			//std::cout << "max_squared_dists = " << squared_dists.maxCoeff() << std::endl;
+			//std::cout << "avg_squared_dists = " << squared_dists.sum() / n << std::endl;
 
 			double squared_distance_threshold = (*_distance_threshold) * (*_distance_threshold);
 			Eigen::MatrixXd::Index subset_n = (squared_dists.array() <= squared_distance_threshold).count();

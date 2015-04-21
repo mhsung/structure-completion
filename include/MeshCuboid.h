@@ -130,8 +130,16 @@ public:
 		get_transformed_axes(const unsigned int _axis_configuration_index,
 		const std::array<MyMesh::Normal, 3> &_axes);
 
-	void set_axis_configuration(const unsigned int _axis_configuration_index);
+	static void compute_cuboid_surface_point_visibility(
+		const Real _modelview_matrix[16],
+		const Real _radius,
+		const std::vector<MeshSamplePoint *> &_given_sample_points,
+		const std::vector<MyMesh::Point> &_test_points,
+		const std::vector<MyMesh::Normal> *_test_normals,
+		std::vector<Real> &_visibility_values);
 
+
+	void set_axis_configuration(const unsigned int _axis_configuration_index);
 
 	void clear_sample_points();
 
@@ -161,7 +169,7 @@ public:
 
 	const std::vector<MeshSamplePoint *> &get_sample_points()const;
 
-	const MeshSamplePoint *get_sample_point(const unsigned int _point_index)const;
+	MeshSamplePoint *get_sample_point(const unsigned int _point_index)const;
 
 	const std::vector<MeshCuboidSurfacePoint *> &get_cuboid_surface_points()const;
 
@@ -245,7 +253,7 @@ public:
 	void compute_cuboid_surface_point_visibility(
 		const Real _modelview_matrix[16],
 		const Real _radius,
-		const std::vector<MeshSamplePoint *>& _all_sample_points,
+		const std::vector<MeshSamplePoint *>& _given_sample_points,
 		bool _use_cuboid_normal = true);
 
 	Real get_cuboid_overvall_visibility();

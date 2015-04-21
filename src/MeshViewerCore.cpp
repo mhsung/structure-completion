@@ -345,11 +345,12 @@ void MeshViewerCore::keyPressEvent(const char _new_key,
 
 	// FIXME.
 	// Check whether the Ascii codes of special keys are correct.
-	case 0x1B:	// Left
-		if (cuboid_structure_.query_label_index_ - 1 < 0
+	//case 0x1B:	// Left
+	case '[':
+		if (cuboid_structure_.query_label_index_ == 0
 			&& cuboid_structure_.num_labels() > 0)
 		{
-			cuboid_structure_.query_label_index_ = cuboid_structure_.num_labels() - 1;
+			cuboid_structure_.query_label_index_ = cuboid_structure_.num_labels();
 		}
 		else
 		{
@@ -359,9 +360,10 @@ void MeshViewerCore::keyPressEvent(const char _new_key,
 		updateGL();
 		break;
 
-	case 0x1A:	// Right
+	//case 0x1A:	// Right
+	case ']':
 		// "mesh_.render_label_idx_ == mesh_.sample_point_num_labels_" draws all parts.
-		if (cuboid_structure_.query_label_index_ + 1 > cuboid_structure_.num_labels())
+		if (cuboid_structure_.query_label_index_ >= cuboid_structure_.num_labels())
 		{
 			cuboid_structure_.query_label_index_ = 0;
 		}
@@ -687,7 +689,6 @@ void MeshViewerCore::draw_openmesh(const std::string& _drawmode)
 				}
 			}
 		}
-
 		
 		// For each label.
 		for (LabelIndex label_index = 0; label_index < cuboid_structure_.label_cuboids_.size(); ++label_index)
@@ -712,27 +713,27 @@ void MeshViewerCore::draw_openmesh(const std::string& _drawmode)
 				MeshCuboid *cuboid = (*it);
 				assert(cuboid);
 
-				//// Draw sample points (Black).
-				//if (!draw_all_labels)
-				//{
-				//	for (unsigned int point_index = 0; point_index < cuboid->num_sample_points(); ++point_index)
-				//	{
-				//		const MeshSamplePoint *sample_point = cuboid->get_sample_point(point_index);
-				//		const GLdouble *point = &(sample_point->point_[0]);
+				// Draw sample points (Gray).
+				if (!draw_all_labels)
+				{
+					for (unsigned int point_index = 0; point_index < cuboid->num_sample_points(); ++point_index)
+					{
+						const MeshSamplePoint *sample_point = cuboid->get_sample_point(point_index);
+						const GLdouble *point = &(sample_point->point_[0]);
 
-				//		Real radius = (mesh_.get_object_diameter() * 0.005) * point_size_;
-				//		if (radius > 0)
-				//		{
-				//			glPushMatrix();
-				//			glTranslatef(point[0], point[1], point[2]);
-				//			black_color();
+						Real radius = (mesh_.get_object_diameter() * 0.005) * point_size_;
+						if (radius > 0)
+						{
+							glPushMatrix();
+							glTranslatef(point[0], point[1], point[2]);
+							gray_color();
 
-				//			glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
-				//			glutSolidSphere(radius, 20, 20);
-				//			glPopMatrix();
-				//		}
-				//	}
-				//}
+							glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
+							glutSolidSphere(radius, 20, 20);
+							glPopMatrix();
+						}
+					}
+				}
 
 				// Draw cuboid surface points (Red).
 				for (unsigned int point_index = 0; point_index < cuboid->num_cuboid_surface_points(); ++point_index)

@@ -60,8 +60,7 @@ public:
 
 	bool load_symmetry_groups(const char *_filename, bool _verbose = true);
 
-	bool load_sample_points(const char *_filename,
-		bool _update_cuboid_memberships = true, bool _verbose = true);
+	bool load_sample_points(const char *_filename, bool _verbose = true);
 
 	// Compute segmentation of dense samples using segmented sparse samples.
 	bool load_dense_sample_points(const char *_filename, bool _verbose = true);
@@ -72,10 +71,14 @@ public:
 
 	bool load_sample_point_labels(const char *_filename, bool _verbose = true);
 
+	bool save_sample_point_labels(const char *_filename, bool _verbose = true);
+
 	std::vector<MeshCuboid *> get_all_cuboids()const;
 
 	// Get sample point labels from the label confidence values.
 	std::vector<LabelIndex> get_sample_point_label_indices();
+
+	void set_sample_point_label_confidence_using_cuboids();
 
 	MeshSamplePoint *add_sample_point(const MyMesh::Point& _point, const MyMesh::Normal& _normal);
 

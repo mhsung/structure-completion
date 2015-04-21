@@ -3,6 +3,8 @@
 
 #include <gflags/gflags.h>
 
+// -- Parameters -- //
+//
 DECLARE_bool(param_optimize_with_non_linear_constraints);
 
 DECLARE_int32(param_num_sample_point_neighbors);
@@ -27,5 +29,48 @@ DECLARE_double(param_opt_symmetry_energy_term_weight);
 
 //DECLARE_double(param_sim_abs_attr_tol);
 //DECLARE_double(param_zero_tol);
+//
+// ---- //
+
+
+// -- Experiments -- //
+//
+DECLARE_bool(run_training);
+DECLARE_bool(run_prediction);
+DECLARE_string(mesh_filename);
+
+DECLARE_string(data_root_path);
+DECLARE_string(label_info_path);
+DECLARE_string(mesh_path);
+DECLARE_string(sample_path);
+DECLARE_string(dense_sample_path);
+DECLARE_string(mesh_label_path);
+DECLARE_string(sample_label_path);
+DECLARE_string(output_path);
+
+DECLARE_string(label_info_filename);
+DECLARE_string(label_symmetry_info_filename);
+DECLARE_string(symmetry_group_info_filename);
+DECLARE_string(pose_filename);
+DECLARE_string(occlusion_pose_filename);
+//DECLARE_string(occlusion_pose_filename);
+
+DECLARE_string(single_feature_filename_prefix);
+DECLARE_string(pair_feature_filename_prefix);
+DECLARE_string(single_stats_filename_prefix);
+DECLARE_string(pair_stats_filename_prefix);
+DECLARE_string(feature_filename_prefix);
+DECLARE_string(transformation_filename_prefix);
+DECLARE_string(joint_normal_relation_filename_prefix);
+DECLARE_string(cond_normal_relation_filename_prefix);
+DECLARE_string(object_list_filename);
+
+DECLARE_double(occlusion_test_radius, 0.01, "");
+DECLARE_int32(random_view_seed, 20150416, "");
+
+// To be removed.
+//DECLARE_bool(use_symmetric_group_cuboids, false, "");
+//
+// ---- //
 
 #endif // _MESH_CUBOID_PARAMETERS_H_

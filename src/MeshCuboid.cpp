@@ -255,7 +255,7 @@ const std::vector<MeshSamplePoint *> &MeshCuboid::get_sample_points() const
 	return sample_points_;
 }
 
-const MeshSamplePoint *MeshCuboid::get_sample_point(
+MeshSamplePoint *MeshCuboid::get_sample_point(
 	const unsigned int _point_index) const
 {
 	assert(_point_index < sample_points_.size());
@@ -879,8 +879,10 @@ void MeshCuboid::update_point_correspondences()
 void MeshCuboid::compute_cuboid_surface_point_visibility(
 	const Real _modelview_matrix[16],
 	const Real _radius,
-	const std::vector<MeshSamplePoint *>& _observed_points,
-	bool _use_cuboid_normal)
+	const std::vector<MeshSamplePoint *> &_given_sample_points,
+	const std::vector<MyMesh::Point> &_test_points,
+	const std::vector<MyMesh::Normal> *_test_normals,
+	std::vector<Real> &_visibility_values)
 {
 	assert(_modelview_matrix);
 	assert(_radius > 0);
@@ -893,14 +895,17 @@ void MeshCuboid::compute_cuboid_surface_point_visibility(
 	MyMesh::Normal view_direction(
 		-_modelview_matrix[2], -_modelview_matrix[6], -_modelview_matrix[10]);
 
-	for (std::vector<MeshCuboidSurfacePoint *>::iterator it = cuboid_surface_points_.begin();
-		it != cuboid_surface_points_.end(); it++)
+	unsigned int num_test_points = _test_points.size();
+	assert(!_test_normals || (*_test_normals).size() == num_test_points);
+	_visibility_values.resize(num_test_points);
+
+	for (unsigned int test_point_index = 0; test_point_index < num_test_points; ++test_point_index)
 	{
-		Real &visibility = (*it)->visibility_;
+		Real &visibility = _visibility_values[test_point_index];
 		visibility = 1.0;
 
 		// Ignore a surface point if its normal is not heading to the viewing direction.
-		if (_use_cuboid_normal && dot((*it)->normal_, view_direction) >= 0)
+		if (_test_normals && dot((*_test_normals)[test_point_index], view_direction) >= 0)
 		{
 			visibility = 0.0;
 			continue;
@@ -908,13 +913,13 @@ void MeshCuboid::compute_cuboid_surface_point_visibility(
 
 		Eigen::Vector3d surface_point;
 		for (unsigned int i = 0; i < 3; ++i)
-			surface_point[i] = (*it)->point_[i];
+			surface_point[i] = _test_points[test_point_index][i];
 
 		Eigen::Vector4d surface_point_4;
 		surface_point_4 << surface_point, 1.0;
 
-		for (std::vector<MeshSamplePoint *>::const_iterator jt = _observed_points.begin();
-			jt != _observed_points.end(); jt++)
+		for (std::vector<MeshSamplePoint *>::const_iterator jt = _given_sample_points.begin();
+			jt != _given_sample_points.end(); jt++)
 		{
 			Eigen::Vector3d observed_point;
 			for (unsigned int i = 0; i < 3; ++i)
@@ -949,7 +954,6 @@ void MeshCuboid::compute_cuboid_surface_point_visibility(
 				visibility = 0;
 			}
 
-
 			//Real cos_angle = dot_prod / (lc_surface_point_len * lc_observed_point_len);
 			//Real sin_angle = std::sqrt(1 - cos_angle * cos_angle);
 			//Real tan_angle = sin_angle / cos_angle;
@@ -973,6 +977,42 @@ void MeshCuboid::compute_cuboid_surface_point_visibility(
 
 		assert(visibility >= 0.0);
 		assert(visibility <= 1.0);
+	}
+}
+
+void MeshCuboid::compute_cuboid_surface_point_visibility(
+	const Real _modelview_matrix[16],
+	const Real _radius,
+	const std::vector<MeshSamplePoint *>& _given_sample_points,
+	bool _use_cuboid_normal)
+{
+	std::vector<MyMesh::Point> test_points(num_cuboid_surface_points());
+	std::vector<MyMesh::Normal> test_normals(num_cuboid_surface_points());
+	
+	for (unsigned int point_index = 0; point_index < num_cuboid_surface_points(); ++point_index)
+	{
+		MeshCuboidSurfacePoint *cuboid_surface_point = cuboid_surface_points_[point_index];
+		assert(cuboid_surface_point);
+		test_points[point_index] = cuboid_surface_point->point_;
+		test_normals[point_index] = cuboid_surface_point->normal_;
+	}
+
+	std::vector<Real> visibility_values;
+
+	if (_use_cuboid_normal)
+		compute_cuboid_surface_point_visibility(_modelview_matrix, _radius,
+		_given_sample_points, test_points, &test_normals, visibility_values);
+	else
+		compute_cuboid_surface_point_visibility(_modelview_matrix, _radius,
+		_given_sample_points, test_points, NULL, visibility_values);
+
+	assert(visibility_values.size() == num_cuboid_surface_points());
+
+	for (unsigned int point_index = 0; point_index < num_cuboid_surface_points(); ++point_index)
+	{
+		MeshCuboidSurfacePoint *cuboid_surface_point = cuboid_surface_points_[point_index];
+		assert(cuboid_surface_point);
+		cuboid_surface_point->visibility_ = visibility_values[point_index];
 	}
 }
 

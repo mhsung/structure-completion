@@ -5,9 +5,9 @@
 // Olga Sorkine, "Least-Squares Rigid Motion Using SVD".
 
 #define MIN_NUM_ICP_POINT_PAIRS		10
-#define MAX_NUM_ICP_ITERATIONS		100
-#define MIN_ICP_ANGLE_DIFFERENCE	1
-#define MIN_ICP_TRANSLATION			1.0E-6
+#define MAX_NUM_ICP_ITERATIONS		300
+#define MIN_ICP_ANGLE_DIFFERENCE	1.0E-2
+#define MIN_ICP_TRANSLATION			1.0E-8
 
 #include <ANN/ANN.h>
 #include <Eigen/Core>

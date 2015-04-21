@@ -77,11 +77,19 @@ public:
 
 private:
 	bool load_object_info(
-		const char* _mesh_filepath,
 		MyMesh &_mesh,
 		MeshCuboidStructure &_cuboid_structure,
+		const char* _mesh_filepath,
 		bool _load_training_data,
 		bool _load_dense_samples);
+
+	bool load_result_info(
+		MyMesh &_mesh,
+		MeshCuboidStructure &_cuboid_structure,
+		const char* _mesh_filepath,
+		const char* _sample_filepath,
+		const char* _sample_label_filepath,
+		const char* _cuboid_filepath);
 
 	void reconstruct(
 		const char *_mesh_filepath,
