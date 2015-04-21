@@ -65,8 +65,8 @@ DECLARE_string(joint_normal_relation_filename_prefix);
 DECLARE_string(cond_normal_relation_filename_prefix);
 DECLARE_string(object_list_filename);
 
-DECLARE_double(occlusion_test_radius, 0.01, "");
-DECLARE_int32(random_view_seed, 20150416, "");
+DECLARE_double(occlusion_test_radius);
+DECLARE_int32(random_view_seed);
 
 // To be removed.
 //DECLARE_bool(use_symmetric_group_cuboids, false, "");
