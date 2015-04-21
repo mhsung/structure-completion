@@ -669,20 +669,20 @@ void MeshViewerCore::draw_openmesh(const std::string& _drawmode)
 				assert(*it);
 				GLdouble *point = &(*it)->point_[0];
 
-				Real radius = 1.0;
-				if (cuboid_structure_.query_label_index_ < cuboid_structure_.num_labels())
+				if (cuboid_structure_.num_sample_points() > 10000)
 				{
-					assert((*it)->label_index_confidence_.size() == cuboid_structure_.num_labels());
-					radius = (*it)->label_index_confidence_[cuboid_structure_.query_label_index_];
+					glPointSize(2);
+					glBegin(GL_POINTS);
+					gray_color();
+					glVertex3dv(&point[0]);
+					glEnd();
 				}
-
-				radius = radius * (mesh_.get_object_diameter() * 0.005) * point_size_;
-				if (radius > 0)
+				else
 				{
+					Real radius = (mesh_.get_object_diameter() * 0.005) * point_size_;
 					glPushMatrix();
 					glTranslatef(point[0], point[1], point[2]);
 					gray_color();
-
 					glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
 					glutSolidSphere(radius, 20, 20);
 					glPopMatrix();
@@ -721,16 +721,33 @@ void MeshViewerCore::draw_openmesh(const std::string& _drawmode)
 						const MeshSamplePoint *sample_point = cuboid->get_sample_point(point_index);
 						const GLdouble *point = &(sample_point->point_[0]);
 
-						Real radius = (mesh_.get_object_diameter() * 0.005) * point_size_;
+						Real radius = 0.0;
+						if (cuboid_structure_.query_label_index_ < cuboid_structure_.num_labels())
+						{
+							assert(sample_point->label_index_confidence_.size() == cuboid_structure_.num_labels());
+							radius = sample_point->label_index_confidence_[cuboid_structure_.query_label_index_];
+						}
+
 						if (radius > 0)
 						{
-							glPushMatrix();
-							glTranslatef(point[0], point[1], point[2]);
-							gray_color();
-
-							glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
-							glutSolidSphere(radius, 20, 20);
-							glPopMatrix();
+							if (cuboid_structure_.num_sample_points() > 10000)
+							{
+								glPointSize(2);
+								glBegin(GL_POINTS);
+								gray_color();
+								glVertex3dv(&point[0]);
+								glEnd();
+							}
+							else
+							{
+								radius = radius * (mesh_.get_object_diameter() * 0.005) * point_size_;
+								glPushMatrix();
+								glTranslatef(point[0], point[1], point[2]);
+								gray_color();
+								glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
+								glutSolidSphere(radius, 20, 20);
+								glPopMatrix();
+							}
 						}
 					}
 				}

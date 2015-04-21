@@ -847,7 +847,6 @@ bool MeshCuboidStructure::load_dense_sample_points(const char *_filename, bool _
 		++sample_point_index)
 	{
 		assert(sample_points_[sample_point_index]);
-
 		for (unsigned int i = 0; i < 3; ++i)
 			sparse_sample_points.col(sample_point_index)(i) =
 			sample_points_[sample_point_index]->point_[i];
@@ -861,6 +860,17 @@ bool MeshCuboidStructure::load_dense_sample_points(const char *_filename, bool _
 		sparse_sample_ann_points);
 	assert(sparse_sample_ann_points);
 	assert(sparse_sample_ann_kd_tree);
+
+
+	std::vector<MeshSamplePoint *> sparse_sample_points_copy;
+	sparse_sample_points_copy.resize(num_sample_points());
+	for (SamplePointIndex sample_point_index = 0; sample_point_index < num_sample_points();
+			++sample_point_index)
+	{
+		assert(sample_points_[sample_point_index]);
+		MeshSamplePoint *sample_point = new MeshSamplePoint(*(sample_points_[sample_point_index]));
+		sparse_sample_points_copy[sample_point_index] = sample_point;
+	}
 	//
 
 
@@ -937,6 +947,7 @@ bool MeshCuboidStructure::load_dense_sample_points(const char *_filename, bool _
 	for (SamplePointIndex sample_point_index = 0; sample_point_index < num_sample_points();
 		++sample_point_index)
 	{
+		assert(sample_points_[sample_point_index]);
 		SamplePointIndex sparse_sample_point_index =
 			static_cast<SamplePointIndex>(dense_sample_point_indices.col(sample_point_index)(0));
 
@@ -946,11 +957,21 @@ bool MeshCuboidStructure::load_dense_sample_points(const char *_filename, bool _
 			MeshCuboid *cuboid = (*it);
 			cuboid->add_sample_point(sample_points_[sample_point_index]);
 		}
+
+		MeshSamplePoint *sparse_sample_point = sparse_sample_points_copy[sparse_sample_point_index];
+		assert(sparse_sample_point);
+		sample_points_[sample_point_index]->label_index_confidence_
+			= sparse_sample_point->label_index_confidence_;
 	}
 
 
 	annDeallocPts(sparse_sample_ann_points);
 	delete sparse_sample_ann_kd_tree;
+
+	for (std::vector<MeshSamplePoint *>::iterator it = sparse_sample_points_copy.begin();
+		it != sparse_sample_points_copy.end(); ++it)
+		delete (*it);
+	sparse_sample_points_copy.clear();
 	//
 
 	std::cout << "Done." << std::endl;
@@ -1899,7 +1920,6 @@ void MeshCuboidStructure::copy_sample_points_to_symmetric_position(
 		return;
 
 	/*
-	//
 	Eigen::MatrixXd symmetric_sample_points_1(3, _cuboid_1->num_sample_points());
 	Eigen::MatrixXd sample_points_2(3, _cuboid_2->num_sample_points());
 
@@ -1924,15 +1944,16 @@ void MeshCuboidStructure::copy_sample_points_to_symmetric_position(
 			sample_points_2.col(sample_point_index)(i) = point_2[i];
 	}
 
-	const Real neighbor_distance = 10 * FLAGS_param_sample_point_neighbor_distance * mesh_->get_object_diameter();
+	const Real neighbor_distance = FLAGS_param_sample_point_neighbor_distance * mesh_->get_object_diameter();
 
 	Eigen::Matrix3d rotation_mat;
 	Eigen::Vector3d translation_vec;
-	double icp_error = ICP::run_iterative_closest_points(symmetric_sample_points_1, sample_points_2,
+	double icp_error = -1;
+	
+	ICP::run_iterative_closest_points(symmetric_sample_points_1, sample_points_2,
 		rotation_mat, translation_vec, &neighbor_distance);
 
-	printf("%d -> %d: %lf\n", _cuboid_1->label_index_, _cuboid_2->label_index_, icp_error);
-	//
+	//printf("%d -> %d: %lf\n", _cuboid_1->label_index_, _cuboid_2->label_index_, icp_error);
 	*/
 
 
@@ -1946,13 +1967,15 @@ void MeshCuboidStructure::copy_sample_points_to_symmetric_position(
 		MyMesh::Normal normal_1 = sample_point_1->normal_;
 
 		MyMesh::Point symmetric_point_1;
-		//if (icp_error >= 0)
-		//{
-		//	// If ICP succeeded, copy the aligned point.
-		//	for (unsigned int i = 0; i < 3; ++i)
-		//		symmetric_point_1[i] = symmetric_sample_points_1.col(point_index_1)[i];
-		//}
-		//else
+		/*
+		if (icp_error >= 0)
+		{
+			// If ICP succeeded, copy the aligned point.
+			for (unsigned int i = 0; i < 3; ++i)
+				symmetric_point_1[i] = symmetric_sample_points_1.col(point_index_1)[i];
+		}
+		else
+		*/
 		{
 			symmetric_point_1 = _symmetry_group->get_symmetric_point(point_1);
 		}

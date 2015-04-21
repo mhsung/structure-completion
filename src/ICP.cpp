@@ -115,10 +115,13 @@ namespace ICP {
 		// Return: error (Minus error means that the computation is failed.)
 
 		assert(_X.rows() == 3);
-		assert(_X.cols() > 0);
-
 		assert(_Y.rows() == 3);
-		assert(_Y.cols() > 0);
+
+		if (_X.cols() == 0 || _Y.cols() == 0)
+		{
+			std::cerr << "Warning: No point exists." << std::endl;
+			return -1;
+		}
 
 		Eigen::MatrixXd::Index X_num_points = _X.cols();
 		Eigen::MatrixXd::Index Y_num_points = _Y.cols();
@@ -250,13 +253,20 @@ namespace ICP {
 			if (error < 0)
 			{
 				// The transformation computation is failed.
-				return error;
+				if (iteration == 0) return -1;
+				//std::cout << "[FINAL] error = " << prev_error << std::endl;
+				return prev_error;
+			}
+			else if (error > prev_error)
+			{
+				// NOTE:
+				// Continue only when the error value is decreasing.
+				//std::cout << "[FINAL] error = " << prev_error << std::endl;
+				return prev_error;
 			}
 
-			// NOTE:
-			// Continue only when the error value is decreasing.
-			if (error > prev_error)	return prev_error;
 			prev_error = error;
+			//std::cout << "error = " << prev_error << std::endl;
 
 			Eigen::AngleAxisd rotation_angle;
 			rotation_angle.fromRotationMatrix(new_rotation_mat);
