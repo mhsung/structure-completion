@@ -97,6 +97,19 @@ bool add_missing_cuboids(
 	const MeshCuboidPredictor &_predictor,
 	std::set<LabelIndex> &_ignored_label_indices);
 
+void reconstruct_fusion_simple(
+	const MeshCuboidStructure &_symmetry_reconstruction,
+	const MeshCuboidStructure &_database_reconstruction,
+	MeshCuboidStructure &_output_cuboid_structure);
+
+void reconstruct_fusion(const char *_mesh_filepath,
+	const GLdouble *_snapshot_modelview_matrix,
+	const GLdouble *_occlusion_modelview_matrix,
+	const MeshCuboidStructure &_original_cuboid_structure,
+	const MeshCuboidStructure &_symmetry_reconstruction,
+	const MeshCuboidStructure &_database_reconstruction,
+	MeshCuboidStructure &_output_cuboid_structure);
+
 //void symmetrize_cuboids(
 //	MeshCuboidStructure &_cuboid_structure);
 

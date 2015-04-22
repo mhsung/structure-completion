@@ -106,18 +106,6 @@ private:
 	void reconstruct_database_prior(
 		const std::vector<LabelIndex> *_reconstructed_label_indices = NULL);
 
-	void reconstruct_fusion_simple(
-		const MeshCuboidStructure &_symmetry_reconstruction,
-		const MeshCuboidStructure &_database_reconstruction);
-
-	void reconstruct_fusion(
-		const char *_mesh_filepath,
-		const GLdouble *_snapshot_modelview_matrix,
-		const GLdouble *_occlusion_modelview_matrix,
-		const MeshCuboidStructure &_symmetry_reconstruction,
-		const MeshCuboidStructure &_database_reconstruction);
-
-
 	void set_view_direction();
 
 	void set_random_view_direction(bool _set_modelview_matrix = false);
