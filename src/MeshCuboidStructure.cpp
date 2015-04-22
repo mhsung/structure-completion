@@ -461,8 +461,8 @@ void MeshCuboidStructure::reset_transformation()
 {
 	if (translation_ != MyMesh::Point(0.0) || scale_ != 1.0)
 	{
-		scale(1.0 / scale_);
 		translate(-translation_);
+		scale(1.0 / scale_);
 
 		scale_ = 1.0;
 		translation_ = MyMesh::Point(0.0);
@@ -979,7 +979,7 @@ bool MeshCuboidStructure::load_dense_sample_points(const char *_filename, bool _
 	return true;
 }
 
-bool MeshCuboidStructure::save_sample_points(const char *_filename, bool _verbose)
+bool MeshCuboidStructure::save_sample_points(const char *_filename, bool _verbose) const
 {
 	std::ofstream file(_filename);
 	if (!file)
@@ -991,38 +991,38 @@ bool MeshCuboidStructure::save_sample_points(const char *_filename, bool _verbos
 	if (_verbose)
 		std::cout << "Saving " << _filename << "..." << std::endl;
 
-	// Note:
-	// Save the original position of sample points.
-	reset_transformation();
-
 	for (SamplePointIndex sample_point_index = 0; sample_point_index < num_sample_points();
 		++sample_point_index)
 	{
 		MeshSamplePoint *sample_point = sample_points_[sample_point_index];
 		assert(sample_point);
 
+		MyMesh::Point point = sample_point->point_;
+		// NOTE:
+		// Reset transformation.
+		point += (-translation_);
+		if (scale_ != 0) point /= scale_;
+
 		std::stringstream sstr;
 		sstr << sample_point->corr_fid_ << " ";
 		sstr << sample_point->bary_coord_[0] << " "
 			<< sample_point->bary_coord_[1] << " "
 			<< sample_point->bary_coord_[2] << " ";
-		sstr << sample_point->point_[0] << " "
-			<< sample_point->point_[1] << " "
-			<< sample_point->point_[2] << " ";
+		sstr << point[0] << " "
+			<< point[1] << " "
+			<< point[2] << " ";
 
 		file << sstr.str() << std::endl;
 	}
 
 	file.close();
 
-	apply_mesh_transformation();
-
 	std::cout << "Done." << std::endl;
 
 	return true;
 }
 
-bool MeshCuboidStructure::save_sample_points_to_ply(const char *_filename, bool _verbose)
+bool MeshCuboidStructure::save_sample_points_to_ply(const char *_filename, bool _verbose) const
 {
 	std::string ply_filename(_filename);
 	ply_filename.append(".ply");
@@ -1035,10 +1035,6 @@ bool MeshCuboidStructure::save_sample_points_to_ply(const char *_filename, bool 
 
 	if (_verbose)
 		std::cout << "Saving " << ply_filename << "..." << std::endl;
-
-	// Note:
-	// Save the original position of sample points.
-	reset_transformation();
 
 	// Print header.
 	file << "ply" << std::endl;
@@ -1060,10 +1056,16 @@ bool MeshCuboidStructure::save_sample_points_to_ply(const char *_filename, bool 
 		MeshSamplePoint *sample_point = sample_points_[sample_point_index];
 		assert(sample_point);
 
+		MyMesh::Point point = sample_point->point_;
+		// NOTE:
+		// Reset transformation.
+		point += (-translation_);
+		if (scale_ != 0) point /= scale_;
+
 		std::stringstream sstr;
-		sstr << sample_point->point_[0] << " "
-			<< sample_point->point_[1] << " "
-			<< sample_point->point_[2] << " "
+		sstr << point[0] << " "
+			<< point[1] << " "
+			<< point[2] << " "
 			<< sample_point->normal_[0] << " "
 			<< sample_point->normal_[1] << " "
 			<< sample_point->normal_[2] << " ";
@@ -1072,8 +1074,6 @@ bool MeshCuboidStructure::save_sample_points_to_ply(const char *_filename, bool 
 	}
 
 	file.close();
-
-	apply_mesh_transformation();
 
 	std::cout << "Done." << std::endl;
 
@@ -1167,7 +1167,7 @@ bool MeshCuboidStructure::load_sample_point_labels(const char *_filename, bool _
 	return true;
 }
 
-bool MeshCuboidStructure::save_sample_point_labels(const char *_filename, bool _verbose)
+bool MeshCuboidStructure::save_sample_point_labels(const char *_filename, bool _verbose) const
 {
 	if (labels_.empty())
 	{

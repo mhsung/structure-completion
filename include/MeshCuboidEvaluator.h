@@ -22,7 +22,7 @@ public:
 		const char *_filename, bool _verbose = true);
 
 	void evaluate_point_to_point_distances(
-		MeshCuboidStructure *_test_cuboid_structure,
+		const MeshCuboidStructure *_test_cuboid_structure,
 		const char *_filename);
 	
 private:

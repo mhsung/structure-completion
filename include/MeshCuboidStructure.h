@@ -65,13 +65,13 @@ public:
 	// Compute segmentation of dense samples using segmented sparse samples.
 	bool load_dense_sample_points(const char *_filename, bool _verbose = true);
 
-	bool save_sample_points(const char *_filename, bool _verbose = true);
+	bool save_sample_points(const char *_filename, bool _verbose = true) const;
 
-	bool save_sample_points_to_ply(const char *_filename, bool _verbose = true);
+	bool save_sample_points_to_ply(const char *_filename, bool _verbose = true) const;
 
 	bool load_sample_point_labels(const char *_filename, bool _verbose = true);
 
-	bool save_sample_point_labels(const char *_filename, bool _verbose = true);
+	bool save_sample_point_labels(const char *_filename, bool _verbose = true) const;
 
 	std::vector<MeshCuboid *> get_all_cuboids()const;
 
