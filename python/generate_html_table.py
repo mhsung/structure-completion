@@ -24,8 +24,8 @@ thumbname_width = 150
 
 #
 dataset_name = 'Assembly Chairs'
-input_path = 'C:/project/app/cuboid-prediction/experiments/exp4_assembly_chairs/output'
-output_path = 'C:/Users/Administrator/Dropbox/Public/web/exp4_assembly_chairs'
+input_path = 'C:/project/app/cuboid-prediction/experiments/exp5_assembly_chairs/output'
+output_path = 'C:/Users/Administrator/Dropbox/Public/web/exp5_assembly_chairs'
 symmetry_part_names = ['seat', 'back', 'legs', 'wheels', 'leg_column', 'armrests']
 
 
@@ -101,10 +101,8 @@ def load_instances(input_filepath, output_filepath, symemtry_part_index):
         image_filenames = []
         image_filenames.append(prefix + '_input.png')
         image_filenames.append(prefix + '_0.png')
-        #image_filenames.append(prefix + '_0_symmetry_accuracy.png')
-        #image_filenames.append(prefix + '_0_symmetry_completeness.png')
-        image_filenames.append(prefix + '_0_reconstructed_accuracy.png')
-        image_filenames.append(prefix + '_0_reconstructed_completeness.png')
+        image_filenames.append(prefix + '_0_symmetry_accuracy.png')
+        image_filenames.append(prefix + '_0_symmetry_completeness.png')
         image_filenames.append(prefix + '_0_database_accuracy.png')
         image_filenames.append(prefix + '_0_database_completeness.png')
         image_filenames.append(prefix + '_0_fusion_accuracy.png')
@@ -125,8 +123,7 @@ def load_instances(input_filepath, output_filepath, symemtry_part_index):
         accuracy_values = []
         completeness_values = []
         csv_filename_postfixes = []
-        #csv_filename_postfixes.append('_0_symmetry_')
-        csv_filename_postfixes.append('_0_reconstructed')
+        csv_filename_postfixes.append('_0_symmetry')
         csv_filename_postfixes.append('_0_database')
         csv_filename_postfixes.append('_0_fusion')
 
