@@ -367,8 +367,11 @@ void MeshCuboidNonLinearSolver::add_cuboid_constraints(
 				(axis_index + 1) % dimension);
 			assert(axis_variable_1.dimension() == axis_variable_2.dimension());
 
+			// NOTE:
+			// Relaxing equality constraint.
+			// The equality constraints cause "too few degrees" errors.
 			_formulation.add_constraint(NLPVectorExpression::dot_product(
-				axis_variable_1, axis_variable_2), 0, 0);
+				axis_variable_1, axis_variable_2), -1.0E-12, 1.0E-12);
 		}
 	}
 
@@ -404,7 +407,11 @@ void MeshCuboidNonLinearSolver::add_cuboid_constraints(
 					// n^T(x - y) = 0.
 					NLPExpression expression = NLPVectorExpression::dot_product(other_axis_variable,
 						corner_variable_1 - corner_variable_2);
-					_formulation.add_constraint(expression, 0, 0);
+
+					// NOTE:
+					// Relaxing equality constraint.
+					// The equality constraints cause "too few degrees" errors.
+					_formulation.add_constraint(expression, -1.0E-12, 1.0E-12);
 				}
 			}
 		}
@@ -581,9 +588,10 @@ void MeshCuboidNonLinearSolver::optimize(
 	// Change some options
 	// Note: The following choices are only examples, they might not be
 	//       suitable for your optimization problem.
-	app->Options()->SetNumericValue("tol", 1e-7);
+	app->Options()->SetNumericValue("tol", 1e-8);
 	app->Options()->SetStringValue("mu_strategy", "adaptive");
 	app->Options()->SetIntegerValue("print_level", 0);
+	app->Options()->SetStringValue("fixed_variable_treatment", "relax_bounds");
 	// app->Options()->SetStringValue("output_file", "ipopt.out");
 	// The following overwrites the default name (ipopt.opt) of the
 	// options file

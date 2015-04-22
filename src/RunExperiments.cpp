@@ -802,6 +802,9 @@ void MeshViewerCore::predict()
 		trainer.get_missing_label_index_groups(given_label_indices, missing_label_index_groups,
 			&ignored_label_indices);
 		
+
+		bool is_cuboid_added = (!missing_label_index_groups.empty());
+
 		if (!missing_label_index_groups.empty())
 		{
 			unsigned int missing_label_index_group_index = 0;
@@ -815,17 +818,26 @@ void MeshViewerCore::predict()
 				// FIXME:
 				// Any missing cuboid may not be added.
 				// Then, you should escapt the loop.
-				add_missing_cuboids(new_cuboid_structure, occlusion_modelview_matrix,
+				ret = add_missing_cuboids(new_cuboid_structure, occlusion_modelview_matrix,
 					missing_label_indices, joint_normal_predictor, ignored_label_indices);
 
-				std::stringstream new_cuboid_structure_name;
-				new_cuboid_structure_name << cuboid_structure_name << missing_label_index_group_index;
-				cuboid_structure_candidates.push_front(
-					std::make_pair(new_cuboid_structure_name.str(), new_cuboid_structure));
-				++missing_label_index_group_index;
+				if (!ret)
+				{
+					is_cuboid_added = false;
+				}
+				else
+				{
+					std::stringstream new_cuboid_structure_name;
+					new_cuboid_structure_name << cuboid_structure_name << missing_label_index_group_index;
+					cuboid_structure_candidates.push_front(
+						std::make_pair(new_cuboid_structure_name.str(), new_cuboid_structure));
+					++missing_label_index_group_index;
+				}
 			}
 		}
-		else
+
+		// If there was a case when no cuboid is added, reconstruct using the current cuboid structure.
+		if (!is_cuboid_added)
 		{
 			// Escape loop.
 			snapshot_filename_sstr.clear(); snapshot_filename_sstr.str("");

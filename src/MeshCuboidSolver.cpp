@@ -1754,7 +1754,7 @@ void add_missing_cuboids_once(
 	}
 }
 
-void add_missing_cuboids(
+bool add_missing_cuboids(
 	MeshCuboidStructure &_cuboid_structure,
 	const Real _modelview_matrix[16],
 	const std::list<LabelIndex> &_missing_label_indices,
@@ -1762,7 +1762,7 @@ void add_missing_cuboids(
 	std::set<LabelIndex> &_ignored_label_indices)
 {
 	if (_missing_label_indices.empty())
-		return;
+		return false;
 
 	const Real radius = FLAGS_param_occlusion_test_neighbor_distance
 		* _cuboid_structure.mesh_->get_object_diameter();
@@ -1843,8 +1843,6 @@ void add_missing_cuboids(
 					symmetric_label_index = (*kt).first;
 				else continue;
 
-				std::cout << label_index << " / " << symmetric_label_index << std::endl;
-
 				std::vector<MeshCuboid *> &symmetric_cuboids =
 					_cuboid_structure.label_cuboids_[symmetric_label_index];
 				for (std::vector<MeshCuboid *>::iterator kt = symmetric_cuboids.begin();
@@ -1853,11 +1851,19 @@ void add_missing_cuboids(
 				symmetric_cuboids.clear();
 
 				new_ignored_label_indices.insert(symmetric_label_index);
+
+				//
+				std::set<LabelIndex>::iterator symmetric_label_it = add_label_indices.find(symmetric_label_index);
+				if (symmetric_label_it != add_label_indices.end())
+					add_label_indices.erase(symmetric_label_it);
+				//
 			}
 		}
 	}
 
 	_ignored_label_indices.insert(new_ignored_label_indices.begin(), new_ignored_label_indices.end());
+
+	return !(add_label_indices.empty());
 }
 
 /*

@@ -90,7 +90,7 @@ void add_missing_cuboids_once(
 	const MeshCuboidPredictor &_predictor,
 	std::vector<MeshCuboid *>& _new_cuboids);
 
-void add_missing_cuboids(
+bool add_missing_cuboids(
 	MeshCuboidStructure &_cuboid_structure,
 	const Real _modelview_matrix[16],
 	const std::list<LabelIndex> &_missing_label_indices,
