@@ -401,7 +401,7 @@ void update_cuboid_surface_points(
 	MeshCuboidStructure &_cuboid_structure,
 	const Real _modelview_matrix[16])
 {
-	const Real radius = FLAGS_param_observed_point_radius * _cuboid_structure.mesh_->get_object_diameter();
+	const Real radius = FLAGS_param_occlusion_test_neighbor_distance * _cuboid_structure.mesh_->get_object_diameter();
 
 	std::vector<MeshCuboid *> all_cuboids = _cuboid_structure.get_all_cuboids();
 	for (std::vector<MeshCuboid *>::iterator it = all_cuboids.begin(); it != all_cuboids.end(); ++it)
@@ -1759,12 +1759,12 @@ void add_missing_cuboids(
 	const Real _modelview_matrix[16],
 	const std::list<LabelIndex> &_missing_label_indices,
 	const MeshCuboidPredictor &_predictor,
-	std::list<LabelIndex> &_ignored_label_indices)
+	std::set<LabelIndex> &_ignored_label_indices)
 {
 	if (_missing_label_indices.empty())
 		return;
 
-	const Real radius = FLAGS_param_observed_point_radius
+	const Real radius = FLAGS_param_occlusion_test_neighbor_distance
 		* _cuboid_structure.mesh_->get_object_diameter();
 	std::set<LabelIndex> add_label_indices;
 
@@ -1794,7 +1794,9 @@ void add_missing_cuboids(
 			// Do not use normal directions when computing the overall visibility.
 			cuboid->compute_cuboid_surface_point_visibility(
 				_modelview_matrix, radius, _cuboid_structure.sample_points_, false);
-			if (cuboid->get_cuboid_overvall_visibility() > FLAGS_param_min_cuboid_overall_visibility)
+			Real overall_visibility = cuboid->get_cuboid_overvall_visibility();
+
+			if (overall_visibility > FLAGS_param_min_cuboid_overall_visibility)
 			{
 				// The cuboid is placed in the visible area.
 				delete cuboid;
@@ -1817,8 +1819,45 @@ void add_missing_cuboids(
 	{
 		LabelIndex label_index = (*it);
 		if (add_label_indices.find(label_index) == add_label_indices.end())
-			_ignored_label_indices.push_back(label_index);
+			_ignored_label_indices.insert(label_index);
 	}
+
+	// Delete their symmetric cuboids as well.
+	std::set<LabelIndex> new_ignored_label_indices;
+	for (std::set<LabelIndex>::const_iterator it = _ignored_label_indices.begin();
+		it != _ignored_label_indices.end(); ++it)
+	{
+		LabelIndex label_index = (*it);
+
+		for (std::vector< MeshCuboidSymmetryGroupInfo >::iterator jt = _cuboid_structure.symmetry_group_info_.begin();
+			jt != _cuboid_structure.symmetry_group_info_.end(); ++jt)
+		{
+			MeshCuboidSymmetryGroupInfo &symmetry_group = (*jt);
+			for (std::vector< std::pair<LabelIndex, LabelIndex> >::iterator kt = symmetry_group.pair_label_indices_.begin();
+				kt != symmetry_group.pair_label_indices_.end(); ++kt)
+			{
+				LabelIndex symmetric_label_index = 0;
+				if (label_index == (*kt).first)
+					symmetric_label_index = (*kt).second;
+				else if (label_index == (*kt).second)
+					symmetric_label_index = (*kt).first;
+				else continue;
+
+				std::cout << label_index << " / " << symmetric_label_index << std::endl;
+
+				std::vector<MeshCuboid *> &symmetric_cuboids =
+					_cuboid_structure.label_cuboids_[symmetric_label_index];
+				for (std::vector<MeshCuboid *>::iterator kt = symmetric_cuboids.begin();
+					kt != symmetric_cuboids.end(); ++kt)
+					delete (*kt);
+				symmetric_cuboids.clear();
+
+				new_ignored_label_indices.insert(symmetric_label_index);
+			}
+		}
+	}
+
+	_ignored_label_indices.insert(new_ignored_label_indices.begin(), new_ignored_label_indices.end());
 }
 
 /*

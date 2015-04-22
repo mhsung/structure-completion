@@ -203,7 +203,7 @@ void MeshCuboidEvaluator::evaluate_point_to_point_distances(
 
 	Eigen::VectorXd neighbor_ranges;
 	neighbor_ranges.setLinSpaced(FLAGS_param_eval_num_neighbor_range_samples,
-		0.0, FLAGS_param_eval_max_neighbor_range);
+		0.0, FLAGS_param_eval_max_neighbor_distance);
 
 
 	// Create a ground truth sample point KD-tree.
@@ -263,7 +263,7 @@ void MeshCuboidEvaluator::evaluate_point_to_point_distances(
 		{
 			_test_sample_points[sample_point_index]->error_ =
 				std::min((test_to_ground_truth_distances[sample_point_index]
-				/ FLAGS_param_eval_max_neighbor_range), 1.0);
+				/ FLAGS_param_eval_max_neighbor_distance), 1.0);
 		}
 
 		// Completeness.
@@ -272,7 +272,7 @@ void MeshCuboidEvaluator::evaluate_point_to_point_distances(
 		{
 			_ground_truth_sample_points[sample_point_index]->error_ =
 				std::min((ground_truth_to_test_distances[sample_point_index]
-				/ FLAGS_param_eval_max_neighbor_range), 1.0);
+				/ FLAGS_param_eval_max_neighbor_distance), 1.0);
 		}
 	}
 

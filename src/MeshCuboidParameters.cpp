@@ -13,14 +13,14 @@ DEFINE_int32(param_opt_max_iterations, 5, "");
 
 DEFINE_double(param_min_sample_point_confidence, 0.7, "");
 DEFINE_double(param_min_num_confidence_tol_sample_points, 0.5, "");
-DEFINE_double(param_sample_point_neighbor_distance, 0.02, "");
 DEFINE_double(param_min_cuboid_bbox_size, 0.1, "");
 DEFINE_double(param_min_cuboid_bbox_diag_length, 0.3, "");
-DEFINE_double(param_observed_point_radius, 0.02, "");
+DEFINE_double(param_sample_point_neighbor_distance, 0.02, "");
+DEFINE_double(param_occlusion_test_neighbor_distance, 0.01, "");
+DEFINE_double(param_eval_max_neighbor_distance, 0.005, "");
 DEFINE_double(param_min_cuboid_overall_visibility, 0.8, "");
 DEFINE_double(param_max_potential, 1.0E8, "");
 DEFINE_double(param_dummy_potential, 1.0E4, "");
-DEFINE_double(param_eval_max_neighbor_range, 0.005, "");
 DEFINE_double(param_opt_single_energy_term_weight, 1.0E4, "");
 DEFINE_double(param_opt_symmetry_energy_term_weight, 1.0E6, "");
 

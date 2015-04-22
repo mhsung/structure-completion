@@ -322,7 +322,7 @@ void MeshViewerCore::run_test()
 	MeshCuboidStructure database_reconstruction = cuboid_structure_;
 
 	cuboid_structure_.clear_sample_points();
-	const Real radius = FLAGS_param_observed_point_radius
+	const Real radius = FLAGS_param_occlusion_test_neighbor_distance
 		* cuboid_structure_.mesh_->get_object_diameter();
 	
 

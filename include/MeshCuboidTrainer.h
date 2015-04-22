@@ -25,7 +25,7 @@ public:
 	void get_missing_label_index_groups(
 		const std::list<LabelIndex> &_given_label_indices,
 		std::list< std::list<LabelIndex> > &_missing_label_index_groups,
-		const std::list<LabelIndex> *_ignored_label_indices = NULL)const;
+		const std::set<LabelIndex> *_ignored_label_indices = NULL)const;
 
 	void get_joint_normal_relations(
 		std::vector< std::vector<MeshCuboidJointNormalRelations *> > &_relations,

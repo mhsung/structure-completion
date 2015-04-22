@@ -16,14 +16,14 @@ DECLARE_int32(param_opt_max_iterations);
 
 DECLARE_double(param_min_sample_point_confidence);
 DECLARE_double(param_min_num_confidence_tol_sample_points);
-DECLARE_double(param_sample_point_neighbor_distance);
 DECLARE_double(param_min_cuboid_bbox_size);
 DECLARE_double(param_min_cuboid_bbox_diag_length);
-DECLARE_double(param_observed_point_radius);
+DECLARE_double(param_sample_point_neighbor_distance);
+DECLARE_double(param_occlusion_test_neighbor_distance);
+DECLARE_double(param_eval_max_neighbor_distance);
 DECLARE_double(param_min_cuboid_overall_visibility);
 DECLARE_double(param_max_potential);
 DECLARE_double(param_dummy_potential);
-DECLARE_double(param_eval_max_neighbor_range);
 DECLARE_double(param_opt_single_energy_term_weight);
 DECLARE_double(param_opt_symmetry_energy_term_weight);
 

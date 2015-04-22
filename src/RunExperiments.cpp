@@ -714,7 +714,7 @@ void MeshViewerCore::predict()
 
 	std::list< std::pair<std::string, MeshCuboidStructure> > cuboid_structure_candidates;
 	cuboid_structure_candidates.push_back(std::make_pair(std::string("0"), cuboid_structure_));
-	std::list<LabelIndex> ignored_label_indices;
+	std::set<LabelIndex> ignored_label_indices;
 
 	while (!cuboid_structure_candidates.empty())
 	{
@@ -812,6 +812,9 @@ void MeshViewerCore::predict()
 				std::list<LabelIndex> &missing_label_indices = (*it);
 				MeshCuboidStructure new_cuboid_structure = cuboid_structure_;
 
+				// FIXME:
+				// Any missing cuboid may not be added.
+				// Then, you should escapt the loop.
 				add_missing_cuboids(new_cuboid_structure, occlusion_modelview_matrix,
 					missing_label_indices, joint_normal_predictor, ignored_label_indices);
 

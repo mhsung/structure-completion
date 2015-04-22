@@ -38,12 +38,16 @@ class AttrType(Enum):
 attr_names = ['Name', 'Input_Image', 'Structure_Reconstruction_Image',
               'Symmetry_Accuracy_Image', 'Symmetry_Completeness_Image',
               'Database_Accuracy_Image', 'Database_Completeness_Image',
+              'Fusion_Accuracy_Image', 'Fusion_Completeness_Image',
               'Symmetry_Accuracy', 'Symmetry_Completeness',
-              'Database_Accuracy', 'Database_Completeness']
+              'Database_Accuracy', 'Database_Completeness',
+              'Fusion_Accuracy', 'Fusion_Completeness']
 
 attr_types = [AttrType.text, AttrType.image, AttrType.image,
               AttrType.image, AttrType.image,
               AttrType.image, AttrType.image,
+              AttrType.image, AttrType.image,
+              AttrType.number, AttrType.number,
               AttrType.number, AttrType.number,
               AttrType.number, AttrType.number]
 
@@ -94,14 +98,17 @@ def load_instances(input_filepath, output_filepath, symemtry_part_index):
         print prefix
 
         relative_image_filepath = []
-
         image_filenames = []
         image_filenames.append(prefix + '_input.png')
         image_filenames.append(prefix + '_0.png')
-        image_filenames.append(prefix + '_0_symmetry_accuracy.png')
-        image_filenames.append(prefix + '_0_symmetry_completeness.png')
+        #image_filenames.append(prefix + '_0_symmetry_accuracy.png')
+        #image_filenames.append(prefix + '_0_symmetry_completeness.png')
+        image_filenames.append(prefix + '_0_reconstructed_accuracy.png')
+        image_filenames.append(prefix + '_0_reconstructed_completeness.png')
         image_filenames.append(prefix + '_0_database_accuracy.png')
         image_filenames.append(prefix + '_0_database_completeness.png')
+        image_filenames.append(prefix + '_0_fusion_accuracy.png')
+        image_filenames.append(prefix + '_0_fusion_completeness.png')
 
         for image_filename in image_filenames:
             if not os.path.exists(output_filepath + '/' + image_filename):
@@ -115,36 +122,39 @@ def load_instances(input_filepath, output_filepath, symemtry_part_index):
             relative_image_filepath.append('./' + image_filename)
 
 
-        symm_all_csv_file = dirname + '/' + prefix + '_0_symmetry.csv'
-        data_all_csv_file = dirname + '/' + prefix + '_0_database.csv'
+        accuracy_values = []
+        completeness_values = []
+        csv_filename_postfixes = []
+        #csv_filename_postfixes.append('_0_symmetry_')
+        csv_filename_postfixes.append('_0_reconstructed')
+        csv_filename_postfixes.append('_0_database')
+        csv_filename_postfixes.append('_0_fusion')
 
-        if symemtry_part_index >= 0:
+        for csv_filename_postfix in csv_filename_postfixes:
+            csv_filename = dirname + '/' + prefix + csv_filename_postfix + '.csv'
+
+            if symemtry_part_index >= 0:
             # Real per-part files.
-            symm_all_csv_file = dirname + '/' + prefix + '_0_symmetry_' + str(symemtry_part_index) + '.csv'
-            data_all_csv_file = dirname + '/' + prefix + '_0_database_' + str(symemtry_part_index) + '.csv'
+                csv_filename = dirname + '/' + prefix + csv_filename_postfix\
+                               + '_' + str(symemtry_part_index) + '.csv'
 
-        symm_all_values = get_csv_value(symm_all_csv_file, threshold)
-        data_all_values = get_csv_value(data_all_csv_file, threshold)
+            all_values = get_csv_value(csv_filename, threshold)
 
-        if not symm_all_values:
-            symm_all_accu_value = float("NaN")
-            symm_all_comp_value = float("NaN")
-        else:
-            symm_all_accu_value = symm_all_values[0]
-            symm_all_comp_value = symm_all_values[1]
+            if not all_values:
+                accuracy_values.append(float("NaN"))
+                completeness_values.append(float("NaN"))
+            else:
+                accuracy_values.append(all_values[0])
+                completeness_values.append(all_values[1])
 
-        if not data_all_values:
-            data_all_accu_value = float("NaN")
-            data_all_comp_value = float("NaN")
-        else:
-            data_all_accu_value = data_all_values[0]
-            data_all_comp_value = data_all_values[1]
 
         instance = OutputInstance(prefix, relative_image_filepath[0], relative_image_filepath[1],
                                   relative_image_filepath[2], relative_image_filepath[3],
                                   relative_image_filepath[4], relative_image_filepath[5],
-                                  symm_all_accu_value, symm_all_comp_value,
-                                  data_all_accu_value, data_all_comp_value)
+                                  relative_image_filepath[6], relative_image_filepath[7],
+                                  accuracy_values[0], completeness_values[0],
+                                  accuracy_values[1], completeness_values[1],
+                                  accuracy_values[2], completeness_values[2])
 
         instances.append(instance)
 
@@ -210,7 +220,7 @@ def write_html_overall_stats(file, instances):
     num_instances = len(instances)
     sum_attr_values = [0] * num_attrs
 
-    file.write('<table class="cell-border" cellspacing="0">\n')
+    file.write('<table border="1" cellpadding="4" cellspacing="0">\n')
 
     file.write('<thead>\n')
     file.write('<tr>\n')

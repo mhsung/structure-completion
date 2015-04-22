@@ -504,7 +504,7 @@ void MeshCuboidTrainer::get_conflicted_labels(std::vector< std::list<LabelIndex>
 void MeshCuboidTrainer::get_missing_label_index_groups(
 	const std::list<LabelIndex> &_given_label_indices,
 	std::list< std::list<LabelIndex> > &_missing_label_index_groups,
-	const std::list<LabelIndex> *_ignored_label_indices)const
+	const std::set<LabelIndex> *_ignored_label_indices)const
 {
 	unsigned int num_labels = feature_list_.size();
 	assert(transformation_list_.size() == num_labels);
@@ -604,7 +604,7 @@ void MeshCuboidTrainer::get_missing_label_index_groups(
 				it != missing_label_indices.end();) // No increment.
 			{
 				bool exist = false;
-				for (std::list<LabelIndex>::const_iterator jt = (*_ignored_label_indices).begin();
+				for (std::set<LabelIndex>::const_iterator jt = (*_ignored_label_indices).begin();
 					jt != (*_ignored_label_indices).end(); ++jt)
 				{
 					if ((*it) == (*jt))
