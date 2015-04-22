@@ -43,6 +43,7 @@ bool MeshViewerCore::load_object_info(
 	MeshCuboidStructure &_cuboid_structure,
 	const char* _mesh_filepath,
 	bool _load_training_data,
+	bool _load_prediction_data,
 	bool _load_dense_samples)
 {
 	bool ret;
@@ -74,7 +75,7 @@ bool MeshViewerCore::load_object_info(
 		std::cerr << "Error: The sample file does not exist (" << sample_filepath << ")." << std::endl;
 		return false;
 	}
-	if (!_load_training_data && !sample_label_file.exists())
+	if (_load_prediction_data && !sample_label_file.exists())
 	{
 		std::cerr << "Error: The sample label file does not exist (" << sample_label_filepath << ")." << std::endl;
 		return false;
@@ -113,7 +114,8 @@ bool MeshViewerCore::load_object_info(
 		// Find the largest part for each part.
 		_cuboid_structure.find_the_largest_label_cuboids();
 	}
-	else
+
+	if (_load_prediction_data)
 	{
 		std::cout << " - Load sample point labels." << std::endl;
 		ret = _cuboid_structure.load_sample_point_labels(sample_label_filepath.c_str());
@@ -329,7 +331,7 @@ void MeshViewerCore::train()
 			std::string mesh_name = std::string(file_info.baseName().toLocal8Bit());
 			std::string snapshot_filepath = FLAGS_output_path + std::string("/") + mesh_name;
 
-			bool ret = load_object_info(mesh_, cuboid_structure_, mesh_filepath.c_str(), true, false);
+			bool ret = load_object_info(mesh_, cuboid_structure_, mesh_filepath.c_str(), true, false, false);
 			if (!ret) continue;
 
 			mesh_name_list_file << mesh_name << std::endl;
@@ -668,7 +670,7 @@ void MeshViewerCore::predict()
 
 
 	//
-	ret = load_object_info(mesh_, cuboid_structure_, mesh_filepath.c_str(), false, true);
+	ret = load_object_info(mesh_, cuboid_structure_, mesh_filepath.c_str(), false, true, true);
 	if (!ret) return;
 	set_modelview_matrix(occlusion_modelview_matrix, false);
 	remove_occluded_points();
@@ -686,7 +688,7 @@ void MeshViewerCore::predict()
 	//
 
 
-	ret = load_object_info(mesh_, cuboid_structure_, mesh_filepath.c_str(), false, false);
+	ret = load_object_info(mesh_, cuboid_structure_, mesh_filepath.c_str(), false, true, false);
 	if (!ret) return;
 
 	std::cout << " - Remove occluded points." << std::endl;
@@ -913,7 +915,7 @@ void MeshViewerCore::reconstruct(
 	// NOTE:
 	// Load dense sample points.
 	ret = load_object_info(ground_truth_mesh, ground_truth_cuboid_structure,
-		_mesh_filepath, true, true);
+		_mesh_filepath, true, false, true);
 	assert(ret);
 	MeshCuboidEvaluator evaluator(&ground_truth_cuboid_structure);
 	//
@@ -924,13 +926,7 @@ void MeshViewerCore::reconstruct(
 
 
 	// 1. Reconstruction using symmetry.
-	ret = cuboid_structure_.load_dense_sample_points(dense_sample_filepath.c_str());
-	assert(ret);
-	set_modelview_matrix(_occlusion_modelview_matrix, false);
-	remove_occluded_points();
-	set_modelview_matrix(_snapshot_modelview_matrix);
-
-	cuboid_structure_.copy_sample_points_to_symmetric_position();
+	reconstruct_symmetry_prior(_mesh_filepath, _snapshot_modelview_matrix, _occlusion_modelview_matrix);
 
 	// NOTE:
 	// The label of reconstructed points are recorded as confidence values.
@@ -958,7 +954,7 @@ void MeshViewerCore::reconstruct(
 
 	// 2. Reconstruction using database.
 	cuboid_structure_ = cuboid_structure_copy;
-	reconstruct_using_database();
+	reconstruct_database_prior();
 
 	// NOTE:
 	// The label of reconstructed points are recorded as confidence values.
@@ -985,89 +981,12 @@ void MeshViewerCore::reconstruct(
 		
 
 	// 3. Fusion.
-	cuboid_structure_ = symmetry_reconstruction;
-	assert(symmetry_reconstruction.num_labels() == database_reconstruction.num_labels());
-	unsigned int num_labels = symmetry_reconstruction.num_labels();
-
-	for (LabelIndex label_index = 0; label_index < num_labels; ++label_index)
-	{
-		if (symmetry_reconstruction.label_cuboids_[label_index].empty()
-			|| database_reconstruction.label_cuboids_[label_index].empty()
-			|| cuboid_structure_.label_cuboids_[label_index].empty())
-			continue;
-
-		MeshCuboid *symmetry_cuboid = symmetry_reconstruction.label_cuboids_[label_index].front();
-		MeshCuboid *database_cuboid = database_reconstruction.label_cuboids_[label_index].front();
-		MeshCuboid *output_cuboid = cuboid_structure_.label_cuboids_[label_index].front();
-		assert(symmetry_cuboid);
-		assert(database_cuboid);
-		assert(output_cuboid);
-
-		if (symmetry_cuboid->num_sample_points() == 0
-			|| database_cuboid->num_sample_points() == 0)
-			continue;
-
-
-		// 1. Per-part ICP.
-		Eigen::MatrixXd symmetry_sample_points(3, symmetry_cuboid->num_sample_points());
-		Eigen::MatrixXd database_sample_points(3, database_cuboid->num_sample_points());
-
-		for (SamplePointIndex sample_point_index = 0; sample_point_index < symmetry_cuboid->num_sample_points();
-			++sample_point_index)
-		{
-			assert(symmetry_cuboid->get_sample_point(sample_point_index));
-			MyMesh::Point point = symmetry_cuboid->get_sample_point(sample_point_index)->point_;
-			for (unsigned int i = 0; i < 3; ++i)
-				symmetry_sample_points.col(sample_point_index)(i) = point[i];
-		}
-
-		for (SamplePointIndex sample_point_index = 0; sample_point_index < database_cuboid->num_sample_points();
-			++sample_point_index)
-		{
-			assert(database_cuboid->get_sample_point(sample_point_index));
-			MyMesh::Point point = database_cuboid->get_sample_point(sample_point_index)->point_;
-			for (unsigned int i = 0; i < 3; ++i)
-				database_sample_points.col(sample_point_index)(i) = point[i];
-		}
-
-		const Real neighbor_distance = FLAGS_param_sample_point_neighbor_distance * mesh_.get_object_diameter();
-
-		Eigen::Matrix3d rotation_mat;
-		Eigen::Vector3d translation_vec;
-		double icp_error = ICP::run_iterative_closest_points(database_sample_points, symmetry_sample_points,
-			rotation_mat, translation_vec, &neighbor_distance);
-		//std::cout << "ICP Error = " << icp_error << std::endl;
-
-		for (SamplePointIndex sample_point_index = 0; sample_point_index < database_cuboid->num_sample_points();
-			++sample_point_index)
-		{
-			MeshSamplePoint *sample_point = database_cuboid->get_sample_point(sample_point_index);
-			assert(sample_point);
-
-			MyMesh::Point new_point;
-			for (unsigned int i = 0; i < 3; ++i)
-				new_point[i] = database_sample_points.col(sample_point_index)[i];
-
-			MeshSamplePoint *new_sample_point = cuboid_structure_.add_sample_point(
-				new_point, sample_point->normal_);
-			output_cuboid->add_sample_point(new_sample_point);
-		}
-	}
-
-	/*
-	ret = cuboid_structure_.load_dense_sample_points(dense_sample_filepath.c_str());
-	assert(ret);
-	set_modelview_matrix(_occlusion_modelview_matrix, false);
-	remove_occluded_points();
-	set_modelview_matrix(_snapshot_modelview_matrix);
-
-	cuboid_structure_.copy_sample_points_to_symmetric_position();
-
-	std::vector<LabelIndex> reconstructed_label_indices;
-	reconstructed_label_indices.push_back(0);
-	reconstructed_label_indices.push_back(1);
-	reconstruct_using_database(&reconstructed_label_indices);
-	*/
+	cuboid_structure_ = cuboid_structure_copy;
+	//MeshViewerCore::reconstruct_fusion_simple(symmetry_reconstruction, database_reconstruction);
+	MeshViewerCore::reconstruct_fusion(_mesh_filepath,
+		_snapshot_modelview_matrix, _occlusion_modelview_matrix,
+		symmetry_reconstruction, database_reconstruction);
+	
 
 	// NOTE:
 	// The label of reconstructed points are recorded as confidence values.
@@ -1096,7 +1015,25 @@ void MeshViewerCore::reconstruct(
 	setDrawMode(CUSTOM_VIEW);
 }
 
-void MeshViewerCore::reconstruct_using_database(const std::vector<LabelIndex> *_reconstructed_label_indices)
+void MeshViewerCore::reconstruct_symmetry_prior(const char *_mesh_filepath,
+	const GLdouble *_snapshot_modelview_matrix,
+	const GLdouble *_occlusion_modelview_matrix)
+{
+	QFileInfo file_info(_mesh_filepath);
+	std::string mesh_name(file_info.baseName().toLocal8Bit());
+	std::string dense_sample_filepath = FLAGS_data_root_path + FLAGS_dense_sample_path
+		+ std::string("/") + mesh_name + std::string(".pts");
+
+	bool ret = cuboid_structure_.load_dense_sample_points(dense_sample_filepath.c_str());
+	assert(ret);
+	set_modelview_matrix(_occlusion_modelview_matrix, false);
+	remove_occluded_points();
+	set_modelview_matrix(_snapshot_modelview_matrix);
+
+	cuboid_structure_.copy_sample_points_to_symmetric_position();
+}
+
+void MeshViewerCore::reconstruct_database_prior(const std::vector<LabelIndex> *_reconstructed_label_indices)
 {
 	MyMesh example_mesh;
 	MeshCuboidStructure example_cuboid_structure(&example_mesh);
@@ -1146,7 +1083,7 @@ void MeshViewerCore::reconstruct_using_database(const std::vector<LabelIndex> *_
 		{
 			std::string mesh_filepath = std::string(file_info.filePath().toLocal8Bit());
 			bool ret = load_object_info(example_mesh, example_cuboid_structure,
-				mesh_filepath.c_str(), true, false);
+				mesh_filepath.c_str(), true, false, false);
 			if (!ret) continue;
 
 			assert(example_cuboid_structure.num_labels() == num_labels);
@@ -1218,7 +1155,7 @@ void MeshViewerCore::reconstruct_using_database(const std::vector<LabelIndex> *_
 		// NOTE:
 		// Load dense sample points.
 		bool ret = load_object_info(example_mesh, example_cuboid_structure,
-			mesh_filepath.c_str(), true, true);
+			mesh_filepath.c_str(), true, false, true);
 		assert(ret);
 
 		assert(cuboid_structure_.label_cuboids_[label_index].size() <= 1);
@@ -1288,6 +1225,95 @@ void MeshViewerCore::reconstruct_using_database(const std::vector<LabelIndex> *_
 
 		std::cout << "Done." << std::endl;
 	}
+}
+
+void MeshViewerCore::reconstruct_fusion_simple(
+	const MeshCuboidStructure &_symmetry_reconstruction,
+	const MeshCuboidStructure &_database_reconstruction)
+{
+	cuboid_structure_ = _symmetry_reconstruction;
+	assert(_symmetry_reconstruction.num_labels() == _database_reconstruction.num_labels());
+	unsigned int num_labels = _symmetry_reconstruction.num_labels();
+
+	for (LabelIndex label_index = 0; label_index < num_labels; ++label_index)
+	{
+		if (_symmetry_reconstruction.label_cuboids_[label_index].empty()
+			|| _database_reconstruction.label_cuboids_[label_index].empty()
+			|| cuboid_structure_.label_cuboids_[label_index].empty())
+			continue;
+
+		MeshCuboid *symmetry_cuboid = _symmetry_reconstruction.label_cuboids_[label_index].front();
+		MeshCuboid *database_cuboid = _database_reconstruction.label_cuboids_[label_index].front();
+		MeshCuboid *output_cuboid = cuboid_structure_.label_cuboids_[label_index].front();
+		assert(symmetry_cuboid);
+		assert(database_cuboid);
+		assert(output_cuboid);
+
+		if (symmetry_cuboid->num_sample_points() == 0
+			|| database_cuboid->num_sample_points() == 0)
+			continue;
+
+
+		// 1. Per-part ICP.
+		Eigen::MatrixXd symmetry_sample_points(3, symmetry_cuboid->num_sample_points());
+		Eigen::MatrixXd database_sample_points(3, database_cuboid->num_sample_points());
+
+		for (SamplePointIndex sample_point_index = 0; sample_point_index < symmetry_cuboid->num_sample_points();
+			++sample_point_index)
+		{
+			assert(symmetry_cuboid->get_sample_point(sample_point_index));
+			MyMesh::Point point = symmetry_cuboid->get_sample_point(sample_point_index)->point_;
+			for (unsigned int i = 0; i < 3; ++i)
+				symmetry_sample_points.col(sample_point_index)(i) = point[i];
+		}
+
+		for (SamplePointIndex sample_point_index = 0; sample_point_index < database_cuboid->num_sample_points();
+			++sample_point_index)
+		{
+			assert(database_cuboid->get_sample_point(sample_point_index));
+			MyMesh::Point point = database_cuboid->get_sample_point(sample_point_index)->point_;
+			for (unsigned int i = 0; i < 3; ++i)
+				database_sample_points.col(sample_point_index)(i) = point[i];
+		}
+
+		const Real neighbor_distance = FLAGS_param_sample_point_neighbor_distance * mesh_.get_object_diameter();
+
+		Eigen::Matrix3d rotation_mat;
+		Eigen::Vector3d translation_vec;
+		double icp_error = ICP::run_iterative_closest_points(database_sample_points, symmetry_sample_points,
+			rotation_mat, translation_vec, &neighbor_distance);
+		//std::cout << "ICP Error = " << icp_error << std::endl;
+
+		for (SamplePointIndex sample_point_index = 0; sample_point_index < database_cuboid->num_sample_points();
+			++sample_point_index)
+		{
+			MeshSamplePoint *sample_point = database_cuboid->get_sample_point(sample_point_index);
+			assert(sample_point);
+
+			MyMesh::Point new_point;
+			for (unsigned int i = 0; i < 3; ++i)
+				new_point[i] = database_sample_points.col(sample_point_index)[i];
+
+			MeshSamplePoint *new_sample_point = cuboid_structure_.add_sample_point(
+				new_point, sample_point->normal_);
+			output_cuboid->add_sample_point(new_sample_point);
+		}
+	}
+
+	/*
+	ret = cuboid_structure_.load_dense_sample_points(dense_sample_filepath.c_str());
+	assert(ret);
+	set_modelview_matrix(_occlusion_modelview_matrix, false);
+	remove_occluded_points();
+	set_modelview_matrix(_snapshot_modelview_matrix);
+
+	cuboid_structure_.copy_sample_points_to_symmetric_position();
+
+	std::vector<LabelIndex> reconstructed_label_indices;
+	reconstructed_label_indices.push_back(0);
+	reconstructed_label_indices.push_back(1);
+	reconstruct_using_database(&reconstructed_label_indices);
+	*/
 }
 
 void MeshViewerCore::batch_render_point_clusters()

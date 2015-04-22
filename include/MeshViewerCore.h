@@ -81,6 +81,7 @@ private:
 		MeshCuboidStructure &_cuboid_structure,
 		const char* _mesh_filepath,
 		bool _load_training_data,
+		bool _load_prediction_data,
 		bool _load_dense_samples);
 
 	bool load_result_info(
@@ -97,8 +98,25 @@ private:
 		const GLdouble *_occlusion_modelview_matrix,
 		const char *_output_file_prefix);
 
-	void reconstruct_using_database(
+	void reconstruct_symmetry_prior(
+		const char *_mesh_filepath,
+		const GLdouble *_snapshot_modelview_matrix,
+		const GLdouble *_occlusion_modelview_matrix);
+
+	void reconstruct_database_prior(
 		const std::vector<LabelIndex> *_reconstructed_label_indices = NULL);
+
+	void reconstruct_fusion_simple(
+		const MeshCuboidStructure &_symmetry_reconstruction,
+		const MeshCuboidStructure &_database_reconstruction);
+
+	void reconstruct_fusion(
+		const char *_mesh_filepath,
+		const GLdouble *_snapshot_modelview_matrix,
+		const GLdouble *_occlusion_modelview_matrix,
+		const MeshCuboidStructure &_symmetry_reconstruction,
+		const MeshCuboidStructure &_database_reconstruction);
+
 
 	void set_view_direction();
 

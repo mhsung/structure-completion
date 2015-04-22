@@ -5,6 +5,7 @@
 #include <sstream>
 #include <Eigen/Geometry>
 #include <QFileInfo>
+#include <MRFEnergy.h>
 
 
 typedef OpenMesh::Vec3i VoxelIndex3D;
@@ -278,18 +279,27 @@ void MeshViewerCore::run_test()
 	setDrawMode(CUSTOM_VIEW);
 
 	bool ret;
-	std::string mesh_name("4064");
-	std::string exp_root_path = "C:/project/app/cuboid-prediction/experiments/exp1_assembly_chairs/output/";
+	std::string mesh_name("4665");
+	std::string exp_root_path = "C:/project/app/cuboid-prediction/experiments/exp5_assembly_chairs/output/";
 
 	std::string mesh_filepath = FLAGS_data_root_path + FLAGS_mesh_path + std::string("/") + mesh_name + std::string(".off");
 	std::string sample_filepath = FLAGS_data_root_path + FLAGS_sample_path + std::string("/") + mesh_name + std::string(".pts");
-	std::string cuboid_filepath = exp_root_path + std::string("/") + mesh_name + std::string("_0.arff");
 
-	std::string symmetry_sample_filepath = exp_root_path + std::string("/") + mesh_name + std::string("_0_symmetry.pts");
-	std::string symmetry_sample_label_filepath = exp_root_path + std::string("/") + mesh_name + std::string("_0_symmetry_label.arff");
+	std::string cuboid_filepath = exp_root_path + std::string("/") + mesh_name
+		+ std::string("/") + mesh_name + std::string("_0.arff");
+
+	std::string symmetry_sample_filepath = exp_root_path + std::string("/") + mesh_name
+		+ std::string("/") + mesh_name + std::string("_0_symmetry.pts");
+	std::string symmetry_sample_label_filepath = exp_root_path + std::string("/") + mesh_name
+		+ std::string("/") + mesh_name + std::string("_0_symmetry_label.arff");
 	
-	std::string database_sample_filepath = exp_root_path + std::string("/") + mesh_name + std::string("_0_database.pts");
-	std::string database_sample_label_filepath = exp_root_path + std::string("/") + mesh_name + std::string("_0_database_label.arff");
+	std::string database_sample_filepath = exp_root_path + std::string("/") + mesh_name
+		+ std::string("/") + mesh_name + std::string("_0_database.pts");
+	std::string database_sample_label_filepath = exp_root_path + std::string("/") + mesh_name
+		+ std::string("/") + mesh_name + std::string("_0_database_label.arff");
+
+	std::string pose_filename = exp_root_path + std::string("../pose.txt");
+	std::string occlusion_pose_filename = exp_root_path + std::string("../occlusion_pose.txt");
 
 
 	double snapshot_modelview_matrix[16];
@@ -299,16 +309,11 @@ void MeshViewerCore::run_test()
 		mesh_filepath.c_str(), sample_filepath.c_str(), NULL, NULL);
 	MeshCuboidStructure input_points = cuboid_structure_;
 
-	open_modelview_matrix_file(FLAGS_pose_filename.c_str());
+	open_modelview_matrix_file(pose_filename.c_str());
 	memcpy(snapshot_modelview_matrix, modelview_matrix(), 16 * sizeof(double));
 
-	if (FLAGS_occlusion_pose_filename == "")
-		set_random_view_direction(true);
-	else
-		open_modelview_matrix_file(FLAGS_occlusion_pose_filename.c_str());
+	open_modelview_matrix_file(occlusion_pose_filename.c_str());
 	memcpy(occlusion_modelview_matrix, modelview_matrix(), 16 * sizeof(double));
-
-	set_modelview_matrix(snapshot_modelview_matrix);
 
 
 	ret = load_result_info(mesh_, cuboid_structure_,
@@ -321,23 +326,57 @@ void MeshViewerCore::run_test()
 		database_sample_label_filepath.c_str(), cuboid_filepath.c_str());
 	MeshCuboidStructure database_reconstruction = cuboid_structure_;
 
-	cuboid_structure_.clear_sample_points();
-	const Real radius = FLAGS_param_occlusion_test_neighbor_distance
-		* cuboid_structure_.mesh_->get_object_diameter();
+	updateGL();
+
+	reconstruct_fusion(mesh_filepath.c_str(),
+		snapshot_modelview_matrix,
+		occlusion_modelview_matrix,
+		symmetry_reconstruction,
+		database_reconstruction);
 	
 
-	assert(symmetry_reconstruction.num_labels() == database_reconstruction.num_labels());
-	unsigned int num_labels = symmetry_reconstruction.num_labels();
+	std::cout << "[Symmetry] # of points = " << symmetry_reconstruction.num_sample_points() << std::endl;
+	std::cout << "[Database] # of points = " << database_reconstruction.num_sample_points() << std::endl;
+	std::cout << "[Output] # of points = " << cuboid_structure_.num_sample_points() << std::endl;
+
+	cuboid_structure_.save_sample_points_to_ply("test1");
+
+	set_modelview_matrix(snapshot_modelview_matrix);
+	setDrawMode(COLORED_POINT_SAMPLES);
+	updateGL();
+	snapshot("test_1");
+}
+
+
+void MeshViewerCore::reconstruct_fusion(const char *_mesh_filepath,
+	const GLdouble *_snapshot_modelview_matrix,
+	const GLdouble *_occlusion_modelview_matrix,
+	const MeshCuboidStructure &_symmetry_reconstruction,
+	const MeshCuboidStructure &_database_reconstruction)
+{
+	assert(_symmetry_reconstruction.num_labels() == _database_reconstruction.num_labels());
+
+	bool ret;
+	const Real radius = FLAGS_param_occlusion_test_neighbor_distance
+		* cuboid_structure_.mesh_->get_object_diameter();
+
+	MyMesh original_mesh;
+	MeshCuboidStructure original_points(&original_mesh);
+	ret = load_object_info(original_mesh, original_points, _mesh_filepath, false, false, false);
+
+	cuboid_structure_.clear_sample_points();
+	
+	unsigned int num_labels = _symmetry_reconstruction.num_labels();
 
 	for (LabelIndex label_index = 0; label_index < num_labels; ++label_index)
 	{
-		if (symmetry_reconstruction.label_cuboids_[label_index].empty()
-			|| database_reconstruction.label_cuboids_[label_index].empty()
+		if (_symmetry_reconstruction.label_cuboids_[label_index].empty()
+			|| _database_reconstruction.label_cuboids_[label_index].empty()
 			|| cuboid_structure_.label_cuboids_[label_index].empty())
 			continue;
 
-		MeshCuboid *symmetry_cuboid = symmetry_reconstruction.label_cuboids_[label_index].front();
-		MeshCuboid *database_cuboid = database_reconstruction.label_cuboids_[label_index].front();
+		MeshCuboid *symmetry_cuboid = _symmetry_reconstruction.label_cuboids_[label_index].front();
+		MeshCuboid *database_cuboid = _database_reconstruction.label_cuboids_[label_index].front();
 		MeshCuboid *output_cuboid = cuboid_structure_.label_cuboids_[label_index].front();
 		assert(symmetry_cuboid);
 		assert(database_cuboid);
@@ -390,17 +429,19 @@ void MeshViewerCore::run_test()
 
 
 		// 2. Voxel visibility test.
-		Eigen::Vector3d bbox_min_vec = symmetry_sample_points.rowwise().minCoeff();
-		Eigen::Vector3d bbox_max_vec = symmetry_sample_points.rowwise().maxCoeff();
+		Eigen::Vector3d symmetry_bbox_min_vec = symmetry_sample_points.rowwise().minCoeff();
+		Eigen::Vector3d symmetry_bbox_max_vec = symmetry_sample_points.rowwise().maxCoeff();
+		Eigen::Vector3d database_bbox_min_vec = database_sample_points.rowwise().minCoeff();
+		Eigen::Vector3d database_bbox_max_vec = database_sample_points.rowwise().maxCoeff();
 
 		MyMesh::Point bbox_min, bbox_max;
 		for (unsigned int i = 0; i < 3; ++i)
 		{
-			bbox_min[i] = bbox_min_vec[i];
-			bbox_max[i] = bbox_max_vec[i];
+			bbox_min[i] = std::min(symmetry_bbox_min_vec[i], database_bbox_min_vec[i]);
+			bbox_max[i] = std::min(symmetry_bbox_max_vec[i], database_bbox_max_vec[i]);
 		}
 
-		VoxelGrid voxels(bbox_min, bbox_max, 0.5 * radius);
+		VoxelGrid voxels(bbox_min, bbox_max, radius);
 
 		std::vector<MyMesh::Point> voxel_centers;
 		std::vector<Real> voxel_visibility_values;
@@ -408,12 +449,63 @@ void MeshViewerCore::run_test()
 
 		std::cout << "Compute visibility values... ";
 		MeshCuboid::compute_cuboid_surface_point_visibility(
-			occlusion_modelview_matrix, radius, input_points.sample_points_,
+			_occlusion_modelview_matrix, radius, original_points.sample_points_,
 			voxel_centers, NULL, voxel_visibility_values);
 		std::cout << "Done." << std::endl;
 
 
-		// 3. Voxel filling.
+		// 3. Denoising (MRF).
+		MRFEnergy<TypeBinary>* mrf;
+		MRFEnergy<TypeBinary>::NodeId* nodes;
+		MRFEnergy<TypeBinary>::Options options;
+		TypeBinary::REAL energy, lowerBound;
+
+		const int nodeNum = voxels.n_voxels(); // number of nodes
+		mrf = new MRFEnergy<TypeBinary>(TypeBinary::GlobalSize());
+		nodes = new MRFEnergy<TypeBinary>::NodeId[nodeNum];
+
+		// construct energy
+		for (unsigned int voxel_index = 0; voxel_index < voxels.n_voxels(); ++voxel_index)
+		{
+			nodes[voxel_index] = mrf->AddNode(TypeBinary::LocalSize(), TypeBinary::NodeData(
+				voxel_visibility_values[voxel_index], 1.0 - voxel_visibility_values[voxel_index]));
+		}
+
+		for (unsigned int voxel_index = 0; voxel_index < voxels.n_voxels(); ++voxel_index)
+		{
+			VoxelIndex3D xyz_index = voxels.get_voxel_index(voxel_index);
+
+			for (unsigned int axis_index = 0; axis_index < 3; ++axis_index)
+			{
+				VoxelIndex3D n_xyz_index = xyz_index;
+				if (n_xyz_index[axis_index] + 1 == voxels.n_axis_voxels(axis_index))
+					continue;
+
+				++n_xyz_index[axis_index];
+				unsigned int n_voxel_index = voxels.get_voxel_index(n_xyz_index);
+				assert(voxel_index < n_voxel_index);
+				assert(n_voxel_index < voxels.n_voxels());
+				mrf->AddEdge(nodes[voxel_index], nodes[n_voxel_index], TypeBinary::EdgeData(0, 0.5, 0.5, 0));
+			}
+		}
+
+		/////////////////////// TRW-S algorithm //////////////////////
+		options.m_iterMax = 30; // maximum number of iterations
+		mrf->Minimize_TRW_S(options, lowerBound, energy);
+
+		// read solution
+		std::vector<Real> smoothed_voxel_visibility_values(voxels.n_voxels(), 0.0);
+		for (unsigned int voxel_index = 0; voxel_index < voxels.n_voxels(); ++voxel_index)
+		{
+			smoothed_voxel_visibility_values[voxel_index] =
+				static_cast<Real>(mrf->GetSolution(nodes[voxel_index]));
+		}
+
+		delete nodes;
+		delete mrf;
+
+
+		// 4. Voxel filling.
 		std::cout << "Filling voxels... ";
 		std::vector<int> symmetry_points_to_voxels;
 		std::vector< std::list<int> > symmetry_voxels_to_points;
@@ -434,7 +526,7 @@ void MeshViewerCore::run_test()
 			const std::list<int>& symmetry_voxel_point_indices = symmetry_voxels_to_points[voxel_index];
 			const std::list<int>& database_voxel_point_indices = database_voxels_to_points[voxel_index];
 
-			//if (voxel_visibility_values[voxel_index] > 0.5)
+			if (smoothed_voxel_visibility_values[voxel_index] > 0.5)
 			{
 				for (std::list<int>::const_iterator it = symmetry_voxel_point_indices.begin();
 					it != symmetry_voxel_point_indices.end(); ++it)
@@ -448,7 +540,7 @@ void MeshViewerCore::run_test()
 					output_cuboid->add_sample_point(new_sample_point);
 				}
 			}
-			//else
+			else
 			{
 				for (std::list<int>::const_iterator it = database_voxel_point_indices.begin();
 					it != database_voxel_point_indices.end(); ++it)
@@ -463,22 +555,7 @@ void MeshViewerCore::run_test()
 				}
 			}
 		}
+
 		std::cout << "Done." << std::endl;
 	}
-
-	std::cout << "[Symmetry] # of points = " << symmetry_reconstruction.num_sample_points() << std::endl;
-	std::cout << "[Database] # of points = " << database_reconstruction.num_sample_points() << std::endl;
-	std::cout << "[Output] # of points = " << cuboid_structure_.num_sample_points() << std::endl;
-
-	cuboid_structure_.save_sample_points_to_ply("test1");
-	database_reconstruction.save_sample_points_to_ply("test2");
-
-	setDrawMode(COLORED_POINT_SAMPLES);
-	updateGL();
-	snapshot("test_1");
-
-	//cuboid_structure_.clear_cuboids();
-	//setDrawMode(CUSTOM_VIEW);
-	//updateGL();
-	//snapshot("test_2");
 }
