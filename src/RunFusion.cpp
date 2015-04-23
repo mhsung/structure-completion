@@ -118,8 +118,8 @@ bool MeshViewerCore::load_result_info(
 			if (!_cuboid_structure.label_cuboids_[label_index].empty())
 				cuboid = _cuboid_structure.label_cuboids_[label_index].front();
 
-			assert(cuboid);
-			cuboid->add_sample_point(sample_point);
+			if (cuboid)
+				cuboid->add_sample_point(sample_point);
 		}
 	}
 
@@ -133,11 +133,12 @@ void MeshViewerCore::run_test()
 	setDrawMode(CUSTOM_VIEW);
 
 	bool ret;
-	std::string mesh_name("4665");
-	std::string exp_root_path = "C:/project/app/cuboid-prediction/experiments/exp5_assembly_chairs/output/";
+	std::string mesh_name("7018");
+	std::string exp_root_path = "C:/project/app/cuboid-prediction/experiments/exp6_assembly_chairs/output/";
 
 	std::string mesh_filepath = FLAGS_data_root_path + FLAGS_mesh_path + std::string("/") + mesh_name + std::string(".off");
 	std::string sample_filepath = FLAGS_data_root_path + FLAGS_sample_path + std::string("/") + mesh_name + std::string(".pts");
+	std::string sample_label_filepath = FLAGS_data_root_path + FLAGS_sample_label_path + std::string("/") + mesh_name + std::string(".arff");
 
 	std::string cuboid_filepath = exp_root_path + std::string("/") + mesh_name
 		+ std::string("/") + mesh_name + std::string("_0.arff");
@@ -160,8 +161,9 @@ void MeshViewerCore::run_test()
 	double occlusion_modelview_matrix[16];
 
 	ret = load_result_info(mesh_, cuboid_structure_,
-		mesh_filepath.c_str(), sample_filepath.c_str(), NULL, NULL);
-	MeshCuboidStructure input_points = cuboid_structure_;
+		mesh_filepath.c_str(), sample_filepath.c_str(),
+		sample_label_filepath.c_str(), cuboid_filepath.c_str());
+	updateGL();
 
 	open_modelview_matrix_file(pose_filename.c_str());
 	memcpy(snapshot_modelview_matrix, modelview_matrix(), 16 * sizeof(double));
@@ -170,29 +172,28 @@ void MeshViewerCore::run_test()
 	memcpy(occlusion_modelview_matrix, modelview_matrix(), 16 * sizeof(double));
 
 
-	ret = load_result_info(mesh_, cuboid_structure_,
+	MyMesh symmetry_mesh;
+	MeshCuboidStructure symmetry_cuboid_structure(&symmetry_mesh);
+	ret = load_result_info(symmetry_mesh, symmetry_cuboid_structure,
 		mesh_filepath.c_str(), symmetry_sample_filepath.c_str(),
 		symmetry_sample_label_filepath.c_str(), cuboid_filepath.c_str());
-	MeshCuboidStructure symmetry_reconstruction = cuboid_structure_;
 
-	ret = load_result_info(mesh_, cuboid_structure_,
+	MyMesh database_mesh;
+	MeshCuboidStructure database_cuboid_structure(&database_mesh);
+	ret = load_result_info(database_mesh, database_cuboid_structure,
 		mesh_filepath.c_str(), database_sample_filepath.c_str(),
 		database_sample_label_filepath.c_str(), cuboid_filepath.c_str());
-	MeshCuboidStructure database_reconstruction = cuboid_structure_;
 
-	MyMesh original_mesh;
-	MeshCuboidStructure original_cuboid_structure(&original_mesh);
-	ret = load_object_info(original_mesh, original_cuboid_structure, mesh_filepath.c_str(), false, false, false);
-
-	updateGL();
+	MeshCuboidStructure original_cuboid_structure = cuboid_structure_;
 
 	reconstruct_fusion(mesh_filepath.c_str(),
 		snapshot_modelview_matrix, occlusion_modelview_matrix,
-		original_cuboid_structure, symmetry_reconstruction, database_reconstruction, cuboid_structure_);
+		original_cuboid_structure, symmetry_cuboid_structure,
+		database_cuboid_structure, cuboid_structure_);
 	
 
-	std::cout << "[Symmetry] # of points = " << symmetry_reconstruction.num_sample_points() << std::endl;
-	std::cout << "[Database] # of points = " << database_reconstruction.num_sample_points() << std::endl;
+	std::cout << "[Symmetry] # of points = " << symmetry_cuboid_structure.num_sample_points() << std::endl;
+	std::cout << "[Database] # of points = " << database_cuboid_structure.num_sample_points() << std::endl;
 	std::cout << "[Output] # of points = " << cuboid_structure_.num_sample_points() << std::endl;
 
 	cuboid_structure_.save_sample_points_to_ply("test1");

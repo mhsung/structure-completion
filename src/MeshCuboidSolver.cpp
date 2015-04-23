@@ -2121,8 +2121,11 @@ void reconstruct_fusion(const char *_mesh_filepath,
 	
 	_output_cuboid_structure.clear_sample_points();
 
-	unsigned int num_labels = _symmetry_reconstruction.num_labels();
+	// Check whether a sample point in the symmetry reconstruction is visited or not.
+	bool *is_symmetry_point_visited = new bool[_symmetry_reconstruction.num_sample_points()];
+	memset(is_symmetry_point_visited, false, _symmetry_reconstruction.num_sample_points() * sizeof(bool));
 
+	unsigned int num_labels = _symmetry_reconstruction.num_labels();
 	for (LabelIndex label_index = 0; label_index < num_labels; ++label_index)
 	{
 		if (_symmetry_reconstruction.label_cuboids_[label_index].empty()
@@ -2149,16 +2152,22 @@ void reconstruct_fusion(const char *_mesh_filepath,
 		for (SamplePointIndex sample_point_index = 0; sample_point_index < symmetry_cuboid->num_sample_points();
 			++sample_point_index)
 		{
-			assert(symmetry_cuboid->get_sample_point(sample_point_index));
+			MeshSamplePoint *sample_point = symmetry_cuboid->get_sample_point(sample_point_index);
+			assert(sample_point);
 			MyMesh::Point point = symmetry_cuboid->get_sample_point(sample_point_index)->point_;
 			for (unsigned int i = 0; i < 3; ++i)
 				symmetry_sample_points.col(sample_point_index)(i) = point[i];
+
+			//
+			is_symmetry_point_visited[sample_point->sample_point_index_] = true;
+			//
 		}
 
 		for (SamplePointIndex sample_point_index = 0; sample_point_index < database_cuboid->num_sample_points();
 			++sample_point_index)
 		{
-			assert(database_cuboid->get_sample_point(sample_point_index));
+			MeshSamplePoint *sample_point = database_cuboid->get_sample_point(sample_point_index);
+			assert(sample_point);
 			MyMesh::Point point = database_cuboid->get_sample_point(sample_point_index)->point_;
 			for (unsigned int i = 0; i < 3; ++i)
 				database_sample_points.col(sample_point_index)(i) = point[i];
@@ -2168,7 +2177,24 @@ void reconstruct_fusion(const char *_mesh_filepath,
 		Eigen::Vector3d translation_vec;
 		double icp_error = ICP::run_iterative_closest_points(database_sample_points, symmetry_sample_points,
 			rotation_mat, translation_vec, &neighbor_distance);
-		//std::cout << "ICP Error = " << icp_error << std::endl;
+
+		if (translation_vec.norm() > 2 * neighbor_distance)
+			icp_error = -1;
+
+		// If ICP failed, recover the original database point cloud.
+		if (icp_error < 0)
+		{
+			for (SamplePointIndex sample_point_index = 0; sample_point_index < database_cuboid->num_sample_points();
+				++sample_point_index)
+			{
+				MeshSamplePoint *sample_point = database_cuboid->get_sample_point(sample_point_index);
+				assert(sample_point);
+				MyMesh::Point point = database_cuboid->get_sample_point(sample_point_index)->point_;
+				for (unsigned int i = 0; i < 3; ++i)
+					database_sample_points.col(sample_point_index)(i) = point[i];
+			}
+		}
+
 
 		for (SamplePointIndex sample_point_index = 0; sample_point_index < database_cuboid->num_sample_points();
 			++sample_point_index)
@@ -2238,7 +2264,7 @@ void reconstruct_fusion(const char *_mesh_filepath,
 				unsigned int n_voxel_index = voxels.get_voxel_index(n_xyz_index);
 				assert(voxel_index < n_voxel_index);
 				assert(n_voxel_index < voxels.n_voxels());
-				mrf->AddEdge(nodes[voxel_index], nodes[n_voxel_index], TypeBinary::EdgeData(0, 0.5, 0.5, 0));
+				mrf->AddEdge(nodes[voxel_index], nodes[n_voxel_index], TypeBinary::EdgeData(0, 1.0, 1.0, 0));
 			}
 		}
 
@@ -2289,10 +2315,6 @@ void reconstruct_fusion(const char *_mesh_filepath,
 
 					MeshSamplePoint *new_sample_point = _output_cuboid_structure.add_sample_point(
 						sample_point->point_, sample_point->normal_);
-					// NOTICE:
-					// Assigned for rendering which part comes from which prior.
-					// Will be reassigned in the evaluation process.
-					new_sample_point->error_ = 0.0;
 					output_cuboid->add_sample_point(new_sample_point);
 				}
 			}
@@ -2306,10 +2328,6 @@ void reconstruct_fusion(const char *_mesh_filepath,
 
 					MeshSamplePoint *new_sample_point = _output_cuboid_structure.add_sample_point(
 						sample_point->point_, sample_point->normal_);
-					// NOTICE:
-					// Assigned for rendering which part comes from which prior.
-					// Will be reassigned in the evaluation process.
-					new_sample_point->error_ = 1.0;
 					output_cuboid->add_sample_point(new_sample_point);
 				}
 			}
@@ -2317,6 +2335,21 @@ void reconstruct_fusion(const char *_mesh_filepath,
 
 		std::cout << "Done." << std::endl;
 	}
+
+	// Add unvisited (unsegmented) sample points in symmetry reconstruction.
+	for (SamplePointIndex sample_point_index = 0; sample_point_index < _symmetry_reconstruction.num_sample_points();
+		++sample_point_index)
+	{
+		if (!is_symmetry_point_visited[sample_point_index])
+		{
+			const MeshSamplePoint *sample_point = _symmetry_reconstruction.sample_points_[sample_point_index];
+			assert(sample_point);
+			MeshSamplePoint *new_sample_point = _output_cuboid_structure.add_sample_point(
+				sample_point->point_, sample_point->normal_);
+		}
+	}
+
+	delete[] is_symmetry_point_visited;
 }
 
 /*
