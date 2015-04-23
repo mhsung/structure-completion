@@ -666,8 +666,12 @@ void MeshViewerCore::predict()
 	if (FLAGS_occlusion_pose_filename == "")
 		set_random_view_direction(true);
 	else
-		open_modelview_matrix_file(FLAGS_occlusion_pose_filename.c_str());
+	{
+		ret = open_modelview_matrix_file(FLAGS_occlusion_pose_filename.c_str());
+		assert(ret);
+	}
 	memcpy(occlusion_modelview_matrix, modelview_matrix(), 16 * sizeof(double));
+	save_modelview_matrix_file((mesh_output_path + std::string("occlusion_pose.txt")).c_str());
 
 
 	//

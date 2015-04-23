@@ -36,9 +36,9 @@ public:
 	MeshViewerCore(GLViewerBase &_widget);
 	virtual ~MeshViewerCore();
 
-	void open_modelview_matrix_file(const char* _filename);
-	void save_modelview_matrix_file(const char* _filename);
-	void save_projection_matrix_file(const char* _filename);
+	bool open_modelview_matrix_file(const char* _filename);
+	bool save_modelview_matrix_file(const char* _filename);
+	bool save_projection_matrix_file(const char* _filename);
 
 	void open_color_map_file(const char* _filename);
 	void save_color_map_file(const char* _filename);

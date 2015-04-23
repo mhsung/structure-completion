@@ -38,14 +38,14 @@ MeshViewerCore::~MeshViewerCore()
 	//
 }
 
-void MeshViewerCore::open_modelview_matrix_file(const char* _filename)
+bool MeshViewerCore::open_modelview_matrix_file(const char* _filename)
 {
 	assert(_filename);
 	std::ifstream file(_filename);
 	if (!file)
 	{
 		std::cerr << "Can't open file: \"" << _filename << "\"" << std::endl;
-		return;
+		return false;
 	}
 	std::cout << "Loading " << _filename << "..." << std::endl;
 
@@ -75,22 +75,23 @@ void MeshViewerCore::open_modelview_matrix_file(const char* _filename)
 	if (count < num_values)
 	{
 		std::cout << "Error: Number of values are not enough." << std::endl;
-		return;
+		return false;
 	}
 
 	file.close();
 	set_modelview_matrix(matrix);
 	std::cout << "Done." << std::endl;
+	return true;
 }
 
-void MeshViewerCore::save_modelview_matrix_file(const char* _filename)
+bool MeshViewerCore::save_modelview_matrix_file(const char* _filename)
 {
 	assert(_filename);
 	std::ofstream file(_filename);
 	if(!file)
 	{
 		std::cerr << "Can't save file: \"" << _filename << "\"" << std::endl;
-		return;
+		return false;
 	}
 	std::cout << "Saving " << _filename << "..." << std::endl;
 
@@ -103,16 +104,17 @@ void MeshViewerCore::save_modelview_matrix_file(const char* _filename)
 
 	file.close();
 	std::cout << "Done." << std::endl;
+	return true;
 }
 
-void MeshViewerCore::save_projection_matrix_file(const char* _filename)
+bool MeshViewerCore::save_projection_matrix_file(const char* _filename)
 {
 	assert(_filename);
 	std::ofstream file(_filename);
 	if (!file)
 	{
 		std::cerr << "Can't save file: \"" << _filename << "\"" << std::endl;
-		return;
+		return false;
 	}
 	std::cout << "Saving " << _filename << "..." << std::endl;
 
@@ -125,6 +127,7 @@ void MeshViewerCore::save_projection_matrix_file(const char* _filename)
 
 	file.close();
 	std::cout << "Done." << std::endl;
+	return true;
 }
 
 void MeshViewerCore::open_color_map_file(const char* _filename)

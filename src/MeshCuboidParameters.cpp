@@ -49,8 +49,8 @@ DEFINE_string(label_info_filename, "regions.txt", "");
 DEFINE_string(label_symmetry_info_filename, "regions_symmetry.txt", "");
 DEFINE_string(symmetry_group_info_filename, "symmetry_groups.txt", "");
 DEFINE_string(pose_filename, "pose.txt", "");
-//DEFINE_string(occlusion_pose_filename, "", "");
-DEFINE_string(occlusion_pose_filename, "occlusion_pose.txt", "");
+DEFINE_string(occlusion_pose_filename, "", "");
+//DEFINE_string(occlusion_pose_filename, "occlusion_pose.txt", "");
 
 DEFINE_string(single_feature_filename_prefix, "single_feature_", "");
 DEFINE_string(pair_feature_filename_prefix, "pair_feature_", "");
