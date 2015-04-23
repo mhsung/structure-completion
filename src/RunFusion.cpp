@@ -128,7 +128,6 @@ bool MeshViewerCore::load_result_info(
 	return true;
 }
 
-/*
 void MeshViewerCore::run_test()
 {
 	setDrawMode(CUSTOM_VIEW);
@@ -181,13 +180,15 @@ void MeshViewerCore::run_test()
 		database_sample_label_filepath.c_str(), cuboid_filepath.c_str());
 	MeshCuboidStructure database_reconstruction = cuboid_structure_;
 
+	MyMesh original_mesh;
+	MeshCuboidStructure original_cuboid_structure(&original_mesh);
+	ret = load_object_info(original_mesh, original_cuboid_structure, mesh_filepath.c_str(), false, false, false);
+
 	updateGL();
 
 	reconstruct_fusion(mesh_filepath.c_str(),
-		snapshot_modelview_matrix,
-		occlusion_modelview_matrix,
-		symmetry_reconstruction,
-		database_reconstruction);
+		snapshot_modelview_matrix, occlusion_modelview_matrix,
+		original_cuboid_structure, symmetry_reconstruction, database_reconstruction, cuboid_structure_);
 	
 
 	std::cout << "[Symmetry] # of points = " << symmetry_reconstruction.num_sample_points() << std::endl;
@@ -201,4 +202,3 @@ void MeshViewerCore::run_test()
 	updateGL();
 	snapshot("test_1");
 }
-*/

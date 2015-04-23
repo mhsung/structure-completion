@@ -63,7 +63,7 @@ public:
 	void batch_render_points();
 	void print_mesh_info();
 	//void do_occlusion_test();
-	void run_test() {};
+	void run_test();
 	//
 
 	// TEST.

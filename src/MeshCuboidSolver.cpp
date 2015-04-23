@@ -2191,7 +2191,7 @@ void reconstruct_fusion(const char *_mesh_filepath,
 		for (unsigned int i = 0; i < 3; ++i)
 		{
 			bbox_min[i] = std::min(symmetry_bbox_min_vec[i], database_bbox_min_vec[i]);
-			bbox_max[i] = std::min(symmetry_bbox_max_vec[i], database_bbox_max_vec[i]);
+			bbox_max[i] = std::max(symmetry_bbox_max_vec[i], database_bbox_max_vec[i]);
 		}
 
 		VoxelGrid voxels(bbox_min, bbox_max, occlusion_radius);
@@ -2289,6 +2289,9 @@ void reconstruct_fusion(const char *_mesh_filepath,
 
 					MeshSamplePoint *new_sample_point = _output_cuboid_structure.add_sample_point(
 						sample_point->point_, sample_point->normal_);
+					// NOTICE:
+					// Assigned for rendering which part comes from which prior.
+					// Will be reassigned in the evaluation process.
 					new_sample_point->error_ = 0.0;
 					output_cuboid->add_sample_point(new_sample_point);
 				}
@@ -2303,6 +2306,9 @@ void reconstruct_fusion(const char *_mesh_filepath,
 
 					MeshSamplePoint *new_sample_point = _output_cuboid_structure.add_sample_point(
 						sample_point->point_, sample_point->normal_);
+					// NOTICE:
+					// Assigned for rendering which part comes from which prior.
+					// Will be reassigned in the evaluation process.
 					new_sample_point->error_ = 1.0;
 					output_cuboid->add_sample_point(new_sample_point);
 				}
