@@ -671,7 +671,7 @@ void MeshViewerCore::predict()
 		assert(ret);
 	}
 	memcpy(occlusion_modelview_matrix, modelview_matrix(), 16 * sizeof(double));
-	save_modelview_matrix_file((mesh_output_path + std::string("occlusion_pose.txt")).c_str());
+	save_modelview_matrix_file((mesh_output_path + std::string("/occlusion_pose.txt")).c_str());
 
 
 	//
