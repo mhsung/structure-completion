@@ -200,9 +200,8 @@ void MeshViewerCore::set_random_view_direction(bool _set_modelview_matrix)
 	static SimpleRandomCong_t rng_cong;
 	simplerandom_cong_seed(&rng_cong, FLAGS_random_view_seed);
 
-	// latitude.
-	double x_angle_min = -M_PI;
-	double x_angle_max = 0;
+	double x_angle_min = 0;
+	double x_angle_max = 2 * M_PI;
 
 	double x_angle = static_cast<double>(simplerandom_cong_next(&rng_cong))
 		/ std::numeric_limits<uint32_t>::max();
@@ -212,6 +211,18 @@ void MeshViewerCore::set_random_view_direction(bool _set_modelview_matrix)
 	x_axis_random_rotation_mat(1, 2) = -sin(x_angle);
 	x_axis_random_rotation_mat(2, 1) = sin(x_angle);
 	x_axis_random_rotation_mat(2, 2) = cos(x_angle);
+
+	double y_angle_min = 0;
+	double y_angle_max = 2 * M_PI;
+
+	double y_angle = static_cast<double>(simplerandom_cong_next(&rng_cong))
+		/ std::numeric_limits<uint32_t>::max();
+	y_angle = y_angle * (y_angle_max - y_angle_min) + y_angle_min;
+	Eigen::Matrix4d y_axis_random_rotation_mat = Eigen::Matrix4d::Identity();
+	y_axis_random_rotation_mat(2, 2) = cos(y_angle);
+	y_axis_random_rotation_mat(2, 0) = -sin(y_angle);
+	y_axis_random_rotation_mat(0, 2) = sin(y_angle);
+	y_axis_random_rotation_mat(0, 0) = cos(y_angle);
 
 	// longitude.
 	double z_angle_min = 0;
@@ -244,7 +255,7 @@ void MeshViewerCore::set_random_view_direction(bool _set_modelview_matrix)
 	translation_mat(2, 3) = z_offset;
 
 	Eigen::Matrix4d transformation_mat = translation_mat
-		* x_axis_random_rotation_mat * z_axis_random_rotation_mat * centering_mat;
+		* x_axis_random_rotation_mat * y_axis_random_rotation_mat * z_axis_random_rotation_mat * centering_mat;
 
 	// -Z direction.
 	Eigen::Vector3d view_direction = -transformation_mat.row(2).transpose().segment(0, 3);
