@@ -24,10 +24,14 @@ thumbname_width = 150
 
 #
 dataset_name = 'Assembly Chairs'
-input_path = 'C:/project/app/cuboid-prediction/experiments/exp5_assembly_chairs/output'
-output_path = 'C:/Users/Administrator/Dropbox/Public/web/exp5_assembly_chairs'
 symmetry_part_names = ['seat', 'back', 'legs', 'wheels', 'leg_column', 'armrests']
+input_path = '/home/mhsung/app/cuboid-prediction/experiments/exp7_assembly_chairs/output'
+output_path = '/home/mhsung/Dropbox/Public/web/exp7_assembly_chairs'
 
+#dataset_name = 'Assembly Airplanes'
+#symmetry_part_names = ['body', 'wings', 'tail_wings', 'fuselages', 'body']
+#input_path = '/home/mhsung/app/cuboid-prediction/experiments/exp1_assembly_airplanes/output'
+#output_path = '/home/mhsung/Dropbox/Public/web/exp1_assembly_airplanes'
 
 #
 class AttrType(Enum):
@@ -97,9 +101,11 @@ def load_instances(input_filepath, output_filepath, symemtry_part_index):
         prefix = os.path.basename(dirname)
         print prefix
 
+        is_loaded = True
+
         relative_image_filepath = []
         image_filenames = []
-        image_filenames.append(prefix + '_input.png')
+        image_filenames.append(prefix + '_view.png')
         image_filenames.append(prefix + '_0.png')
         image_filenames.append(prefix + '_0_symmetry_accuracy.png')
         image_filenames.append(prefix + '_0_symmetry_completeness.png')
@@ -109,6 +115,11 @@ def load_instances(input_filepath, output_filepath, symemtry_part_index):
         image_filenames.append(prefix + '_0_fusion_completeness.png')
 
         for image_filename in image_filenames:
+            if not os.path.exists(dirname + '/' + image_filename):
+                print 'Warning: File does not exist: "' + (dirname + '/' + image_filename) + '"'
+                is_loaded = False
+                break
+
             if not os.path.exists(output_filepath + '/' + image_filename):
                 # Copy the image.
                 shutil.copy(dirname + '/' + image_filename, output_filepath)
@@ -119,6 +130,8 @@ def load_instances(input_filepath, output_filepath, symemtry_part_index):
             # Get relative file path.
             relative_image_filepath.append('./' + image_filename)
 
+        if not is_loaded:
+            continue
 
         accuracy_values = []
         completeness_values = []
@@ -129,7 +142,6 @@ def load_instances(input_filepath, output_filepath, symemtry_part_index):
 
         for csv_filename_postfix in csv_filename_postfixes:
             csv_filename = dirname + '/' + prefix + csv_filename_postfix + '.csv'
-
             if symemtry_part_index >= 0:
             # Real per-part files.
                 csv_filename = dirname + '/' + prefix + csv_filename_postfix\
@@ -143,7 +155,6 @@ def load_instances(input_filepath, output_filepath, symemtry_part_index):
             else:
                 accuracy_values.append(all_values[0])
                 completeness_values.append(all_values[1])
-
 
         instance = OutputInstance(prefix, relative_image_filepath[0], relative_image_filepath[1],
                                   relative_image_filepath[2], relative_image_filepath[3],
@@ -200,7 +211,7 @@ def write_html_image(file, image_filepath):
 
 def write_html_part_links(file):
     file.write('Per-part Statistics: \n')
-    file.write('<a href="./all.html"> All </a>\n')
+    file.write('<a href="./index.html"> All </a>\n')
     for symmetry_part_name in symmetry_part_names:
         file.write(' - <a href="./' + symmetry_part_name + '.html"> ' + symmetry_part_name.title() + ' </a>\n')
     file.write('<p></p>\n')
@@ -304,16 +315,17 @@ def write_html_table(instances, title, filename):
 
 
 def main():
+    if not os.path.isdir(output_path):
+        os.makedirs(output_path)
+
     instances = load_instances(input_path, output_path, -1)
-    html_filename = output_path + '/all.html'
-    #html_filename = 'all.html'
+    html_filename = output_path + '/index.html'
     write_html_table(instances, dataset_name + ' (All)', html_filename)
 
     # For each part
     for i in range(len(symmetry_part_names)):
         instances = load_instances(input_path, output_path, i)
         html_filename = output_path + '/' + symmetry_part_names[i] + '.html'
-        #html_filename = symmetry_part_names[i] + '.html'
         write_html_table(instances, dataset_name + ' (' + symmetry_part_names[i].title() + ')', html_filename)
 
 
