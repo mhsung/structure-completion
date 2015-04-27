@@ -12,7 +12,8 @@ import fas
 
 
 ## Variables
-disallowParallel = True;
+disallowParallel = False;
+disallowRandomView = False;
 dataDir = "";
 expDir = "";
 
@@ -22,6 +23,7 @@ if len(sys.argv) < 3:
 	print("Usage: " + sys.argv[0] + " dataset_path experiment_path [options]");
 	print("Options:");
 	print("   -disallowParallel");
+	print("   -disallowRandomView");
 	exit();
 else:
 	dataDir = sys.argv[1];
@@ -30,6 +32,8 @@ else:
 	while i < len(sys.argv):
 		if (sys.argv[i] == "-disallowParallel"):
 			disallowParallel = True;
+		elif (sys.argv[i] == "-disallowRandomView"):
+			disallowRandomView = True;
 		else:
 			print("[ERROR] Unknown argument " + sys.argv[i]);
 			exit();
@@ -54,6 +58,10 @@ for mName in mListTest:
 	cmd += "--flagfile=arguments.txt" + " "
 	cmd += "--mesh_filename=" + mName + " "
 	cmd += "--run_prediction" + " "
+
+	if not disallowRandomView:
+		cmd += "--occlusion_pose_filename=\"\" "
+		cmd += "--random_view_seed=" + str(count) + " "
 
 	scriptFile = "script/" + mName
 

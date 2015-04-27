@@ -7,7 +7,7 @@ echo ""
 echo "Please make sure that followings are installed on your machine:"
 echo " - g++"
 echo " - gfortran"
-echo " - cmake"
+echo " - cmake (version >= 2.8.12)"
 echo " - wget"
 echo " - git"
 echo " - svn"
@@ -16,10 +16,6 @@ echo " - glew"
 
 read -p "Press any key to continue... " -n1 -s
 
-if [ ! -d "lib" ]; then
-  mkdir lib
-fi
-cd lib
 
 # ANN
 rm -rf ann-1.1.2
@@ -28,7 +24,11 @@ tar xvf ann_1.1.2.tar.gz
 rm -rf ann_1.1.2.tar.gz
 mv ann_1.1.2 ann-1.1.2
 cd ann-1.1.2
+if [[ "$OSTYPE" == "linux-gnu" ]]; then
+make linux-g++
+elif [[ "$OSTYPE" == "darwin"* ]]; then
 make macosx-g++
+fi
 cd ../
 
 # Eigen
