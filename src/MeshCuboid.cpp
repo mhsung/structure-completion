@@ -1229,13 +1229,16 @@ void MeshCuboid::compute_oriented_bbox()
 	Eigen::Vector3d translation_vec;
 
 	// Initialize (PCA).
-	Eigen::MatrixXd cov = centered_sample_points_mat * centered_sample_points_mat.adjoint();
-	Eigen::SelfAdjointEigenSolver<Eigen::MatrixXd> eig(cov);
+	//Eigen::MatrixXd cov = centered_sample_points_mat * centered_sample_points_mat.adjoint();
+	//Eigen::SelfAdjointEigenSolver<Eigen::MatrixXd> eig(cov);
+	Eigen::JacobiSVD<Eigen::MatrixXd> svd(centered_sample_points_mat, Eigen::ComputeFullU);
+
 
 	// Note:
 	// The eigenvalues are sorted in increasing order.
 	for (unsigned int axis_index = 0; axis_index < 3; ++axis_index)
-		rotation_mat.row(axis_index) = eig.eigenvectors().col(3 - axis_index - 1);
+		//rotation_mat.row(axis_index) = eig.eigenvectors().col(3 - axis_index - 1);
+		rotation_mat.row(axis_index) = svd.matrixU().col(axis_index);
 
 	// Fix z-axis direction.
 	if ((rotation_mat.row(0).cross(rotation_mat.row(1))).dot(rotation_mat.row(2)) < 0)
@@ -1248,6 +1251,7 @@ void MeshCuboid::compute_oriented_bbox()
 
 	rotate(rotation_mat, true);
 
+	/*
 	// Rotate by each axis and find the minimum size of bounding box.
 	for (unsigned int axis_index = 0; axis_index < 3; ++axis_index)
 	{
@@ -1280,6 +1284,7 @@ void MeshCuboid::compute_oriented_bbox()
 		Eigen::AngleAxisd axis_rotation(min_angle, axis_vec);
 		rotate(axis_rotation.toRotationMatrix(), true);
 	}
+	*/
 
 	//// ICP-style iterative optimization.
 	//double prev_error = std::numeric_limits<double>::max();

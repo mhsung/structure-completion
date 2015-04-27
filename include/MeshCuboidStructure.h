@@ -163,6 +163,8 @@ public:
 	std::vector< std::vector<MeshCuboid *> > label_cuboids_;
 	//std::vector< std::list<LabelIndex> > label_children_;
 
+	// FIXME:
+	// The following symmetry information should be integrated with 'label_symmetries_'.
 	std::vector< MeshCuboidSymmetryGroupInfo > symmetry_group_info_;
 	std::vector< MeshCuboidSymmetryGroup* > symmetry_groups_;
 

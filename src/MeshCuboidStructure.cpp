@@ -1584,8 +1584,6 @@ void MeshCuboidStructure::compute_label_cuboids()
 		}
 	}
 
-	split_label_cuboids();
-
 	// NOTE:
 	// Draws all boxes.
 	query_label_index_ = num_labels();

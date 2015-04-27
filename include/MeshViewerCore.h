@@ -63,7 +63,7 @@ public:
 	void batch_render_points();
 	void print_mesh_info();
 	//void do_occlusion_test();
-	void run_test();
+	void run_fusion_test();
 	//
 
 	// TEST.
@@ -76,13 +76,19 @@ public:
 
 
 private:
+	typedef enum {
+		LoadSamplePoints,
+		LoadDenseSamplePoints,
+		LoadGroundTruthData,
+		LoadTestData,
+		LoadDenseTestData,
+	} LoadObjectInfoOption;
+	
 	bool load_object_info(
 		MyMesh &_mesh,
 		MeshCuboidStructure &_cuboid_structure,
 		const char* _mesh_filepath,
-		bool _load_training_data,
-		bool _load_prediction_data,
-		bool _load_dense_samples);
+		const LoadObjectInfoOption _option);
 
 	bool load_result_info(
 		MyMesh &_mesh,
@@ -104,6 +110,7 @@ private:
 		const GLdouble *_occlusion_modelview_matrix);
 
 	void reconstruct_database_prior(
+		const char *_mesh_filepath,
 		const std::vector<LabelIndex> *_reconstructed_label_indices = NULL);
 
 	void set_view_direction();
