@@ -492,8 +492,8 @@ void segment_sample_points(
 			double label_probability = sample_point->label_index_confidence_[label_index];
 			double energy = distance * distance - lambda * std::log(label_probability);
 
-			if (cuboid->is_group_cuboid())
-				energy = FLAGS_param_max_potential;
+			//if (cuboid->is_group_cuboid())
+			//	energy = FLAGS_param_max_potential;
 
 			single_potentials(point_index, cuboid_index) = energy;
 		}

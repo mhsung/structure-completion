@@ -164,6 +164,10 @@ bool MeshViewerCore::load_result_info(
 	ret = ret & _cuboid_structure.load_label_symmetries((FLAGS_data_root_path +
 		FLAGS_label_info_path + FLAGS_label_symmetry_info_filename).c_str());
 
+	// Load symmetry groups.
+	ret = ret & _cuboid_structure.load_symmetry_groups((FLAGS_data_root_path +
+		FLAGS_label_info_path + FLAGS_symmetry_group_info_filename).c_str());
+
 	if (!ret)
 	{
 		do {

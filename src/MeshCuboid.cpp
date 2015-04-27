@@ -193,7 +193,7 @@ MeshCuboid::MeshCuboid(const LabelIndex _label_index)
 	: label_index_(_label_index)
 	, bbox_center_(0.0)
 	, bbox_size_(0.0)
-	, is_group_cuboid_(false)
+	//, is_group_cuboid_(false)
 {
 	bbox_axes_[0] = MyMesh::Normal(1.0, 0.0, 0.0);
 	bbox_axes_[1] = MyMesh::Normal(0.0, 1.0, 0.0);
@@ -216,7 +216,7 @@ MeshCuboid& MeshCuboid::operator=(const MeshCuboid& _other)
 
 void MeshCuboid::deep_copy(const MeshCuboid& _other)
 {
-	this->is_group_cuboid_ = _other.is_group_cuboid_;
+	//this->is_group_cuboid_ = _other.is_group_cuboid_;
 	this->label_index_ = _other.label_index_;
 
 	// NOTE:
@@ -250,9 +250,33 @@ MeshCuboid::~MeshCuboid()
 	clear_cuboid_surface_points();
 }
 
+unsigned int MeshCuboid::num_sample_points()const {
+	return static_cast<unsigned int>(sample_points_.size());
+}
+
+unsigned int MeshCuboid::num_cuboid_surface_points()const {
+	return static_cast<unsigned int>(cuboid_surface_points_.size());
+}
+
 const std::vector<MeshSamplePoint *> &MeshCuboid::get_sample_points() const
 {
 	return sample_points_;
+}
+
+void MeshCuboid::get_sample_points(Eigen::MatrixXd &_sample_points) const
+{
+	_sample_points = Eigen::MatrixXd(3, num_sample_points());
+
+	for (SamplePointIndex sample_point_index = 0; sample_point_index < num_sample_points();
+		++sample_point_index)
+	{
+		MeshSamplePoint *sample_point = get_sample_point(sample_point_index);
+		assert(sample_point);
+		MyMesh::Point point = sample_point->point_;
+
+		for (unsigned int i = 0; i < 3; ++i)
+			_sample_points.col(sample_point_index)(i) = point[i];
+	}
 }
 
 MeshSamplePoint *MeshCuboid::get_sample_point(
@@ -432,6 +456,63 @@ Real MeshCuboid::get_bbox_face_area(const unsigned int _face_index) const
 	Real area = 0.5 * (cross(p, q)).length();
 
 	return area;
+}
+
+MyMesh::Point MeshCuboid::get_local_coord(const MyMesh::Point _pos) const
+{
+	// Global coordinates -> Local coordinates (Bounding box center and axes).
+	MyMesh::Point pos = _pos - bbox_center_;
+	MyMesh::Point local_pos;
+	for (unsigned int axis_index = 0; axis_index < 3; ++axis_index)
+		local_pos[axis_index] = dot(bbox_axes_[axis_index], pos);
+
+	MyMesh::Point global_pos = get_global_coord(local_pos);
+	CHECK_NUMERICAL_ERROR(__FUNCTION__, (global_pos - _pos).norm());
+
+	return local_pos;
+}
+
+MyMesh::Point MeshCuboid::get_global_coord(const MyMesh::Point _pos) const
+{
+	// Local coordinates (Bounding box center and axes) -> Global coordinates.
+	MyMesh::Point global_pos(0.0);
+	for (unsigned int axis_index = 0; axis_index < 3; ++axis_index)
+		global_pos += (_pos[axis_index] * bbox_axes_[axis_index]);
+	global_pos += bbox_center_;
+	return global_pos;
+}
+
+void MeshCuboid::get_local_coord_sample_points(std::vector<MyMesh::Point> &_sample_points) const
+{
+	_sample_points.clear();
+	_sample_points.resize(num_sample_points());
+
+	for (SamplePointIndex sample_point_index = 0; sample_point_index < num_sample_points();
+		++sample_point_index)
+	{
+		MeshSamplePoint *sample_point = get_sample_point(sample_point_index);
+		assert(sample_point);
+		MyMesh::Point point = sample_point->point_;
+		MyMesh::Point local_coord = get_local_coord(point);
+		_sample_points[sample_point_index] = local_coord;
+	}
+}
+
+void MeshCuboid::get_local_coord_sample_points(Eigen::MatrixXd &_sample_points) const
+{
+	_sample_points = Eigen::MatrixXd(3, num_sample_points());
+
+	for (SamplePointIndex sample_point_index = 0; sample_point_index < num_sample_points();
+		++sample_point_index)
+	{
+		MeshSamplePoint *sample_point = get_sample_point(sample_point_index);
+		assert(sample_point);
+		MyMesh::Point point = sample_point->point_;
+		MyMesh::Point local_coord = get_local_coord(point);
+
+		for (unsigned int i = 0; i < 3; ++i)
+			_sample_points.col(sample_point_index)(i) = local_coord[i];
+	}
 }
 
 const std::vector<int>&
@@ -1016,14 +1097,14 @@ void MeshCuboid::compute_cuboid_surface_point_visibility(
 	}
 }
 
-Real MeshCuboid::get_cuboid_overvall_visibility()
+Real MeshCuboid::get_cuboid_overvall_visibility() const
 {
 	// Assume that visibility of each surface point is already computed.
 	Real sum_visibility = 0.0;
 	if (cuboid_surface_points_.empty())
 		return sum_visibility;
 
-	for (std::vector<MeshCuboidSurfacePoint *>::iterator it = cuboid_surface_points_.begin();
+	for (std::vector<MeshCuboidSurfacePoint *>::const_iterator it = cuboid_surface_points_.begin();
 		it != cuboid_surface_points_.end(); it++)
 	{
 		sum_visibility += (*it)->visibility_;
@@ -1668,6 +1749,9 @@ void MeshCuboid::draw_cuboid()const
 void MeshCuboid::points_to_cuboid_distances(const Eigen::MatrixXd& _points,
 	Eigen::VectorXd &_distances)
 {
+	// NOTE:
+	// Do not use corner points, but use only center, size, and axes.
+	// The distance becomes less than zero when the point is inside the cuboid.
 	unsigned int num_points = _points.cols();
 
 	Eigen::Vector3d bbox_center_vec;
@@ -1731,6 +1815,7 @@ Real MeshCuboid::distance_between_cuboids(
 
 	return max_distance;
 }
+
 
 /*
 void MeshCuboid::split_cuboid_recursive(ANNkd_tree* _kd_tree, std::vector<MeshCuboid *> &_sub_cuboids)

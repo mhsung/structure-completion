@@ -141,112 +141,87 @@ public:
 
 	void set_axis_configuration(const unsigned int _axis_configuration_index);
 
-	void clear_sample_points();
-
-	void add_sample_point(MeshSamplePoint *_point);
-
-	void add_sample_points(const std::vector<MeshSamplePoint *> _points);
-
-	void remove_sample_points(const bool *is_sample_point_removed);
-
 	bool compute_bbox();
 
+	void clear_sample_points();
+	void clear_cuboid_surface_points();
+	void add_sample_point(MeshSamplePoint *_point);
+	void add_sample_points(const std::vector<MeshSamplePoint *> _points);
+	void remove_sample_points(const bool *is_sample_point_removed);
 
-	unsigned int num_sample_points()const {
-		return static_cast<unsigned int>(sample_points_.size());
-	}
-	unsigned int num_cuboid_surface_points()const {
-		return static_cast<unsigned int>(cuboid_surface_points_.size());
-	}
+	unsigned int num_sample_points() const;
+	unsigned int num_cuboid_surface_points() const;
 
-	bool is_point_inside_cuboid(const MyMesh::Point& _point)const;
+	//bool is_group_cuboid()const { return is_group_cuboid_;  }
+	//void set_group_cuboid(bool _is_group_cuboid) { is_group_cuboid_ = _is_group_cuboid; }
 
-	bool is_group_cuboid()const { return is_group_cuboid_;  }
-
-	void set_group_cuboid(bool _is_group_cuboid) { is_group_cuboid_ = _is_group_cuboid; }
-
+	// Getters.
 	LabelIndex get_label_index()const { return label_index_; }
 
 	const std::vector<MeshSamplePoint *> &get_sample_points()const;
-
+	void get_sample_points(Eigen::MatrixXd &_sample_points)const;
 	MeshSamplePoint *get_sample_point(const unsigned int _point_index)const;
 
 	const std::vector<MeshCuboidSurfacePoint *> &get_cuboid_surface_points()const;
-
 	MeshCuboidSurfacePoint *get_cuboid_surface_point(const unsigned int _point_index)const;
 
-	void set_label_index(LabelIndex _label_index) { label_index_ = _label_index; }
-
 	MyMesh::Point get_bbox_min()const;
-
 	MyMesh::Point get_bbox_max()const;
-
 	MyMesh::Normal get_bbox_axis(const unsigned int _axis_index)const;
-
 	std::array<MyMesh::Normal, 3> get_bbox_axes()const;
-
 	MyMesh::Point get_bbox_center()const;
-
 	MyMesh::Normal get_bbox_size()const;
-
 	MyMesh::Point get_bbox_corner(const unsigned int _corner_index,
 		MyMesh::Normal *_axis_direction = NULL)const;
-
 	std::array<MyMesh::Point, k_num_corners> get_bbox_corners()const;
-
 	std::pair<MyMesh::Normal, MyMesh::Point> get_bbox_faces(const unsigned int _face_index,
 		MyMesh::Normal *_axis_direction = NULL)const;
-
 	std::vector< std::pair<MyMesh::Normal, MyMesh::Point> > get_bbox_faces()const;
-
 	Real get_bbox_volume()const;
-
 	Real get_bbox_diag_length()const;
-
 	Real get_bbox_face_area(const unsigned int _face_index)const;
 
+	// Global coordinates -> Local coordinates (Bounding box center and axes).
+	MyMesh::Point get_local_coord(const MyMesh::Point _pos) const;
+	// Local coordinates (Bounding box center and axes) -> Global coordinates.
+	MyMesh::Point get_global_coord(const MyMesh::Point _pos) const;
+
+	void get_local_coord_sample_points(std::vector<MyMesh::Point> &_sample_points) const;
+	void get_local_coord_sample_points(Eigen::MatrixXd &_sample_points) const;
+
 	const std::vector<int>& get_sample_to_cuboid_surface_correspondences() const;
-
 	int get_sample_to_cuboid_surface_correspondences(const unsigned int _point_index) const;
-
 	const std::vector<int>& get_cuboid_surface_to_sample_correspondence() const;
-
 	int get_cuboid_surface_to_sample_correspondence(const unsigned int _point_index) const;
 
+	Real get_cuboid_overvall_visibility() const;
+
+
+	// Setters.
+	void set_label_index(LabelIndex _label_index) { label_index_ = _label_index; }
 
 	void set_bbox_center(const MyMesh::Point &_bbox_center);
-
 	void set_bbox_size(const MyMesh::Normal &_bbox_size, bool _update_corners = true);
-
 	void set_bbox_axes(const std::array<MyMesh::Normal, 3> &_bbox_axes, bool _update_corners = true);
-
 	void set_bbox_corners(const std::array<MyMesh::Point, k_num_corners> &_bbox_corners);
 
 	void translate(const Eigen::Vector3d _translation_vec);
-
 	void rotate(const Eigen::Matrix3d _rotation_mat, bool _update_center_size = true);
-
 	void flip_axis(const unsigned int _axis_index);
 	
 	void update_corner_points();
-
 	void update_center_size_corner_points();
-
 	void update_axes_center_size_corner_points();
-
 	// Update the label based on the label confidence values of sample points.
 	void update_label_using_sample_points();
+	void update_point_correspondences();
 
 	static MeshCuboid *merge_cuboids(const LabelIndex _label_index,
 		const std::vector<MeshCuboid *> _cuboids);
-
 	std::vector<MeshCuboid *> split_cuboid(const Real _object_diameter);
-
-	void clear_cuboid_surface_points();
 
 	void create_random_points_on_cuboid_surface(
 		const unsigned int _num_cuboid_surface_points);
-
 	void create_grid_points_on_cuboid_surface(
 		const unsigned int _num_cuboid_surface_points);
 
@@ -256,26 +231,18 @@ public:
 		const std::vector<MeshSamplePoint *>& _given_sample_points,
 		bool _use_cuboid_normal = true);
 
-	Real get_cuboid_overvall_visibility();
-
-	void update_point_correspondences();
-
-	// NOTE:
-	// Do not use corner points, but use only center, size, and axes.
-	// The distance becomes less than zero when the point is inside the cuboid.
+	bool is_point_inside_cuboid(const MyMesh::Point& _point)const;
 	void points_to_cuboid_distances(const Eigen::MatrixXd& _points,
 		Eigen::VectorXd &_distances);
-
 	static Real distance_between_cuboids(
 		const MeshCuboid *_cuboid_1, const MeshCuboid *_cuboid_2);
 
 	void print_cuboid()const;
-
 	void draw_cuboid()const;
 
 
 protected:
-	bool is_group_cuboid_;
+	//bool is_group_cuboid_;
 
 	LabelIndex label_index_;
 	std::vector<MeshSamplePoint *> sample_points_;
