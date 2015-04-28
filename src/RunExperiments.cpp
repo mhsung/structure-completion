@@ -112,7 +112,7 @@ bool MeshViewerCore::load_object_info(
 		ret = _cuboid_structure.load_sample_points(sample_filepath.c_str(), false);
 		assert(ret);
 
-		cuboid_structure_.apply_mesh_face_labels_to_sample_points();
+		_cuboid_structure.apply_mesh_face_labels_to_sample_points();
 	}
 	else if (_option == LoadDenseSamplePoints)
 	{
@@ -128,7 +128,7 @@ bool MeshViewerCore::load_object_info(
 		ret = _cuboid_structure.load_sample_points(dense_sample_filepath.c_str(), false);
 		assert(ret);
 
-		cuboid_structure_.apply_mesh_face_labels_to_sample_points();
+		_cuboid_structure.apply_mesh_face_labels_to_sample_points();
 	}
 	else if (_option == LoadGroundTruthData)
 	{
@@ -188,7 +188,8 @@ bool MeshViewerCore::load_object_info(
 			MeshSamplePoint* sample_point = _cuboid_structure.sample_points_[sample_point_index];
 			assert(sample_point);
 			LabelIndex label_index = sample_point_label_indices[sample_point_index];
-			assert(label_index < _cuboid_structure.num_labels());
+			if (label_index >= _cuboid_structure.num_labels())
+				continue;
 
 			MeshCuboid *cuboid = NULL;
 			// NOTE:

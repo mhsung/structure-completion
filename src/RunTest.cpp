@@ -256,7 +256,8 @@ bool MeshViewerCore::load_result_info(
 			MeshSamplePoint* sample_point = _cuboid_structure.sample_points_[sample_point_index];
 			assert(sample_point);
 			LabelIndex label_index = sample_point_label_indices[sample_point_index];
-			assert(label_index < _cuboid_structure.num_labels());
+			if (label_index >= _cuboid_structure.num_labels())
+				continue;
 
 			MeshCuboid *cuboid = NULL;
 			// NOTE:

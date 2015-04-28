@@ -1638,8 +1638,8 @@ std::vector<LabelIndex> MeshCuboidStructure::get_sample_point_label_indices()
 		assert(sample_point);
 		assert(sample_point->label_index_confidence_.size() == labels_.size());
 
-		Real max_confidence = -std::numeric_limits<Real>::max();
-		Label max_confidence_label_index = 0;
+		Real max_confidence = 0;
+		LabelIndex max_confidence_label_index = num_labels();
 
 		for (LabelIndex label_index = 0; label_index < num_labels(); ++label_index)
 		{
@@ -1652,6 +1652,9 @@ std::vector<LabelIndex> MeshCuboidStructure::get_sample_point_label_indices()
 			}
 		}
 
+		// NOTE:
+		// If the maximum confidence is zero, the number of labels is assigned as the label index,
+		// which means that the sample point is not included in any cuboid.
 		sample_point_label_indices[sample_point_index] = max_confidence_label_index;
 	}
 
