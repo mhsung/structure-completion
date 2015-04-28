@@ -410,8 +410,11 @@ void update_cuboid_surface_points(
 		cuboid->create_grid_points_on_cuboid_surface(
 			FLAGS_param_num_cuboid_surface_points);
 
-		cuboid->compute_cuboid_surface_point_visibility(
-			_modelview_matrix, radius, _cuboid_structure.sample_points_);
+		if (_modelview_matrix)
+		{
+			cuboid->compute_cuboid_surface_point_visibility(
+				_modelview_matrix, radius, _cuboid_structure.sample_points_);
+		}
 	}
 }
 

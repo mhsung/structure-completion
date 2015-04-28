@@ -18,6 +18,13 @@ MeshCuboidPredictor::MeshCuboidPredictor(unsigned int _num_labels)
 
 }
 
+void MeshCuboidPredictor::get_missing_label_indices(
+	const std::list<LabelIndex> &_given_label_indices,
+	std::list<LabelIndex> &_missing_label_indices) const
+{
+	_missing_label_indices.clear();
+}
+
 Real MeshCuboidPredictor::get_single_potential(
 	const MeshCuboid *_cuboid,
 	const MeshCuboidAttributes *_attributes,
@@ -228,13 +235,20 @@ Real MeshCuboidPredictor::get_pair_quadratic_form(
 	assert(_cuboid_1); assert(_cuboid_2);
 	assert(_label_index_1 < num_labels_);
 	assert(_label_index_2 < num_labels_);
+	assert(_label_index_1 != _label_index_2);
 
 	const unsigned int num_attributes = MeshCuboidAttributes::k_num_attributes;
-	const unsigned int mat_size = num_labels_ * num_attributes;
+	const unsigned int num_features = MeshCuboidFeatures::k_num_features;
+	const unsigned int mat_size = _quadratic_term.cols();
 
-	_quadratic_term = Eigen::MatrixXd::Zero(mat_size, mat_size);
-	_linear_term = Eigen::VectorXd::Zero(mat_size);
-	_constant_term = 0.0;
+	assert(_quadratic_term.rows() == mat_size);
+	assert(_linear_term.rows() == mat_size);
+	assert(_cuboid_index_1 * num_attributes <= mat_size);
+	assert(_cuboid_index_2 * num_attributes <= mat_size);
+
+	_quadratic_term.setZero();
+	_linear_term.setZero();
+	_constant_term = 0;
 
 	return 0;
 }

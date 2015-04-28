@@ -15,7 +15,7 @@ public:
 
 	virtual void get_missing_label_indices(
 		const std::list<LabelIndex> &_given_label_indices,
-		std::list<LabelIndex> &_missing_label_indices)const = 0;
+		std::list<LabelIndex> &_missing_label_indices)const;
 
 	virtual Real get_single_potential(const MeshCuboid *_cuboid,
 		const MeshCuboidAttributes *_attributes,

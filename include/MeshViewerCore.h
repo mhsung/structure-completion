@@ -77,18 +77,20 @@ public:
 
 private:
 	typedef enum {
+		LoadMesh,
 		LoadSamplePoints,
 		LoadDenseSamplePoints,
 		LoadGroundTruthData,
 		LoadTestData,
-		LoadDenseTestData,
+		LoadDenseTestData
 	} LoadObjectInfoOption;
 	
 	bool load_object_info(
 		MyMesh &_mesh,
 		MeshCuboidStructure &_cuboid_structure,
 		const char* _mesh_filepath,
-		const LoadObjectInfoOption _option);
+		const LoadObjectInfoOption _option,
+		const char* _cuboid_filepath = NULL);
 
 	bool load_result_info(
 		MyMesh &_mesh,

@@ -70,7 +70,7 @@ public:
 		, normal_(_normal)
 		, cuboid_face_index_(_cuboid_face_index)
 		, corner_weights_(_corner_weights)
-		, visibility_(0) 
+		, visibility_(1.0) 
 	{}
 
 	MeshCuboidSurfacePoint(

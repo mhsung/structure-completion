@@ -84,6 +84,9 @@ public:
 
 	void add_sample_points_from_mesh_vertices();
 
+	// Apple mesh face labels to sample points
+	void apply_mesh_face_labels_to_sample_points();
+
 	void remove_sample_points(const bool *is_sample_point_removed);
 
 	void compute_label_cuboids();
@@ -148,9 +151,6 @@ public:
 
 private:
 	inline Label get_new_label()const;
-
-	// Apple mesh face labels to sample points
-	void apply_mesh_face_labels_to_sample_points();
 
 
 public:

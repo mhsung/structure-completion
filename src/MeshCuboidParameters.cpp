@@ -3,6 +3,7 @@
 // -- Parameters -- //
 //
 DEFINE_bool(param_optimize_with_non_linear_constraints, true, "");
+DEFINE_bool(param_optimize_training_cuboids, true, "");
 
 DEFINE_int32(param_num_sample_point_neighbors, 8, "");
 DEFINE_int32(param_min_num_cuboid_sample_points, 10, "");
@@ -43,7 +44,8 @@ DEFINE_string(sample_path, "data/2_analysis/assembly_chairs/points/even1000/", "
 DEFINE_string(dense_sample_path, "data/2_analysis/assembly_chairs/points/random100000/", "");
 DEFINE_string(mesh_label_path, "data/1_input/assembly_chairs/gt/", "");
 DEFINE_string(sample_label_path, "data/4_experiments/exp1_assembly_chairs/1_prediction/", "");
-DEFINE_string(output_path, "output", "");
+DEFINE_string(output_dir, "output", "");
+DEFINE_string(training_dir, "training", "");
 
 DEFINE_string(label_info_filename, "regions.txt", "");
 DEFINE_string(label_symmetry_info_filename, "regions_symmetry.txt", "");

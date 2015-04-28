@@ -25,7 +25,7 @@ void MeshViewerCore::parse_arguments()
 	std::cout << "sample_path = " << FLAGS_data_root_path + FLAGS_sample_path << std::endl;
 	std::cout << "sample_label_path = " << FLAGS_data_root_path + FLAGS_sample_label_path << std::endl;
 	std::cout << "mesh_label_path = " << FLAGS_data_root_path + FLAGS_mesh_label_path << std::endl;
-	std::cout << "output_path = " << FLAGS_output_path << std::endl;
+	std::cout << "output_dir = " << FLAGS_output_dir << std::endl;
 
 	if (FLAGS_run_training)
 	{
@@ -44,7 +44,8 @@ bool MeshViewerCore::load_object_info(
 	MyMesh &_mesh,
 	MeshCuboidStructure &_cuboid_structure,
 	const char* _mesh_filepath,
-	const LoadObjectInfoOption _option)
+	const LoadObjectInfoOption _option,
+	const char* _cuboid_filepath)
 {
 	bool ret;
 	QFileInfo file_info(_mesh_filepath);
@@ -66,7 +67,7 @@ bool MeshViewerCore::load_object_info(
 		std::cerr << "Error: The mesh file does not exist (" << _mesh_filepath << ")." << std::endl;
 		return false;
 	}
-	if (_option == LoadGroundTruthData && !mesh_label_file.exists())
+	if (!(_option == LoadTestData || _option == LoadDenseTestData) && !mesh_label_file.exists())
 	{
 		std::cerr << "Error: The mesh label file does not exist (" << mesh_label_filepath << ")." << std::endl;
 		return false;
@@ -103,12 +104,22 @@ bool MeshViewerCore::load_object_info(
 
 	if (_option == LoadSamplePoints)
 	{
+		std::cout << " - Load mesh face labels." << std::endl;
+		ret = _mesh.load_face_label_simple(mesh_label_filepath.c_str(), false);
+		assert(ret);
+
 		std::cout << " - Load sample points." << std::endl;
 		ret = _cuboid_structure.load_sample_points(sample_filepath.c_str(), false);
 		assert(ret);
+
+		cuboid_structure_.apply_mesh_face_labels_to_sample_points();
 	}
 	else if (_option == LoadDenseSamplePoints)
 	{
+		std::cout << " - Load mesh face labels." << std::endl;
+		ret = _mesh.load_face_label_simple(mesh_label_filepath.c_str(), false);
+		assert(ret);
+
 		// NOTE:
 		// Load dense sample points as base sample points.
 		// Do not use load_dense_sample_points() function,
@@ -116,6 +127,8 @@ bool MeshViewerCore::load_object_info(
 		std::cout << " - Load dense sample points." << std::endl;
 		ret = _cuboid_structure.load_sample_points(dense_sample_filepath.c_str(), false);
 		assert(ret);
+
+		cuboid_structure_.apply_mesh_face_labels_to_sample_points();
 	}
 	else if (_option == LoadGroundTruthData)
 	{
@@ -123,6 +136,10 @@ bool MeshViewerCore::load_object_info(
 		ret = _mesh.load_face_label_simple(mesh_label_filepath.c_str(), false);
 		assert(ret);
 
+		// NOTE:
+		// Load dense sample points as base sample points.
+		// Do not use load_dense_sample_points() function,
+		// which requires to load sparse sample point first.
 		std::cout << " - Load dense sample points." << std::endl;
 		ret = _cuboid_structure.load_sample_points(dense_sample_filepath.c_str(), false);
 		assert(ret);
@@ -146,6 +163,42 @@ bool MeshViewerCore::load_object_info(
 			std::cout << " - Load dense sample points." << std::endl;
 			ret = _cuboid_structure.load_dense_sample_points(dense_sample_filepath.c_str(), false);
 			assert(ret);
+		}
+	}
+
+	if (_cuboid_filepath)
+	{
+		ret = _cuboid_structure.load_cuboids(_cuboid_filepath, false);
+		assert(ret);
+
+		std::vector<MeshCuboid *> all_cuboids = _cuboid_structure.get_all_cuboids();
+		for (std::vector<MeshCuboid *>::iterator it = all_cuboids.begin(); it != all_cuboids.end(); ++it)
+		{
+			MeshCuboid *cuboid = (*it);
+			cuboid->clear_sample_points();
+		}
+
+		// Assign sample points to cuboids.
+		std::vector<LabelIndex> sample_point_label_indices = _cuboid_structure.get_sample_point_label_indices();
+		assert(sample_point_label_indices.size() == _cuboid_structure.num_sample_points());
+
+		for (SamplePointIndex sample_point_index = 0; sample_point_index < _cuboid_structure.num_sample_points();
+			++sample_point_index)
+		{
+			MeshSamplePoint* sample_point = _cuboid_structure.sample_points_[sample_point_index];
+			assert(sample_point);
+			LabelIndex label_index = sample_point_label_indices[sample_point_index];
+			assert(label_index < _cuboid_structure.num_labels());
+
+			MeshCuboid *cuboid = NULL;
+			// NOTE:
+			// The current implementation assumes that there is only one part for each label.
+			assert(_cuboid_structure.label_cuboids_[label_index].size() <= 1);
+			if (!_cuboid_structure.label_cuboids_[label_index].empty())
+				cuboid = _cuboid_structure.label_cuboids_[label_index].front();
+
+			if (cuboid)
+				cuboid->add_sample_point(sample_point);
 		}
 	}
 
@@ -307,6 +360,10 @@ void MeshViewerCore::train()
 	ret = ret & cuboid_structure_.load_label_symmetries((FLAGS_data_root_path +
 		FLAGS_label_info_path + FLAGS_label_symmetry_info_filename).c_str());
 
+	// Load symmetry groups.
+	ret = ret & cuboid_structure_.load_symmetry_groups((FLAGS_data_root_path +
+		FLAGS_label_info_path + FLAGS_symmetry_group_info_filename).c_str());
+
 	if (!ret)
 	{
 		do {
@@ -322,10 +379,6 @@ void MeshViewerCore::train()
 	//}
 
 	unsigned int num_labels = cuboid_structure_.num_labels();
-
-
-	std::ofstream mesh_name_list_file(FLAGS_object_list_filename);
-	assert(mesh_name_list_file);
 
 	std::vector< std::list<MeshCuboidFeatures *> > feature_list(num_labels);
 	std::vector< std::list<MeshCuboidTransformation *> > transformation_list(num_labels);
@@ -346,8 +399,12 @@ void MeshViewerCore::train()
 	input_dir.setFilter(QDir::Files | QDir::Hidden | QDir::NoSymLinks);
 	input_dir.setSorting(QDir::Name);
 
+	std::stringstream output_filename_sstr;
 	QDir output_dir;
-	output_dir.mkpath(FLAGS_output_path.c_str());
+	output_dir.mkpath(FLAGS_training_dir.c_str());
+
+	std::ofstream mesh_name_list_file(FLAGS_training_dir + std::string("/") + FLAGS_object_list_filename);
+	assert(mesh_name_list_file);
 
 
 	QFileInfoList dir_list = input_dir.entryInfoList();
@@ -360,7 +417,6 @@ void MeshViewerCore::train()
 		{
 			std::string mesh_filepath = std::string(file_info.filePath().toLocal8Bit());
 			std::string mesh_name = std::string(file_info.baseName().toLocal8Bit());
-			std::string snapshot_filepath = FLAGS_output_path + std::string("/") + mesh_name;
 
 			bool ret = load_object_info(mesh_, cuboid_structure_, mesh_filepath.c_str(), LoadGroundTruthData);
 			if (!ret) continue;
@@ -370,7 +426,32 @@ void MeshViewerCore::train()
 			mesh_.clear_colors();
 			open_modelview_matrix_file(FLAGS_pose_filename.c_str());
 			updateGL();
-			snapshot(snapshot_filepath.c_str());
+			output_filename_sstr.clear(); output_filename_sstr.str("");
+			output_filename_sstr << FLAGS_training_dir << std::string("/") << mesh_name;
+			snapshot(output_filename_sstr.str().c_str());
+
+			if (FLAGS_param_optimize_training_cuboids)
+			{
+				cuboid_structure_.compute_symmetry_groups();
+
+				output_filename_sstr.clear(); output_filename_sstr.str("");
+				output_filename_sstr << FLAGS_training_dir << std::string("/") << mesh_name << std::string("_log.txt");
+
+				// Iterate only once.
+				MeshCuboidPredictor predictor(num_labels);
+				optimize_attributes(cuboid_structure_, NULL, predictor,
+					FLAGS_param_opt_single_energy_term_weight, FLAGS_param_opt_symmetry_energy_term_weight,
+					1, output_filename_sstr.str(), this);
+
+				updateGL();
+				output_filename_sstr.clear(); output_filename_sstr.str("");
+				output_filename_sstr << FLAGS_training_dir << std::string("/") << mesh_name << std::string("_optimized");
+				snapshot(output_filename_sstr.str().c_str());
+			}
+
+			output_filename_sstr.clear(); output_filename_sstr.str("");
+			output_filename_sstr << FLAGS_training_dir << std::string("/") << mesh_name << std::string(".arff");
+			cuboid_structure_.save_cuboids(output_filename_sstr.str());
 
 
 			assert(cuboid_structure_.num_labels() == num_labels);
@@ -448,13 +529,13 @@ void MeshViewerCore::train()
 		//}
 
 		std::stringstream transformation_filename_sstr;
-		transformation_filename_sstr << FLAGS_transformation_filename_prefix
+		transformation_filename_sstr << FLAGS_training_dir << std::string("/") << FLAGS_transformation_filename_prefix
 			<< label_index_1 << std::string(".csv");
 		MeshCuboidTransformation::save_transformation_collection(transformation_filename_sstr.str().c_str(),
 			transformation_list[label_index_1]);
 
 		std::stringstream feature_filename_sstr;
-		feature_filename_sstr << FLAGS_feature_filename_prefix
+		feature_filename_sstr << FLAGS_training_dir << std::string("/") << FLAGS_feature_filename_prefix
 			<< label_index_1 << std::string(".csv");
 		MeshCuboidFeatures::save_feature_collection(feature_filename_sstr.str().c_str(),
 			feature_list[label_index_1]);
@@ -514,9 +595,9 @@ void MeshViewerCore::train_file_files()
 	unsigned int num_cuboids = 0;
 
 	MeshCuboidTrainer trainer;
-	trainer.load_object_list(FLAGS_object_list_filename);
-	trainer.load_features(FLAGS_feature_filename_prefix);
-	trainer.load_transformations(FLAGS_transformation_filename_prefix);
+	trainer.load_object_list(FLAGS_training_dir + std::string("/") + FLAGS_object_list_filename);
+	trainer.load_features(FLAGS_training_dir + std::string("/") + FLAGS_feature_filename_prefix);
+	trainer.load_transformations(FLAGS_training_dir + std::string("/") + FLAGS_transformation_filename_prefix);
 
 	//
 	std::vector< std::vector<MeshCuboidJointNormalRelations *> > joint_normal_relations;
@@ -624,9 +705,9 @@ void MeshViewerCore::predict()
 
 	ret = true;
 	MeshCuboidTrainer trainer;
-	ret = ret & trainer.load_object_list(FLAGS_object_list_filename);
-	ret = ret & trainer.load_features(FLAGS_feature_filename_prefix);
-	ret = ret & trainer.load_transformations(FLAGS_transformation_filename_prefix);
+	ret = ret & trainer.load_object_list(FLAGS_training_dir + std::string("/") + FLAGS_object_list_filename);
+	ret = ret & trainer.load_features(FLAGS_training_dir + std::string("/") + FLAGS_feature_filename_prefix);
+	ret = ret & trainer.load_transformations(FLAGS_training_dir + std::string("/") + FLAGS_transformation_filename_prefix);
 
 	if (!ret)
 	{
@@ -660,9 +741,9 @@ void MeshViewerCore::predict()
 	std::stringstream log_filename_sstr;
 
 	QDir output_dir;
-	std::string mesh_output_path = FLAGS_output_path + std::string("/") + mesh_name;
-	std::string mesh_intermediate_path = FLAGS_output_path + std::string("/") + mesh_name + std::string("/temp");
-	output_dir.mkpath(FLAGS_output_path.c_str());
+	std::string mesh_output_path = FLAGS_output_dir + std::string("/") + mesh_name;
+	std::string mesh_intermediate_path = FLAGS_output_dir + std::string("/") + mesh_name + std::string("/temp");
+	output_dir.mkpath(FLAGS_output_dir.c_str());
 	output_dir.mkpath(mesh_output_path.c_str());
 	output_dir.mkpath(mesh_intermediate_path.c_str());
 
@@ -825,7 +906,7 @@ void MeshViewerCore::predict()
 
 		updateGL();
 		snapshot_filename_sstr.clear(); snapshot_filename_sstr.str("");
-		snapshot_filename_sstr << FLAGS_output_path + std::string("/Temp") << filename_prefix
+		snapshot_filename_sstr << FLAGS_output_dir + std::string("/Temp") << filename_prefix
 			<< std::string("c_") << cuboid_structure_name << std::string("_")
 			<< std::string("s_") << snapshot_index;
 		snapshot(snapshot_filename_sstr.str().c_str());
@@ -1129,8 +1210,12 @@ void MeshViewerCore::reconstruct_database_prior(
 			if (mesh_filepath.compare(_mesh_filepath) == 0)
 				continue;
 
+			QFileInfo file_info(mesh_filepath.c_str());
+			std::string mesh_name(file_info.baseName().toLocal8Bit());
+			std::string cuboid_filepath = FLAGS_training_dir + std::string("/") + mesh_name + std::string(".arff");
+
 			bool ret = load_object_info(example_mesh, example_cuboid_structure,
-				mesh_filepath.c_str(), LoadGroundTruthData);
+				mesh_filepath.c_str(), LoadMesh, cuboid_filepath.c_str());
 			if (!ret) continue;
 
 			assert(example_cuboid_structure.num_labels() == num_labels);
@@ -1218,9 +1303,10 @@ void MeshViewerCore::reconstruct_database_prior(
 		std::string mesh_filepath = label_matched_object[label_index].second;
 		QFileInfo file_info(mesh_filepath.c_str());
 		std::string mesh_name(file_info.baseName().toLocal8Bit());
+		std::string cuboid_filepath = FLAGS_training_dir + std::string("/") + mesh_name + std::string(".arff");
 
 		bool ret = load_object_info(example_mesh, example_cuboid_structure,
-			mesh_filepath.c_str(), LoadGroundTruthData);
+			mesh_filepath.c_str(), LoadDenseSamplePoints, cuboid_filepath.c_str());
 		assert(ret);
 
 		assert(cuboid_structure_.label_cuboids_[label_index].size() <= 1);
@@ -1328,7 +1414,7 @@ void MeshViewerCore::batch_render_point_clusters()
 	input_dir.setSorting(QDir::Name);
 
 	QDir output_dir;
-	output_dir.mkpath(FLAGS_output_path.c_str());
+	output_dir.mkpath(FLAGS_output_dir.c_str());
 
 
 	QFileInfoList dir_list = input_dir.entryInfoList();
@@ -1345,7 +1431,7 @@ void MeshViewerCore::batch_render_point_clusters()
 			std::string sample_filename = FLAGS_data_root_path + FLAGS_sample_path + std::string("/") + mesh_name + std::string(".pts");
 			std::string sample_label_filename = FLAGS_data_root_path + FLAGS_sample_label_path + std::string("/") + mesh_name + std::string(".arff");
 			std::string mesh_label_filename = FLAGS_data_root_path + FLAGS_mesh_label_path + std::string("/") + mesh_name + std::string(".seg");
-			std::string snapshot_filename = FLAGS_output_path + std::string("/") + mesh_name + std::string("_in");
+			std::string snapshot_filename = FLAGS_output_dir + std::string("/") + mesh_name + std::string("_in");
 
 			QFileInfo mesh_file(mesh_filename.c_str());
 			QFileInfo sample_file(sample_filename.c_str());
@@ -1408,13 +1494,13 @@ void MeshViewerCore::batch_render_cuboids()
 	open_modelview_matrix_file(FLAGS_pose_filename.c_str());
 
 	// For every file in the base path.
-	QDir input_dir(FLAGS_output_path.c_str());
+	QDir input_dir(FLAGS_output_dir.c_str());
 	assert(input_dir.exists());
 	input_dir.setFilter(QDir::Files | QDir::Hidden | QDir::NoSymLinks);
 	input_dir.setSorting(QDir::Name);
 
 	QDir output_dir;
-	output_dir.mkpath((FLAGS_output_path + std::string("/cuboid_snapshots/")).c_str());
+	output_dir.mkpath((FLAGS_output_dir + std::string("/cuboid_snapshots/")).c_str());
 
 
 	QFileInfoList dir_list = input_dir.entryInfoList();
@@ -1426,7 +1512,7 @@ void MeshViewerCore::batch_render_cuboids()
 		{
 			std::string cuboid_name = std::string(file_info.baseName().toLocal8Bit());
 			std::string cuboid_filename = std::string(file_info.filePath().toLocal8Bit());
-			std::string snapshot_filename = FLAGS_output_path + std::string("/cuboid_snapshots/") + cuboid_name;
+			std::string snapshot_filename = FLAGS_output_dir + std::string("/cuboid_snapshots/") + cuboid_name;
 
 			QFileInfo cuboid_file(cuboid_filename.c_str());
 			if (!cuboid_file.exists())
@@ -1479,7 +1565,7 @@ void MeshViewerCore::batch_render_points()
 	input_dir.setSorting(QDir::Name);
 
 	QDir output_dir;
-	output_dir.mkpath((FLAGS_output_path + std::string("/reconstruction_snapshots/")).c_str());
+	output_dir.mkpath((FLAGS_output_dir + std::string("/reconstruction_snapshots/")).c_str());
 
 
 	const std::string sample_filename_postfix("_0_reconstructed.pts");
@@ -1496,8 +1582,8 @@ void MeshViewerCore::batch_render_points()
 			std::string mesh_filename = std::string(file_info.filePath().toLocal8Bit());
 
 			//std::string sample_filename = FLAGS_data_root_path + FLAGS_sample_path + std::string("/") + mesh_name + std::string(".pts");
-			std::string sample_filename = FLAGS_output_path + std::string("/") + mesh_name + sample_filename_postfix;
-			std::string snapshot_filename = FLAGS_output_path + std::string("/reconstruction_snapshots/") + mesh_name;
+			std::string sample_filename = FLAGS_output_dir + std::string("/") + mesh_name + sample_filename_postfix;
+			std::string snapshot_filename = FLAGS_output_dir + std::string("/reconstruction_snapshots/") + mesh_name;
 
 			QFileInfo mesh_file(mesh_filename.c_str());
 			QFileInfo sample_file(sample_filename.c_str());

@@ -6,6 +6,7 @@
 // -- Parameters -- //
 //
 DECLARE_bool(param_optimize_with_non_linear_constraints);
+DECLARE_bool(param_optimize_training_cuboids);
 
 DECLARE_int32(param_num_sample_point_neighbors);
 DECLARE_int32(param_min_num_cuboid_sample_points);
@@ -46,7 +47,8 @@ DECLARE_string(sample_path);
 DECLARE_string(dense_sample_path);
 DECLARE_string(mesh_label_path);
 DECLARE_string(sample_label_path);
-DECLARE_string(output_path);
+DECLARE_string(output_dir);
+DECLARE_string(training_dir);
 
 DECLARE_string(label_info_filename);
 DECLARE_string(label_symmetry_info_filename);
