@@ -106,7 +106,7 @@ void MeshCuboidStructure::deep_copy(const MeshCuboidStructure& _other)
 		it != _other.symmetry_groups_.end(); ++it)
 	{
 		assert(*it);
-		MeshCuboidSymmetryGroup *symmetry_group = new MeshCuboidSymmetryGroup(**it);
+		MeshCuboidSymmetryGroup *symmetry_group = (*it)->copy_constructor();
 		this->symmetry_groups_.push_back(symmetry_group);
 	}
 }

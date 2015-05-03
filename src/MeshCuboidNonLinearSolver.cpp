@@ -532,7 +532,7 @@ void MeshCuboidNonLinearSolver::compute_symmetry_group_values(Eigen::VectorXd &_
 		assert(symmetry_group);
 
 		MyMesh::Normal n; double t;
-		symmetry_group->get_reflection_plane(n, t);
+		symmetry_group->get_axis_parameters(n, t);
 
 		std::pair<Index, Index> index_size_pair;
 		index_size_pair = get_symmetry_group_variable_n_index_size(symmetry_group_index);
@@ -743,7 +743,7 @@ void MeshCuboidNonLinearSolver::update_symmetry_groups(const std::vector< Number
 		assert(index_size_pair.second == 1);
 		t = _values[index_size_pair.first];
 
-		symmetry_groups_[symmetry_group_index]->set_reflection_plane(n, t);
+		symmetry_groups_[symmetry_group_index]->set_axis_parameters(n, t);
 	}
 }
 

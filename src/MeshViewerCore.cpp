@@ -870,7 +870,8 @@ void MeshViewerCore::draw_openmesh(const std::string& _drawmode)
 		for (std::vector< MeshCuboidSymmetryGroup* >::iterator it = cuboid_structure_.symmetry_groups_.begin();
 			it != cuboid_structure_.symmetry_groups_.end(); ++it)
 		{
-			MeshCuboidSymmetryGroup* group = (*it);
+			//MeshCuboidSymmetryGroup* group = (*it);
+			MeshCuboidReflectionSymmetryGroup* group = dynamic_cast<MeshCuboidReflectionSymmetryGroup*>(*it);
 			assert(group);
 			std::array<MyMesh::Point, 4> corners;
 			group->get_reflection_plane_corners(mesh_.get_bbox_center(), mesh_.get_object_diameter(), corners);

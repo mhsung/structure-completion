@@ -6,19 +6,22 @@
 
 
 MeshCuboidSymmetryGroupInfo::MeshCuboidSymmetryGroupInfo()
-	: reflection_axis_index_(0)
+	: symmetry_type_(ReflectionSymmetryType)
+	, reflection_axis_index_(0)
 {
 
 }
 
 MeshCuboidSymmetryGroupInfo::MeshCuboidSymmetryGroupInfo(unsigned int _reflection_axis_index)
-	: reflection_axis_index_(_reflection_axis_index)
+	: symmetry_type_(ReflectionSymmetryType)
+	, reflection_axis_index_(_reflection_axis_index)
 {
 
 }
 
 MeshCuboidSymmetryGroupInfo::MeshCuboidSymmetryGroupInfo(const MeshCuboidSymmetryGroupInfo& _other)
 {
+	symmetry_type_ = _other.symmetry_type_;
 	reflection_axis_index_ = _other.reflection_axis_index_;
 	single_label_indices_ = _other.single_label_indices_;
 	pair_label_indices_ = _other.pair_label_indices_;
@@ -28,7 +31,10 @@ MeshCuboidSymmetryGroup* MeshCuboidSymmetryGroup::constructor(
 	const MeshCuboidSymmetryGroupInfo &_info,
 	const std::vector<MeshCuboid *>& _cuboids)
 {
-	MeshCuboidSymmetryGroup *group = new MeshCuboidSymmetryGroup(_info);
+	MeshCuboidSymmetryGroup *group = NULL;
+	if (_info.symmetry_type_ == ReflectionSymmetryType)
+		group = new MeshCuboidReflectionSymmetryGroup(_info);
+
 	bool ret = group->compute_symmetry_axis(_cuboids);
 	if (!ret)
 	{
@@ -43,15 +49,16 @@ MeshCuboidSymmetryGroup::MeshCuboidSymmetryGroup(const MeshCuboidSymmetryGroupIn
 	, n_(MyMesh::Normal(1, 0, 0))
 	, t_(0)
 {
-	
+	assert(get_symmetry_type() == ReflectionSymmetryType);
 }
 
-MeshCuboidSymmetryGroup::MeshCuboidSymmetryGroup(const MeshCuboidSymmetryGroup &_other)
-	: info_(_other.info_)
-	, n_(_other.n_)
-	, t_(_other.t_)
+MeshCuboidSymmetryGroup::MeshCuboidSymmetryGroup(const MeshCuboidSymmetryGroupInfo &_info,
+	const MyMesh::Normal _n, const double _t)
+	: info_(_info)
+	, n_(_n)
+	, t_(_t)
 {
-
+	assert(get_symmetry_type() == ReflectionSymmetryType);
 }
 
 MeshCuboidSymmetryGroup::~MeshCuboidSymmetryGroup()
@@ -59,46 +66,39 @@ MeshCuboidSymmetryGroup::~MeshCuboidSymmetryGroup()
 
 }
 
-bool MeshCuboidSymmetryGroup::compute_symmetry_axis(const std::vector<MeshCuboid *>& _cuboids)
-{
-	std::vector< std::pair<unsigned int, unsigned int> > pair_cuboid_indices;
-	get_pair_cuboid_indices(_cuboids, pair_cuboid_indices);
-	if (pair_cuboid_indices.empty())
-		return false;
-
-	const unsigned int num_cuboids = _cuboids.size();
-
-	std::list< std::pair < MyMesh::Point, MyMesh::Point > > point_pairs;
-	for (std::vector < std::pair <unsigned int, unsigned int> >::const_iterator it = pair_cuboid_indices.begin();
-		it != pair_cuboid_indices.end(); ++it)
-	{
-		int cuboid_index_1 = (*it).first;
-		int cuboid_index_2 = (*it).second;
-		assert(cuboid_index_1 < num_cuboids);
-		assert(cuboid_index_2 < num_cuboids);
-
-		const MeshCuboid *cuboid_1 = _cuboids[cuboid_index_1];
-		const MeshCuboid *cuboid_2 = _cuboids[cuboid_index_2];
-
-		add_symmety_cuboid_corner_points(cuboid_1, cuboid_2, _cuboids,
-			info_.reflection_axis_index_, point_pairs);
-	}
-
-	assert(!point_pairs.empty());
-	compute_reflection_plane(point_pairs, n_, t_);
-	return true;
-}
-
-void MeshCuboidSymmetryGroup::get_reflection_plane(MyMesh::Normal &_n, double &_t) const
+void MeshCuboidSymmetryGroup::get_axis_parameters(MyMesh::Normal &_n, double &_t) const
 {
 	_n = n_;
 	_t = t_;
 }
 
-void MeshCuboidSymmetryGroup::set_reflection_plane(const MyMesh::Normal &_n, const double &_t)
+void MeshCuboidSymmetryGroup::set_axis_parameters(const MyMesh::Normal &_n, const double &_t)
 {
 	n_ = _n;
 	t_ = _t;
+}
+
+MeshCuboidReflectionSymmetryGroup::MeshCuboidReflectionSymmetryGroup(
+	const MeshCuboidSymmetryGroupInfo &_info)
+	: MeshCuboidSymmetryGroup(_info)
+{
+	assert(_info.symmetry_type_ == ReflectionSymmetryType);
+}
+
+MeshCuboidReflectionSymmetryGroup::MeshCuboidReflectionSymmetryGroup(
+	const MeshCuboidSymmetryGroupInfo &_info,
+	const MyMesh::Normal _n, const double _t)
+	: MeshCuboidSymmetryGroup(_info, _n, _t)
+{
+	assert(_info.symmetry_type_ == ReflectionSymmetryType);
+}
+
+MeshCuboidSymmetryGroup *MeshCuboidReflectionSymmetryGroup::copy_constructor()
+{
+	MeshCuboidSymmetryGroup *group = new MeshCuboidReflectionSymmetryGroup(
+		info_, n_, t_);
+	assert(group);
+	return group;
 }
 
 void MeshCuboidSymmetryGroup::get_single_cuboid_indices(const std::vector<MeshCuboid *>& _cuboids,
@@ -151,7 +151,37 @@ void MeshCuboidSymmetryGroup::get_pair_cuboid_indices(const std::vector<MeshCubo
 	}
 }
 
-void MeshCuboidSymmetryGroup::add_symmety_cuboid_corner_points(
+bool MeshCuboidReflectionSymmetryGroup::compute_symmetry_axis(const std::vector<MeshCuboid *>& _cuboids)
+{
+	std::vector< std::pair<unsigned int, unsigned int> > pair_cuboid_indices;
+	get_pair_cuboid_indices(_cuboids, pair_cuboid_indices);
+	if (pair_cuboid_indices.empty())
+		return false;
+
+	const unsigned int num_cuboids = _cuboids.size();
+
+	std::list< std::pair < MyMesh::Point, MyMesh::Point > > point_pairs;
+	for (std::vector < std::pair <unsigned int, unsigned int> >::const_iterator it = pair_cuboid_indices.begin();
+		it != pair_cuboid_indices.end(); ++it)
+	{
+		int cuboid_index_1 = (*it).first;
+		int cuboid_index_2 = (*it).second;
+		assert(cuboid_index_1 < num_cuboids);
+		assert(cuboid_index_2 < num_cuboids);
+
+		const MeshCuboid *cuboid_1 = _cuboids[cuboid_index_1];
+		const MeshCuboid *cuboid_2 = _cuboids[cuboid_index_2];
+
+		add_symmety_cuboid_corner_points(cuboid_1, cuboid_2, _cuboids,
+			info_.reflection_axis_index_, point_pairs);
+	}
+
+	assert(!point_pairs.empty());
+	compute_reflection_plane(point_pairs, n_, t_);
+	return true;
+}
+
+void MeshCuboidReflectionSymmetryGroup::add_symmety_cuboid_corner_points(
 	const MeshCuboid *cuboid_1, const MeshCuboid *cuboid_2,
 	const std::vector<MeshCuboid *>& _cuboids,
 	const unsigned int _reflection_axis_index,
@@ -180,7 +210,7 @@ void MeshCuboidSymmetryGroup::add_symmety_cuboid_corner_points(
 	}
 }
 
-void MeshCuboidSymmetryGroup::compute_reflection_plane(
+void MeshCuboidReflectionSymmetryGroup::compute_reflection_plane(
 	const std::list< std::pair < MyMesh::Point, MyMesh::Point > > &_point_pairs,
 	MyMesh::Normal &_n, double &_t)
 {
@@ -222,7 +252,7 @@ void MeshCuboidSymmetryGroup::compute_reflection_plane(
 	_t /= _point_pairs.size();
 }
 
-void MeshCuboidSymmetryGroup::get_reflection_plane_corners(
+void MeshCuboidReflectionSymmetryGroup::get_reflection_plane_corners(
 	const MyMesh::Point &_point, const Real _size,
 	std::array<MyMesh::Point, 4>& _corners) const
 {
@@ -257,7 +287,7 @@ void MeshCuboidSymmetryGroup::get_reflection_plane_corners(
 	_corners[3] = center - 0.5 * _size * axes[0] + 0.5 * _size * axes[1];
 }
 
-MyMesh::Point MeshCuboidSymmetryGroup::get_symmetric_point(const MyMesh::Point& _point) const
+MyMesh::Point MeshCuboidReflectionSymmetryGroup::get_symmetric_point(const MyMesh::Point& _point) const
 {
 	// Assume that 'n_' is normalized.
 	MyMesh::Normal plane_to_point = n_ * (dot(n_, _point) - t_);
@@ -266,7 +296,7 @@ MyMesh::Point MeshCuboidSymmetryGroup::get_symmetric_point(const MyMesh::Point& 
 	return symmetric_point;
 }
 
-MyMesh::Normal MeshCuboidSymmetryGroup::get_symmetric_normal(const MyMesh::Normal& _normal) const
+MyMesh::Normal MeshCuboidReflectionSymmetryGroup::get_symmetric_normal(const MyMesh::Normal& _normal) const
 {
 	// Assume that 'n_' and 'normal_' are normalized.
 	MyMesh::Normal n_direction_component = n_ * (dot(n_, _normal));
@@ -287,7 +317,6 @@ void MeshCuboidSymmetryGroup::get_symmetric_sample_point_pairs(
 	assert(_cuboid_ann_kd_tree.size() == num_cuboids);
 
 	_sample_point_pairs.clear();
-
 
 
 	std::vector<unsigned int> single_cuboid_indices;
@@ -331,7 +360,7 @@ void MeshCuboidSymmetryGroup::get_symmetric_sample_point_pairs(
 	}
 }
 
-void MeshCuboidSymmetryGroup::get_symmetric_sample_point_pairs(
+void MeshCuboidReflectionSymmetryGroup::get_symmetric_sample_point_pairs(
 	const MeshCuboid *_cuboid_1,
 	const ANNpointArray &_cuboid_ann_points_2,
 	ANNkd_tree *_cuboid_ann_kd_tree_2,
@@ -358,7 +387,8 @@ void MeshCuboidSymmetryGroup::get_symmetric_sample_point_pairs(
 		for (unsigned int i = 0; i < 3; ++i)
 			q[i] = symmetric_point_1[i];
 
-		int num_searched_neighbors = _cuboid_ann_kd_tree_2->annkFRSearch(q, neighbor_distance, 1, nn_idx, dd);
+		int num_searched_neighbors = _cuboid_ann_kd_tree_2->annkFRSearch(
+			q, neighbor_distance, 1, nn_idx, dd);
 		if (num_searched_neighbors > 0)
 		{
 			int point_index_2 = (int)nn_idx[0];
@@ -385,4 +415,68 @@ void MeshCuboidSymmetryGroup::get_symmetric_sample_point_pairs(
 	delete[] nn_idx;
 	delete[] dd;
 	//
+}
+
+MeshCuboidRotationSymmetryGroup::MeshCuboidRotationSymmetryGroup(
+	const MeshCuboidSymmetryGroupInfo &_info)
+	: MeshCuboidSymmetryGroup(_info)
+{
+	assert(_info.symmetry_type_ == RotationSymmetryType);
+}
+
+MeshCuboidRotationSymmetryGroup::MeshCuboidRotationSymmetryGroup(
+	const MeshCuboidSymmetryGroupInfo &_info,
+	const MyMesh::Normal _n, const double _t)
+	: MeshCuboidSymmetryGroup(_info, _n, _t)
+{
+	assert(_info.symmetry_type_ == RotationSymmetryType);
+}
+
+MeshCuboidSymmetryGroup *MeshCuboidRotationSymmetryGroup::copy_constructor()
+{
+	MeshCuboidSymmetryGroup *group = new MeshCuboidRotationSymmetryGroup(
+		info_, n_, t_);
+	assert(group);
+	return group;
+}
+
+bool MeshCuboidRotationSymmetryGroup::compute_symmetry_axis(const std::vector<MeshCuboid *>& _cuboids)
+{
+	return true;
+}
+
+MyMesh::Point MeshCuboidRotationSymmetryGroup::get_symmetric_point(const MyMesh::Point& _point) const
+{
+	return MyMesh::Point(0.0);
+}
+
+MyMesh::Normal MeshCuboidRotationSymmetryGroup::get_symmetric_normal(const MyMesh::Normal& _normal) const
+{
+	return MyMesh::Normal(0.0);
+}
+
+void MeshCuboidRotationSymmetryGroup::get_symmetric_sample_point_pairs(
+	const MeshCuboid *_cuboid_1,
+	const ANNpointArray &_cuboid_ann_points_2,
+	ANNkd_tree *_cuboid_ann_kd_tree_2,
+	const Real _neighbor_distance,
+	std::list<WeightedPointPair> &_sample_point_pairs) const
+{
+
+}
+
+void MeshCuboidRotationSymmetryGroup::add_symmety_cuboid_corner_points(
+	const MeshCuboid *cuboid_1, const MeshCuboid *cuboid_2,
+	const std::vector<MeshCuboid *>& _cuboids,
+	const unsigned int _reflection_axis_index,
+	std::list< std::pair < MyMesh::Point, MyMesh::Point > > &_point_pairs)
+{
+
+}
+
+void MeshCuboidRotationSymmetryGroup::compute_rotation_plane(
+	const std::list< std::pair < MyMesh::Point, MyMesh::Point > > &_point_pairs,
+	MyMesh::Normal &_n, double &_t)
+{
+
 }
