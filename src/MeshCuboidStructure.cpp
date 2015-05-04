@@ -97,17 +97,30 @@ void MeshCuboidStructure::deep_copy(const MeshCuboidStructure& _other)
 		}
 	}
 
-	// Deep copy symmetry groups.
-	unsigned int num_symmetry_groups = _other.symmetry_groups_.size();
-	this->symmetry_groups_.clear();
-	this->symmetry_groups_.reserve(num_symmetry_groups);
+	// Deep copy reflection symmetry groups.
+	unsigned int num_reflection_symmetry_groups = _other.reflection_symmetry_groups_.size();
+	this->reflection_symmetry_groups_.clear();
+	this->reflection_symmetry_groups_.reserve(num_reflection_symmetry_groups);
 
-	for (std::vector<MeshCuboidSymmetryGroup *>::const_iterator it = _other.symmetry_groups_.begin();
-		it != _other.symmetry_groups_.end(); ++it)
+	for (std::vector<MeshCuboidReflectionSymmetryGroup *>::const_iterator it = _other.reflection_symmetry_groups_.begin();
+		it != _other.reflection_symmetry_groups_.end(); ++it)
 	{
 		assert(*it);
-		MeshCuboidSymmetryGroup *symmetry_group = (*it)->copy_constructor();
-		this->symmetry_groups_.push_back(symmetry_group);
+		MeshCuboidReflectionSymmetryGroup *symmetry_group = new MeshCuboidReflectionSymmetryGroup(**it);
+		this->reflection_symmetry_groups_.push_back(symmetry_group);
+	}
+
+	// Deep copy rotation symmetry groups.
+	unsigned int num_rotation_symmetry_groups = _other.rotation_symmetry_groups_.size();
+	this->rotation_symmetry_groups_.clear();
+	this->rotation_symmetry_groups_.reserve(num_rotation_symmetry_groups);
+
+	for (std::vector<MeshCuboidRotationSymmetryGroup *>::const_iterator it = _other.rotation_symmetry_groups_.begin();
+		it != _other.rotation_symmetry_groups_.end(); ++it)
+	{
+		assert(*it);
+		MeshCuboidRotationSymmetryGroup *symmetry_group = new MeshCuboidRotationSymmetryGroup(**it);
+		this->rotation_symmetry_groups_.push_back(symmetry_group);
 	}
 }
 
@@ -210,10 +223,15 @@ void MeshCuboidStructure::clear_cuboids()
 	label_cuboids_.clear();
 	label_cuboids_.resize(num_labels());
 
-	for (std::vector< MeshCuboidSymmetryGroup* >::iterator it = symmetry_groups_.begin();
-		it != symmetry_groups_.end(); ++it)
+	for (std::vector< MeshCuboidReflectionSymmetryGroup* >::iterator it = reflection_symmetry_groups_.begin();
+		it != reflection_symmetry_groups_.end(); ++it)
 		delete (*it);
-	symmetry_groups_.clear();
+	reflection_symmetry_groups_.clear();
+
+	for (std::vector< MeshCuboidRotationSymmetryGroup* >::iterator it = rotation_symmetry_groups_.begin();
+		it != rotation_symmetry_groups_.end(); ++it)
+		delete (*it);
+	rotation_symmetry_groups_.clear();
 }
 
 void MeshCuboidStructure::clear_labels()
@@ -599,10 +617,16 @@ bool MeshCuboidStructure::load_symmetry_groups(const char *_filename, bool _verb
 		std::cout << "Loading " << _filename << "..." << std::endl;
 
 
-	for (std::vector< MeshCuboidSymmetryGroup* >::iterator it = symmetry_groups_.begin();
-		it != symmetry_groups_.end(); ++it)
+	for (std::vector< MeshCuboidReflectionSymmetryGroup* >::iterator it = reflection_symmetry_groups_.begin();
+		it != reflection_symmetry_groups_.end(); ++it)
 		delete (*it);
-	symmetry_groups_.clear();
+	reflection_symmetry_groups_.clear();
+
+	for (std::vector< MeshCuboidRotationSymmetryGroup* >::iterator it = rotation_symmetry_groups_.begin();
+		it != rotation_symmetry_groups_.end(); ++it)
+		delete (*it);
+	rotation_symmetry_groups_.clear();
+
 	symmetry_group_info_.clear();
 
 
@@ -625,31 +649,38 @@ bool MeshCuboidStructure::load_symmetry_groups(const char *_filename, bool _verb
 
 		if (head_element == "symmetry_group")
 		{
-			//if (tokens.size() != 0)
-			//{
-			//	std::cerr << "Error: Wrong file format: \"" << _filename << "\"" << std::endl;
-			//	return false;
-			//}
-			if (!new_symmetry_group.single_label_indices_.empty()
-				|| !new_symmetry_group.pair_label_indices_.empty())
-			{
-				// Add the current symmetry group and create a new one.
-				symmetry_group_info_.push_back(new_symmetry_group);
-				new_symmetry_group = MeshCuboidSymmetryGroupInfo();
-			}
-		}
-		else if (head_element == "axis_index")
-		{
-			if (tokens.size() != 1)
+			if (tokens.size() != 2)
 			{
 				std::cerr << "Error: Wrong file format: \"" << _filename << "\"" << std::endl;
 				return false;
 			}
 			else
 			{
-				unsigned int reflection_axis_index = atoi(tokens[0].c_str());
-				assert(reflection_axis_index < 3);
-				new_symmetry_group.reflection_axis_index_ = reflection_axis_index;
+				MeshCuboidSymmetryGroupType symmetry_type;
+
+				if (tokens[0] == "reflection")
+				{
+					symmetry_type = ReflectionSymmetryType;
+				}
+				else if (tokens[0] == "rotation")
+				{
+					symmetry_type = RotationSymmetryType;
+				}
+				else
+				{
+					std::cerr << "Error: Wrong file format: \"" << _filename << "\"" << std::endl;
+					return false;
+				}
+
+				unsigned int aligned_global_axis_index = atoi(tokens[1].c_str());
+				assert(aligned_global_axis_index < 3);
+
+				if (!new_symmetry_group.single_label_indices_.empty()
+					|| !new_symmetry_group.pair_label_indices_.empty())
+					// Add the current symmetry group.
+					symmetry_group_info_.push_back(new_symmetry_group);
+
+				new_symmetry_group = MeshCuboidSymmetryGroupInfo(symmetry_type, aligned_global_axis_index);
 			}
 		}
 		else if (head_element == "single_label_indices")
@@ -1850,25 +1881,38 @@ void MeshCuboidStructure::remove_symmetric_cuboids()
 
 void MeshCuboidStructure::compute_symmetry_groups()
 {
-	for (std::vector< MeshCuboidSymmetryGroup* >::iterator it = symmetry_groups_.begin();
-		it != symmetry_groups_.end(); ++it)
+	for (std::vector< MeshCuboidReflectionSymmetryGroup* >::iterator it = reflection_symmetry_groups_.begin();
+		it != reflection_symmetry_groups_.end(); ++it)
 		delete (*it);
-	symmetry_groups_.clear();
+	reflection_symmetry_groups_.clear();
+
+	for (std::vector< MeshCuboidRotationSymmetryGroup* >::iterator it = rotation_symmetry_groups_.begin();
+		it != rotation_symmetry_groups_.end(); ++it)
+		delete (*it);
+	rotation_symmetry_groups_.clear();
 
 	const std::vector<MeshCuboid*> cuboids = get_all_cuboids();
 
 	for (std::vector< MeshCuboidSymmetryGroupInfo >::iterator it = symmetry_group_info_.begin();
 		it != symmetry_group_info_.end(); ++it)
 	{
-		MeshCuboidSymmetryGroup* group = MeshCuboidSymmetryGroup::constructor(*it, cuboids);
-		if (group) symmetry_groups_.push_back(group);
+		if ((*it).symmetry_type_ == ReflectionSymmetryType)
+		{
+			MeshCuboidReflectionSymmetryGroup* group = MeshCuboidReflectionSymmetryGroup::constructor(*it, cuboids);
+			if (group) reflection_symmetry_groups_.push_back(group);
+		}
+		else if ((*it).symmetry_type_ == RotationSymmetryType)
+		{
+			MeshCuboidRotationSymmetryGroup* group = MeshCuboidRotationSymmetryGroup::constructor(*it, cuboids);
+			if (group) rotation_symmetry_groups_.push_back(group);
+		}
 	}
 }
 
 void MeshCuboidStructure::copy_sample_points_to_symmetric_position()
 {
-	for (std::vector< MeshCuboidSymmetryGroup* >::const_iterator it = symmetry_groups_.begin();
-		it != symmetry_groups_.end(); ++it)
+	for (std::vector< MeshCuboidReflectionSymmetryGroup* >::const_iterator it = reflection_symmetry_groups_.begin();
+		it != reflection_symmetry_groups_.end(); ++it)
 	{
 		copy_sample_points_to_symmetric_position(*it);
 	}
@@ -1920,77 +1964,78 @@ void MeshCuboidStructure::copy_sample_points_to_symmetric_position(
 	if (!_cuboid_1 || !_cuboid_2)
 		return;
 
-	/*
-	Eigen::MatrixXd symmetric_sample_points_1(3, _cuboid_1->num_sample_points());
-	Eigen::MatrixXd sample_points_2(3, _cuboid_2->num_sample_points());
-
-	for (SamplePointIndex sample_point_index = 0; sample_point_index < _cuboid_1->num_sample_points();
-		++sample_point_index)
+	for (unsigned int symmetry_order = 0; symmetry_order < _symmetry_group->num_symmetry_order(); ++symmetry_order)
 	{
-		assert(_cuboid_1->get_sample_point(sample_point_index));
-		MyMesh::Point point_1 = _cuboid_1->get_sample_point(sample_point_index)->point_;
-		//
-		MyMesh::Point symmetric_point_1 = _symmetry_group->get_symmetric_point(point_1);
-		//
-		for (unsigned int i = 0; i < 3; ++i)
-			symmetric_sample_points_1.col(sample_point_index)(i) = symmetric_point_1[i];
-	}
-
-	for (SamplePointIndex sample_point_index = 0; sample_point_index < _cuboid_2->num_sample_points();
-		++sample_point_index)
-	{
-		assert(_cuboid_2->get_sample_point(sample_point_index));
-		MyMesh::Point point_2 = _cuboid_2->get_sample_point(sample_point_index)->point_;
-		for (unsigned int i = 0; i < 3; ++i)
-			sample_points_2.col(sample_point_index)(i) = point_2[i];
-	}
-
-	const Real neighbor_distance = FLAGS_param_sample_point_neighbor_distance * mesh_->get_object_diameter();
-
-	Eigen::Matrix3d rotation_mat;
-	Eigen::Vector3d translation_vec;
-	double icp_error = -1;
-	
-	ICP::run_iterative_closest_points(symmetric_sample_points_1, sample_points_2,
-		rotation_mat, translation_vec, &neighbor_distance);
-
-	//printf("%d -> %d: %lf\n", _cuboid_1->label_index_, _cuboid_2->label_index_, icp_error);
-	*/
-
-
-	const int num_points_1 = _cuboid_1->num_sample_points();
-
-	for (int point_index_1 = 0; point_index_1 < num_points_1; ++point_index_1)
-	{
-		const MeshSamplePoint* sample_point_1 = _cuboid_1->get_sample_point(point_index_1);
-		assert(sample_point_1);
-		MyMesh::Point point_1 = sample_point_1->point_;
-		MyMesh::Normal normal_1 = sample_point_1->normal_;
-
-		MyMesh::Point symmetric_point_1;
 		/*
-		if (icp_error >= 0)
+		Eigen::MatrixXd symmetric_sample_points_1(3, _cuboid_1->num_sample_points());
+		Eigen::MatrixXd sample_points_2(3, _cuboid_2->num_sample_points());
+
+		for (SamplePointIndex sample_point_index = 0; sample_point_index < _cuboid_1->num_sample_points();
+			++sample_point_index)
 		{
+			assert(_cuboid_1->get_sample_point(sample_point_index));
+			MyMesh::Point point_1 = _cuboid_1->get_sample_point(sample_point_index)->point_;
+			//
+			MyMesh::Point symmetric_point_1 = _symmetry_group->get_symmetric_point(point_1, symmetry_order);
+			//
+			for (unsigned int i = 0; i < 3; ++i)
+				symmetric_sample_points_1.col(sample_point_index)(i) = symmetric_point_1[i];
+		}
+
+		for (SamplePointIndex sample_point_index = 0; sample_point_index < _cuboid_2->num_sample_points();
+			++sample_point_index)
+		{
+			assert(_cuboid_2->get_sample_point(sample_point_index));
+			MyMesh::Point point_2 = _cuboid_2->get_sample_point(sample_point_index)->point_;
+			for (unsigned int i = 0; i < 3; ++i)
+				sample_points_2.col(sample_point_index)(i) = point_2[i];
+		}
+
+		const Real neighbor_distance = FLAGS_param_sample_point_neighbor_distance * mesh_->get_object_diameter();
+
+		Eigen::Matrix3d rotation_mat;
+		Eigen::Vector3d translation_vec;
+		double icp_error = -1;
+
+		ICP::run_iterative_closest_points(symmetric_sample_points_1, sample_points_2,
+			rotation_mat, translation_vec, &neighbor_distance);
+
+		//printf("%d -> %d: %lf\n", _cuboid_1->label_index_, _cuboid_2->label_index_, icp_error);
+		*/
+
+
+		const int num_points_1 = _cuboid_1->num_sample_points();
+
+		for (int point_index_1 = 0; point_index_1 < num_points_1; ++point_index_1)
+		{
+			const MeshSamplePoint* sample_point_1 = _cuboid_1->get_sample_point(point_index_1);
+			assert(sample_point_1);
+			MyMesh::Point point_1 = sample_point_1->point_;
+			MyMesh::Normal normal_1 = sample_point_1->normal_;
+
+			MyMesh::Point symmetric_point_1;
+			/*
+			if (icp_error >= 0)
+			{
 			// If ICP succeeded, copy the aligned point.
 			for (unsigned int i = 0; i < 3; ++i)
-				symmetric_point_1[i] = symmetric_sample_points_1.col(point_index_1)[i];
+			symmetric_point_1[i] = symmetric_sample_points_1.col(point_index_1)[i];
+			}
+			else
+			*/
+			symmetric_point_1 = _symmetry_group->get_symmetric_point(point_1, symmetry_order);
+
+			// FIXME:
+			// IF ICP succeeded, how to compute the symmetric normal direction?
+			MyMesh::Normal symmetric_normal_1 = _symmetry_group->get_symmetric_normal(normal_1, symmetry_order);
+
+			MeshSamplePoint *symmetric_sample_point = add_sample_point(symmetric_point_1, symmetric_normal_1);
+
+			// Copy label confidence values.
+			symmetric_sample_point->label_index_confidence_ = sample_point_1->label_index_confidence_;
+
+			_cuboid_2->add_sample_point(symmetric_sample_point);
 		}
-		else
-		*/
-		{
-			symmetric_point_1 = _symmetry_group->get_symmetric_point(point_1);
-		}
-
-		// FIXME:
-		// IF ICP succeeded, how to compute the symmetric normal direction?
-		MyMesh::Normal symmetric_normal_1 = _symmetry_group->get_symmetric_normal(normal_1);
-
-		MeshSamplePoint *symmetric_sample_point = add_sample_point(symmetric_point_1, symmetric_normal_1);
-
-		// Copy label confidence values.
-		symmetric_sample_point->label_index_confidence_ = sample_point_1->label_index_confidence_;
-
-		_cuboid_2->add_sample_point(symmetric_sample_point);
 	}
 }
 

@@ -1393,7 +1393,10 @@ void optimize_attributes_once_with_constraints(
 		_cuboid_structure.mesh_->get_object_diameter();
 
 	std::vector<MeshCuboid *> all_cuboids = _cuboid_structure.get_all_cuboids();
-	std::vector<MeshCuboidSymmetryGroup *>& all_symmetry_groups = _cuboid_structure.symmetry_groups_;
+	std::vector<MeshCuboidReflectionSymmetryGroup *>& all_reflection_symmetry_groups
+		= _cuboid_structure.reflection_symmetry_groups_;
+	std::vector<MeshCuboidRotationSymmetryGroup *>& all_rotation_symmetry_groups
+		= _cuboid_structure.rotation_symmetry_groups_;
 
 	const unsigned int num_attributes = MeshCuboidAttributes::k_num_attributes;
 	unsigned int num_cuboids = all_cuboids.size();
@@ -1416,7 +1419,11 @@ void optimize_attributes_once_with_constraints(
 	Eigen::VectorXd linear_term = pair_linear_term + _single_energy_term_weight * single_linear_term;
 	double constant_term = pair_constant_term + _single_energy_term_weight * single_constant_term;
 
-	MeshCuboidNonLinearSolver non_linear_solver(all_cuboids, all_symmetry_groups, neighbor_distance,
+	MeshCuboidNonLinearSolver non_linear_solver(
+		all_cuboids,
+		all_reflection_symmetry_groups,
+		all_rotation_symmetry_groups,
+		neighbor_distance,
 		_symmetry_energy_term_weight);
 
 	non_linear_solver.optimize(quadratic_term, linear_term, constant_term, &init_values);

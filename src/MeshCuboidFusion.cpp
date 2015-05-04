@@ -629,7 +629,7 @@ void reconstruct_fusion(const char *_mesh_filepath,
 				occlusion_radius, visibility_smoothing_prior, voxel_visibility);
 
 			// Merge visibility values for voxels in symmetric cuboids.
-			merge_symmetric_cuboids_visibility(local_coord_voxels, symmetry_group.reflection_axis_index_,
+			merge_symmetric_cuboids_visibility(local_coord_voxels, symmetry_group.aligned_global_axis_index_,
 				voxel_visibility, voxel_visibility);
 			std::cout << "Done." << std::endl;
 
@@ -696,7 +696,7 @@ void reconstruct_fusion(const char *_mesh_filepath,
 				occlusion_radius, visibility_smoothing_prior, voxel_visibility_2);
 
 			// Merge visibility values for voxels in symmetric cuboids.
-			merge_symmetric_cuboids_visibility(local_coord_voxels, symmetry_group.reflection_axis_index_,
+			merge_symmetric_cuboids_visibility(local_coord_voxels, symmetry_group.aligned_global_axis_index_,
 				voxel_visibility_1, voxel_visibility_2);
 			std::cout << "Done." << std::endl;
 

@@ -534,6 +534,53 @@ void draw_arrow(MyMesh::Point _p1, MyMesh::Point _p2, GLdouble _arrow_size)
 	glPolygonMode(GL_BACK, polygon_mode[1]);
 }
 
+void draw_cylinder(MyMesh::Point _p1, MyMesh::Point _p2, GLdouble _arrow_size)
+{
+	MyMesh::Normal x_dir, y_dir, z_dir;
+	z_dir = (_p2 - _p1).normalize();
+
+	if (abs(dot(z_dir, MyMesh::Normal(0, 1, 0))) < 0.99)
+	{
+		x_dir = cross(MyMesh::Normal(0, 1, 0), z_dir);
+		y_dir = cross(z_dir, x_dir);
+	}
+	else
+	{
+		y_dir = cross(z_dir, MyMesh::Normal(1, 0, 0));
+		x_dir = cross(y_dir, z_dir);
+	}
+
+	GLdouble cylinder_matrix[16] = {
+		x_dir[0], x_dir[1], x_dir[2], 0,
+		y_dir[0], y_dir[1], y_dir[2], 0,
+		z_dir[0], z_dir[1], z_dir[2], 0,
+		_p1[0], _p1[1], _p1[2], 1
+	};
+
+	GLint polygon_mode[2];
+	glGetIntegerv(GL_POLYGON_MODE, polygon_mode);
+	glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
+
+	GLUquadric *cylinder = gluNewQuadric();
+	gluQuadricDrawStyle(cylinder, GLU_FILL);
+	gluQuadricNormals(cylinder, GLU_SMOOTH);
+	gluQuadricOrientation(cylinder, GLU_OUTSIDE);
+
+	glPushMatrix();
+	glMultMatrixd(cylinder_matrix);
+
+	GLdouble arrow_length = (_p2 - _p1).length() - (2 * _arrow_size);
+
+	glTranslated(0, 0, _arrow_size);
+	gluCylinder(cylinder, 0.5*_arrow_size, 0.5*_arrow_size, arrow_length, 20, 20);
+
+	glPopMatrix();
+	gluDeleteQuadric(cylinder);
+
+	glPolygonMode(GL_FRONT, polygon_mode[0]);
+	glPolygonMode(GL_BACK, polygon_mode[1]);
+}
+
 void MeshViewerCore::draw_scene(const std::string& _draw_mode)
 {
 	MeshViewerCoreT<MyMesh>::draw_scene(_draw_mode);
@@ -866,12 +913,25 @@ void MeshViewerCore::draw_openmesh(const std::string& _drawmode)
 			}
 		}
 
-		// Draw symmetry axes.
-		for (std::vector< MeshCuboidSymmetryGroup* >::iterator it = cuboid_structure_.symmetry_groups_.begin();
-			it != cuboid_structure_.symmetry_groups_.end(); ++it)
+		// Draw rotation symmetry axes.
+		for (std::vector< MeshCuboidRotationSymmetryGroup* >::iterator it = cuboid_structure_.rotation_symmetry_groups_.begin();
+			it != cuboid_structure_.rotation_symmetry_groups_.end(); ++it)
 		{
-			//MeshCuboidSymmetryGroup* group = (*it);
-			MeshCuboidReflectionSymmetryGroup* group = dynamic_cast<MeshCuboidReflectionSymmetryGroup*>(*it);
+			MeshCuboidRotationSymmetryGroup* group = (*it);
+			assert(group);
+			std::array<MyMesh::Point, 2> corners;
+			group->get_rotation_axis_corners(mesh_.get_bbox_center(), mesh_.get_object_diameter(), corners);
+
+			glColor4f(192.0f / 256.0f, 0.0f / 256.0f, 0.0f / 256.0f, 0.3f);
+			glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
+			draw_cylinder(corners[0], corners[1], 0.02 * mesh_.get_object_diameter());
+		}
+
+		// Draw reflection symmetry axes.
+		for (std::vector< MeshCuboidReflectionSymmetryGroup* >::iterator it = cuboid_structure_.reflection_symmetry_groups_.begin();
+			it != cuboid_structure_.reflection_symmetry_groups_.end(); ++it)
+		{
+			MeshCuboidReflectionSymmetryGroup* group = (*it);
 			assert(group);
 			std::array<MyMesh::Point, 4> corners;
 			group->get_reflection_plane_corners(mesh_.get_bbox_center(), mesh_.get_object_diameter(), corners);

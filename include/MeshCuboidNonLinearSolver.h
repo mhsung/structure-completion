@@ -22,7 +22,8 @@ class MeshCuboidNonLinearSolver
 public:
 	MeshCuboidNonLinearSolver(
 		const std::vector<MeshCuboid *>& _cuboids,
-		const std::vector<MeshCuboidSymmetryGroup *>& _symmetry_groups,
+		const std::vector<MeshCuboidReflectionSymmetryGroup *>& _reflection_symmetry_groups,
+		const std::vector<MeshCuboidRotationSymmetryGroup *>& _rotation_symmetry_groups,
 		const Real _neighbor_distance, const Real _symmetry_energy_term_weight);
 	~MeshCuboidNonLinearSolver();
 
@@ -30,7 +31,8 @@ public:
 	inline unsigned int num_total_variables() const;
 	inline unsigned int num_total_cuboid_corner_variables() const;
 	inline unsigned int num_total_cuboid_axis_variables() const;
-	inline unsigned int num_total_symmetry_gtoup_variables() const;
+	inline unsigned int num_total_reflection_symmetry_group_variables() const;
+	inline unsigned int num_total_rotation_symmetry_group_variables() const;
 
 	static NLPVectorExpression create_vector_variable(
 		const std::pair<Index, Index>& _index_size_pair);
@@ -40,18 +42,26 @@ public:
 		unsigned int _cuboid_index, unsigned int _corner_index) const;
 	inline std::pair<Index, Index> get_cuboid_axis_variable_index_size(
 		unsigned int _cuboid_index, unsigned int _axis_index) const;
-	inline std::pair<Index, Index> get_symmetry_group_variable_n_index_size(
+	inline std::pair<Index, Index> get_reflection_symmetry_group_variable_n_index_size(
 		unsigned int _symmetry_group_index) const;
-	inline std::pair<Index, Index> get_symmetry_group_variable_t_index_size(
+	inline std::pair<Index, Index> get_reflection_symmetry_group_variable_t_index_size(
+		unsigned int _symmetry_group_index) const;
+	inline std::pair<Index, Index> get_rotation_symmetry_group_variable_n_index_size(
+		unsigned int _symmetry_group_index) const;
+	inline std::pair<Index, Index> get_rotation_symmetry_group_variable_t_index_size(
 		unsigned int _symmetry_group_index) const;
 
-	inline NLPVectorExpression get_cuboid_corner_variable(
+	inline NLPVectorExpression create_cuboid_corner_variable(
 		unsigned int _cuboid_index, unsigned int _corner_index) const;
-	inline NLPVectorExpression get_cuboid_axis_variable(
+	inline NLPVectorExpression create_cuboid_axis_variable(
 		unsigned int _cuboid_index, unsigned int _axis_index) const;
-	inline NLPVectorExpression get_symmetry_group_variable_n(
+	inline NLPVectorExpression create_reflection_symmetry_group_variable_n(
 		unsigned int _symmetry_group_index) const;
-	inline NLPVectorExpression get_symmetry_group_variable_t(
+	inline NLPVectorExpression create_reflection_symmetry_group_variable_t(
+		unsigned int _symmetry_group_index) const;
+	inline NLPVectorExpression create_rotation_symmetry_group_variable_n(
+		unsigned int _symmetry_group_index) const;
+	inline NLPVectorExpression create_rotation_symmetry_group_variable_t(
 		unsigned int _symmetry_group_index) const;
 
 
@@ -68,12 +78,12 @@ private:
 		const Eigen::VectorXd& _linear_term,
 		const double _constant_term);
 
-	void add_symmetry_group_energy_functions(
+	void add_reflection_symmetry_group_energy_functions(
 		Eigen::MatrixXd& _quadratic_term,
 		Eigen::VectorXd& _linear_term,
 		double &_constant_term);
 
-	void add_symmetry_group_energy_functions(
+	void add_reflection_symmetry_group_energy_functions(
 		const unsigned int _symmetry_group_index,
 		const std::vector<ANNpointArray>& _cuboid_ann_points,
 		const std::vector<ANNkd_tree *>& _cuboid_ann_kd_tree,
@@ -92,13 +102,14 @@ private:
 
 	// Constraint functions.
 	void add_cuboid_constraints(NLPFormulation &_formulation);
-	void add_symmetry_group_constraints(NLPFormulation &_formulation);
+	void add_reflection_symmetry_group_constraints(NLPFormulation &_formulation);
+	void add_rotation_symmetry_group_constraints(NLPFormulation &_formulation);
 
 	void add_cuboid_constraints(
 		const unsigned int _cuboid_index,
 		NLPFormulation &_formulation);
 
-	void add_symmetry_group_constraints(
+	void add_reflection_symmetry_group_constraints(
 		const unsigned int _symmetry_group_index,
 		NLPFormulation &_formulation);
 
@@ -116,34 +127,44 @@ private:
 		const unsigned int _reflection_axis_index,
 		NLPFormulation &_formulation);
 
+	void add_rotation_symmetry_group_constraints(
+		const unsigned int _symmetry_group_index,
+		NLPFormulation &_formulation);
+
 
 	// Initialization function.
 	bool compute_initial_values(const Eigen::VectorXd &_input, Eigen::VectorXd &_output);
 	void compute_cuboid_axis_values(Eigen::VectorXd &_values);
-	void compute_symmetry_group_values(Eigen::VectorXd &_values);
+	void compute_reflection_symmetry_group_values(Eigen::VectorXd &_values);
+	void compute_rotation_symmetry_group_values(Eigen::VectorXd &_values);
 
 
 	// Update function.
 	void update_cuboids(const std::vector< Number >& _values);
-	void update_symmetry_groups(const std::vector< Number >& _values);
+	void update_reflection_symmetry_groups(const std::vector< Number >& _values);
+	void update_rotation_symmetry_groups(const std::vector< Number >& _values);
 
 
 private:
 	const std::vector<MeshCuboid *>& cuboids_;
-	const std::vector<MeshCuboidSymmetryGroup *>& symmetry_groups_;
+	const std::vector<MeshCuboidReflectionSymmetryGroup *>& reflection_symmetry_groups_;
+	const std::vector<MeshCuboidRotationSymmetryGroup *>& rotation_symmetry_groups_;
 	const Real neighbor_distance_;
 	const double symmetry_energy_term_weight_;
 
 	unsigned int num_cuboids_;
-	unsigned int num_symmetry_groups_;
+	unsigned int num_reflection_symmetry_groups_;
+	unsigned int num_rotation_symmetry_groups_;
 
 	unsigned int cuboid_corner_variable_start_index_;
 	unsigned int cuboid_axis_variable_start_index_;
-	unsigned int symmetry_group_variable_start_index_;
+	unsigned int reflection_symmetry_group_variable_start_index_;
+	unsigned int rotation_symmetry_group_variable_start_index_;
 
 	const unsigned int num_cuboid_corner_variables_;
 	const unsigned int num_cuboid_axis_variables_;
-	const unsigned int num_symmetry_group_variables_;
+	const unsigned int num_reflection_symmetry_group_variables_;
+	const unsigned int num_rotation_symmetry_group_variables_;
 
 	Eigen::MatrixXd quadratic_term_;
 	Eigen::VectorXd linear_term_;

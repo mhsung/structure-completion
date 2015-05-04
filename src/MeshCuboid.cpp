@@ -467,7 +467,7 @@ MyMesh::Point MeshCuboid::get_local_coord(const MyMesh::Point _pos) const
 		local_pos[axis_index] = dot(bbox_axes_[axis_index], pos);
 
 	MyMesh::Point global_pos = get_global_coord(local_pos);
-	CHECK_NUMERICAL_ERROR(__FUNCTION__, (global_pos - _pos).norm());
+	//CHECK_NUMERICAL_ERROR(__FUNCTION__, (global_pos - _pos).norm());
 
 	return local_pos;
 }

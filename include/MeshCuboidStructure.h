@@ -166,7 +166,8 @@ public:
 	// FIXME:
 	// The following symmetry information should be integrated with 'label_symmetries_'.
 	std::vector< MeshCuboidSymmetryGroupInfo > symmetry_group_info_;
-	std::vector< MeshCuboidSymmetryGroup* > symmetry_groups_;
+	std::vector< MeshCuboidReflectionSymmetryGroup* > reflection_symmetry_groups_;
+	std::vector< MeshCuboidRotationSymmetryGroup* > rotation_symmetry_groups_;
 
 	MyMesh::Normal translation_;
 	Real scale_;
