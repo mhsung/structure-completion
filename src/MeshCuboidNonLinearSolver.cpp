@@ -219,6 +219,7 @@ NLPEigenQuadFunction* MeshCuboidNonLinearSolver::create_quadratic_energy_functio
 
 	//
 	add_reflection_symmetry_group_energy_functions(quadratic_term_, linear_term_, constant_term_);
+	add_rotation_symmetry_group_energy_functions(quadratic_term_, linear_term_, constant_term_);
 	//
 
 	NLPEigenQuadFunction *function = new NLPEigenQuadFunction(
@@ -323,6 +324,37 @@ void MeshCuboidNonLinearSolver::add_reflection_symmetry_group_energy_functions(
 		symmetry_energy_term_weight_ * A2;
 }
 
+void MeshCuboidNonLinearSolver::add_rotation_symmetry_group_energy_functions(
+	Eigen::MatrixXd& _quadratic_term,
+	Eigen::VectorXd& _linear_term,
+	double &_constant_term)
+{
+	assert(_quadratic_term.rows() == num_total_variables());
+	assert(_quadratic_term.cols() == num_total_variables());
+	assert(_linear_term.rows() == num_total_variables());
+
+	for (unsigned int symmetry_group_index = 0; symmetry_group_index < num_rotation_symmetry_groups_;
+		++symmetry_group_index)
+	{
+		const MeshCuboidSymmetryGroup* symmetry_group = rotation_symmetry_groups_[symmetry_group_index];
+		assert(symmetry_group);
+
+		std::pair<Index, Index> index_size_pair;
+		index_size_pair = get_rotation_symmetry_group_variable_t_index_size(symmetry_group_index);
+
+		// Minimize \| t \|_2^2.
+		_quadratic_term.block<3, 3>(index_size_pair.first, index_size_pair.first) +=
+			Eigen::MatrixXd::Identity(index_size_pair.second, index_size_pair.second);
+	}
+}
+
+void MeshCuboidNonLinearSolver::add_constraints(NLPFormulation &_formulation)
+{
+	add_cuboid_constraints(_formulation);
+	add_reflection_symmetry_group_constraints(_formulation);
+	add_rotation_symmetry_group_constraints(_formulation);
+}
+
 void MeshCuboidNonLinearSolver::add_cuboid_constraints(NLPFormulation &_formulation)
 {
 	for (unsigned int cuboid_index = 0; cuboid_index < num_cuboids_; ++cuboid_index)
@@ -425,7 +457,7 @@ void MeshCuboidNonLinearSolver::add_reflection_symmetry_group_constraints(
 	const unsigned int _symmetry_group_index,
 	NLPFormulation &_formulation)
 {
-	const MeshCuboidSymmetryGroup *symmetry_group = reflection_symmetry_groups_[_symmetry_group_index];
+	const MeshCuboidReflectionSymmetryGroup *symmetry_group = reflection_symmetry_groups_[_symmetry_group_index];
 	assert(symmetry_group);
 
 	const unsigned int dimension = 3;
@@ -439,15 +471,13 @@ void MeshCuboidNonLinearSolver::add_reflection_symmetry_group_constraints(
 		it != single_cuboid_indices.end(); ++it)
 	{
 		unsigned int cuboid_index = (*it);
-		for (unsigned int i = 0; i < dimension; ++i)
-		{
-			NLPVectorExpression axis_variable = create_cuboid_axis_variable(cuboid_index,
-				symmetry_group->get_aligned_global_axis_index());
+		
+		NLPVectorExpression axis_variable = create_cuboid_axis_variable(cuboid_index,
+			symmetry_group->get_aligned_global_axis_index());
 
-			// The symmetry axis should be identical with the cuboid axis.
-			NLPVectorExpression expression = n_variable - axis_variable;
-			_formulation.add_constraint(expression, 0, 0);
-		}
+		// The symmetry axis should be identical with the cuboid axis.
+		NLPVectorExpression expression = n_variable - axis_variable;
+		_formulation.add_constraint(expression, 0, 0);
 	}
 
 
@@ -546,11 +576,12 @@ void MeshCuboidNonLinearSolver::add_rotation_symmetry_group_constraints(
 	const unsigned int _symmetry_group_index,
 	NLPFormulation &_formulation)
 {
-	const MeshCuboidSymmetryGroup *symmetry_group = rotation_symmetry_groups_[_symmetry_group_index];
+	const MeshCuboidRotationSymmetryGroup *symmetry_group = rotation_symmetry_groups_[_symmetry_group_index];
 	assert(symmetry_group);
 
 	const unsigned int dimension = 3;
 	NLPVectorExpression n_variable = create_rotation_symmetry_group_variable_n(_symmetry_group_index);
+	NLPVectorExpression t_variable = create_rotation_symmetry_group_variable_t(_symmetry_group_index);
 
 
 	std::vector< unsigned int > single_cuboid_indices;
@@ -560,15 +591,23 @@ void MeshCuboidNonLinearSolver::add_rotation_symmetry_group_constraints(
 		it != single_cuboid_indices.end(); ++it)
 	{
 		unsigned int cuboid_index = (*it);
-		for (unsigned int i = 0; i < dimension; ++i)
-		{
-			NLPVectorExpression axis_variable = create_cuboid_axis_variable(cuboid_index,
-				symmetry_group->get_aligned_global_axis_index());
 
-			// The symmetry axis should be identical with the cuboid axis.
-			NLPVectorExpression expression = n_variable - axis_variable;
-			_formulation.add_constraint(expression, 0, 0);
-		}
+		NLPVectorExpression axis_variable = create_cuboid_axis_variable(cuboid_index,
+			symmetry_group->get_aligned_global_axis_index());
+
+		// The symmetry axis should be identical with the cuboid axis.
+		NLPVectorExpression expression_1 = n_variable - axis_variable;
+		_formulation.add_constraint(expression_1, 0, 0);
+
+		NLPVectorExpression cuboid_center_variable(dimension);
+		for (unsigned int corner_index = 0; corner_index < MeshCuboid::k_num_corners; ++corner_index)
+			cuboid_center_variable += create_cuboid_corner_variable(cuboid_index, corner_index);
+		cuboid_center_variable *= (1.0 / MeshCuboid::k_num_corners);
+
+		//  cross(n, (c - t)) = 0.
+		NLPVectorExpression expression_2 = NLPVectorExpression::cross_product(
+			n_variable, cuboid_center_variable - t_variable);
+		_formulation.add_constraint(NLPVectorExpression::dot_product(expression_2, expression_2), -1.0E-12, 1.0E-12);
 	}
 
 	// Ignore pairs of cuboids.
@@ -686,10 +725,7 @@ void MeshCuboidNonLinearSolver::optimize(
 		_quadratic_term, _linear_term, _constant_term);
 	assert(function);
 	NLPFormulation formulation(function);
-
-	add_cuboid_constraints(formulation);
-	add_reflection_symmetry_group_constraints(formulation);
-	add_rotation_symmetry_group_constraints(formulation);
+	add_constraints(formulation);
 
 
 	std::cout << "Energy: (";
@@ -762,10 +798,16 @@ void MeshCuboidNonLinearSolver::optimize(
 	assert(output.size() == num_total_variables());
 	std::cout << "final = " << function->eval(&(output[0])) << ")" << std::endl;
 
+
 	// Update symmetry groups.
-	update_cuboids(output);
-	update_reflection_symmetry_groups(output);
-	update_rotation_symmetry_groups(output);
+	update(output);
+}
+
+void MeshCuboidNonLinearSolver::update(const std::vector< Number >& _values)
+{
+	update_cuboids(_values);
+	update_reflection_symmetry_groups(_values);
+	update_rotation_symmetry_groups(_values);
 }
 
 void MeshCuboidNonLinearSolver::update_cuboids(const std::vector< Number >& _values)

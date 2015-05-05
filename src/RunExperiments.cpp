@@ -802,6 +802,9 @@ void MeshViewerCore::predict()
 	snapshot_filename_sstr.clear(); snapshot_filename_sstr.str("");
 	snapshot_filename_sstr << mesh_output_path << filename_prefix << std::string("input");
 	snapshot(snapshot_filename_sstr.str().c_str());
+
+	cuboid_structure_.save_sample_points_to_ply(snapshot_filename_sstr.str().c_str());
+	cuboid_structure_.save_sample_points((snapshot_filename_sstr.str() + std::string(".pts")).c_str());
 	//
 
 

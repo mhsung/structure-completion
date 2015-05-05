@@ -47,33 +47,27 @@ public:
 
 	struct WeightedPointPair
 	{
-		WeightedPointPair(const Real _weight, const MyMesh::Point _p1, const MyMesh::Point _p2)
-			: weight_(_weight), p1_(_p1), p2_(_p2) {}
-		Real weight_;
+		WeightedPointPair(const MyMesh::Point _p1, const MyMesh::Point _p2,
+			const Real _weight = 1.0, Real _angle = 0.0)
+			: p1_(_p1), p2_(_p2), weight_(_weight), angle_(_angle) {}
 		MyMesh::Point p1_;
 		MyMesh::Point p2_;
+		Real weight_;
+		Real angle_;
 	};
 
 
 	// Virtual functions.
 	virtual bool compute_symmetry_axis(const std::vector<MeshCuboid *>& _cuboids) = 0;
 
-	virtual MyMesh::Point get_symmetric_point(const MyMesh::Point& _point, unsigned int _order) const = 0;
-	virtual MyMesh::Normal get_symmetric_normal(const MyMesh::Normal& _normal, unsigned int _order) const = 0;
+	virtual MyMesh::Point get_symmetric_point(const MyMesh::Point& _point, unsigned int _symmetry_order) const = 0;
+	virtual MyMesh::Normal get_symmetric_normal(const MyMesh::Normal& _normal, unsigned int _symmetry_order) const = 0;
 
 	virtual MeshCuboidSymmetryGroupType get_symmetry_type() const = 0;
-	virtual unsigned int num_symmetry_order() const;
-	virtual void set_symmetry_order(unsigned int _symmetry_order);
+	virtual unsigned int num_symmetry_orders() const;
 
-	virtual void get_symmetric_sample_point_pairs(
-		const MeshCuboid *_cuboid_1,
-		const ANNpointArray &_cuboid_ann_points_2,
-		ANNkd_tree *_cuboid_ann_kd_tree_2,
-		const Real _neighbor_distance,
-		std::list<WeightedPointPair> &_sample_point_pairs) const = 0;
-
-
-	unsigned int get_aligned_global_axis_index() const { return info_.aligned_global_axis_index_; }
+	Real get_rotation_angle() const;
+	unsigned int get_aligned_global_axis_index() const;
 	void get_single_cuboid_indices(const std::vector<MeshCuboid *>& _cuboids,
 		std::vector<unsigned int> &_single_cuboid_indices) const;
 	void get_pair_cuboid_indices(const std::vector<MeshCuboid *>& _cuboids,
@@ -86,9 +80,16 @@ public:
 		const Real _neighbor_distance,
 		std::list<WeightedPointPair> &_sample_point_pairs) const;
 
+	void get_symmetric_sample_point_pairs(
+		const MeshCuboid *_cuboid_1,
+		const ANNpointArray &_cuboid_ann_points_2,
+		ANNkd_tree *_cuboid_ann_kd_tree_2,
+		const Real _neighbor_distance,
+		std::list<WeightedPointPair> &_sample_point_pairs) const;
+
 protected:
 	const MeshCuboidSymmetryGroupInfo info_;
-	unsigned int symmetry_order_;
+	unsigned int num_symmetry_orders_;
 };
 
 
@@ -107,21 +108,14 @@ public:
 	// Virtual functions.
 	virtual bool compute_symmetry_axis(const std::vector<MeshCuboid *>& _cuboids);
 
-	virtual MyMesh::Point get_symmetric_point(const MyMesh::Point& _point, unsigned int _order) const;
-	virtual MyMesh::Normal get_symmetric_normal(const MyMesh::Normal& _normal, unsigned int _order) const;
+	virtual MyMesh::Point get_symmetric_point(const MyMesh::Point& _point, unsigned int _symmetry_order) const;
+	virtual MyMesh::Normal get_symmetric_normal(const MyMesh::Normal& _normal, unsigned int _symmetry_order) const;
 	virtual MyMesh::Point get_symmetric_point(const MyMesh::Point& _point) const;
 	virtual MyMesh::Normal get_symmetric_normal(const MyMesh::Normal& _normal) const;
 
 	virtual MeshCuboidSymmetryGroupType get_symmetry_type() const;
-	virtual unsigned int num_symmetry_order() const;
-	virtual void set_symmetry_order(unsigned int _symmetry_order);
-	
-	virtual void get_symmetric_sample_point_pairs(
-		const MeshCuboid *_cuboid_1,
-		const ANNpointArray &_cuboid_ann_points_2,
-		ANNkd_tree *_cuboid_ann_kd_tree_2,
-		const Real _neighbor_distance,
-		std::list<WeightedPointPair> &_sample_point_pairs) const;
+	virtual unsigned int num_symmetry_orders() const;
+	virtual void set_num_symmetry_order(unsigned int _symmetry_order);
 
 	void get_reflection_plane(MyMesh::Normal &_n, double &_t) const;
 	void set_reflection_plane(const MyMesh::Normal &_n, const double &_t);
@@ -164,19 +158,14 @@ public:
 	// Virtual functions.
 	virtual bool compute_symmetry_axis(const std::vector<MeshCuboid *>& _cuboids);
 	
-	virtual MyMesh::Point get_symmetric_point(const MyMesh::Point& _point, unsigned int _order) const;
-	virtual MyMesh::Normal get_symmetric_normal(const MyMesh::Normal& _normal, unsigned int _order) const;
+	virtual MyMesh::Point get_symmetric_point(const MyMesh::Point& _point, unsigned int _symmetry_order) const;
+	virtual MyMesh::Normal get_symmetric_normal(const MyMesh::Normal& _normal, unsigned int _symmetry_order) const;
 
 	virtual MeshCuboidSymmetryGroupType get_symmetry_type() const;
 
-	virtual void get_symmetric_sample_point_pairs(
-		const MeshCuboid *_cuboid_1,
-		const ANNpointArray &_cuboid_ann_points_2,
-		ANNkd_tree *_cuboid_ann_kd_tree_2,
-		const Real _neighbor_distance,
-		std::list<WeightedPointPair> &_sample_point_pairs) const;
 
-	Real get_rotation_angle() const;
+	bool compute_rotation_angle(const std::vector<MeshCuboid *> &_cuboids);
+
 	void get_rotation_axis(MyMesh::Normal &_n, MyMesh::Point &_t) const;
 	void set_rotation_axis(const MyMesh::Normal &_n, const MyMesh::Point &_t);
 	void get_rotation_axis_corners(const MyMesh::Point &_point, const Real _size,

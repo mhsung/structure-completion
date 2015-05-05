@@ -1916,6 +1916,12 @@ void MeshCuboidStructure::copy_sample_points_to_symmetric_position()
 	{
 		copy_sample_points_to_symmetric_position(*it);
 	}
+
+	for (std::vector< MeshCuboidRotationSymmetryGroup* >::const_iterator it = rotation_symmetry_groups_.begin();
+		it != rotation_symmetry_groups_.end(); ++it)
+	{
+		copy_sample_points_to_symmetric_position(*it);
+	}
 }
 
 void MeshCuboidStructure::copy_sample_points_to_symmetric_position(
@@ -1936,23 +1942,27 @@ void MeshCuboidStructure::copy_sample_points_to_symmetric_position(
 			_symmetry_group, all_cuboids[cuboid_index], all_cuboids[cuboid_index]);
 	}
 
-
-	std::vector< std::pair<unsigned int, unsigned int> > pair_cuboid_indices;
-	_symmetry_group->get_pair_cuboid_indices(all_cuboids, pair_cuboid_indices);
-
-	for (std::vector< std::pair<unsigned int, unsigned int> >::const_iterator it = pair_cuboid_indices.begin();
-		it != pair_cuboid_indices.end(); ++it)
+	// NOTE:
+	// Copy cuboid to cuboid only for reflection symmetry.
+	if (_symmetry_group->get_symmetry_type() == ReflectionSymmetryType)
 	{
-		const unsigned int cuboid_index_1 = (*it).first;
-		const unsigned int cuboid_index_2 = (*it).second;
+		std::vector< std::pair<unsigned int, unsigned int> > pair_cuboid_indices;
+		_symmetry_group->get_pair_cuboid_indices(all_cuboids, pair_cuboid_indices);
 
-		// 1 -> 2.
-		copy_sample_points_to_symmetric_position(
-			_symmetry_group, all_cuboids[cuboid_index_1], all_cuboids[cuboid_index_2]);
+		for (std::vector< std::pair<unsigned int, unsigned int> >::const_iterator it = pair_cuboid_indices.begin();
+			it != pair_cuboid_indices.end(); ++it)
+		{
+			const unsigned int cuboid_index_1 = (*it).first;
+			const unsigned int cuboid_index_2 = (*it).second;
 
-		// 2 -> 1.
-		copy_sample_points_to_symmetric_position(
-			_symmetry_group, all_cuboids[cuboid_index_2], all_cuboids[cuboid_index_1]);
+			// 1 -> 2.
+			copy_sample_points_to_symmetric_position(
+				_symmetry_group, all_cuboids[cuboid_index_1], all_cuboids[cuboid_index_2]);
+
+			// 2 -> 1.
+			copy_sample_points_to_symmetric_position(
+				_symmetry_group, all_cuboids[cuboid_index_2], all_cuboids[cuboid_index_1]);
+		}
 	}
 }
 
@@ -1964,8 +1974,9 @@ void MeshCuboidStructure::copy_sample_points_to_symmetric_position(
 	if (!_cuboid_1 || !_cuboid_2)
 		return;
 
-	for (unsigned int symmetry_order = 0; symmetry_order < _symmetry_group->num_symmetry_order(); ++symmetry_order)
+	for (unsigned int symmetry_order = 1; symmetry_order < _symmetry_group->num_symmetry_orders(); ++symmetry_order)
 	{
+		assert(symmetry_order > 0);
 		/*
 		Eigen::MatrixXd symmetric_sample_points_1(3, _cuboid_1->num_sample_points());
 		Eigen::MatrixXd sample_points_2(3, _cuboid_2->num_sample_points());

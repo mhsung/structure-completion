@@ -73,11 +73,20 @@ public:
 
 
 private:
+	// Core functions.
 	NLPEigenQuadFunction* create_quadratic_energy_function(
 		const Eigen::MatrixXd& _quadratic_term,
 		const Eigen::VectorXd& _linear_term,
 		const double _constant_term);
 
+	void add_constraints(NLPFormulation &_formulation);
+
+	bool compute_initial_values(const Eigen::VectorXd &_input, Eigen::VectorXd &_output);
+
+	void update(const std::vector< Number >& _values);
+
+
+	// Energy functions.
 	void add_reflection_symmetry_group_energy_functions(
 		Eigen::MatrixXd& _quadratic_term,
 		Eigen::VectorXd& _linear_term,
@@ -87,6 +96,11 @@ private:
 		const unsigned int _symmetry_group_index,
 		const std::vector<ANNpointArray>& _cuboid_ann_points,
 		const std::vector<ANNkd_tree *>& _cuboid_ann_kd_tree,
+		Eigen::MatrixXd& _quadratic_term,
+		Eigen::VectorXd& _linear_term,
+		double &_constant_term);
+
+	void add_rotation_symmetry_group_energy_functions(
 		Eigen::MatrixXd& _quadratic_term,
 		Eigen::VectorXd& _linear_term,
 		double &_constant_term);
@@ -133,7 +147,6 @@ private:
 
 
 	// Initialization function.
-	bool compute_initial_values(const Eigen::VectorXd &_input, Eigen::VectorXd &_output);
 	void compute_cuboid_axis_values(Eigen::VectorXd &_values);
 	void compute_reflection_symmetry_group_values(Eigen::VectorXd &_values);
 	void compute_rotation_symmetry_group_values(Eigen::VectorXd &_values);
