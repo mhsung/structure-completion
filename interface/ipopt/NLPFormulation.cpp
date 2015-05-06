@@ -352,11 +352,15 @@ Number NLPFormulation::eval_function(const Number* _x) const
 
 void NLPFormulation::eval_function_gredient(const Number* _x, Number* _output) const
 {
+	memset(_output, 0, num_vars_ * sizeof(Number));
+
 	for (std::vector<NLPFunction*>::const_iterator it = functions_.begin();
 		it != functions_.end(); ++it)
 	{
 		assert(*it);
 		Number* temp = new Number[num_vars_];
+		memset(temp, 0, num_vars_ * sizeof(Number));
+
 		(*it)->eval_gradient(_x, temp);
 
 		for (int i = 0; i < num_vars_; ++i)
@@ -367,6 +371,9 @@ void NLPFormulation::eval_function_gredient(const Number* _x, Number* _output) c
 void NLPFormulation::eval_function_hessian(const Number* _x,
 	const Number _obj_factor, Number* _output) const
 {
+	// NOTE:
+	// When evaluating Hessian, assume that '_output' is initialized.
+
 	for (std::vector<NLPFunction*>::const_iterator it = functions_.begin();
 		it != functions_.end(); ++it)
 	{
