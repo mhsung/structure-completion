@@ -6,7 +6,7 @@
 
 #include "NLPExpression.h"
 
-#include "NLPExpression.h"
+#include <Eigen/Core>
 
 
 class NLPVectorExpression
@@ -22,8 +22,14 @@ public:
 	static NLPExpression dot_product(const NLPVectorExpression& _vector_1,
 		const NLPVectorExpression& _vector_2);
 
+	static NLPExpression dot_product(const NLPVectorExpression& _vector,
+		const Eigen::VectorXd& _constant_vector);
+
 	static NLPVectorExpression cross_product(const NLPVectorExpression& _vector_1,
 		const NLPVectorExpression& _vector_2);
+
+	static NLPVectorExpression cross_product(const NLPVectorExpression& _vector,
+		const Eigen::VectorXd& _constant_vector);
 
 
 	NLPVectorExpression& operator+=(const NLPVectorExpression& rhs);

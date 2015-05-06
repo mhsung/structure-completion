@@ -169,11 +169,29 @@ void NLPSparseConstraint::eval_hessian(const Number* _x,
 	}
 }
 
-NLPFormulation::NLPFormulation(const NLPFunction *_function)
-	: function_(_function)
+NLPFormulation::NLPFormulation(NLPFunction *_function)
 {
 	assert(_function);
 	num_vars_ = _function->num_variables();
+
+	functions_.push_back(_function);
+
+	lower_bound_.resize(num_vars_, -NLP_BOUND_INFINITY);
+	upper_bound_.resize(num_vars_, NLP_BOUND_INFINITY);
+	values_.resize(num_vars_, 0);
+}
+
+NLPFormulation::NLPFormulation(const std::vector<NLPFunction *> &_functions)
+{
+	assert(!_functions.empty());
+	functions_ = _functions;
+	num_vars_ = functions_.front()->num_variables();
+
+	for (std::vector<NLPFunction*>::iterator it = functions_.begin();
+		it != functions_.end(); ++it)
+	{
+		assert((*it)->num_variables() == num_vars_);
+	}
 
 	lower_bound_.resize(num_vars_, -NLP_BOUND_INFINITY);
 	upper_bound_.resize(num_vars_, NLP_BOUND_INFINITY);
@@ -182,7 +200,12 @@ NLPFormulation::NLPFormulation(const NLPFunction *_function)
 
 NLPFormulation::~NLPFormulation()
 {
-	delete function_;
+	for (std::vector<NLPFunction*>::iterator it = functions_.begin();
+		it != functions_.end(); ++it)
+	{
+		assert(*it);
+		delete (*it);
+	}
 
 	for (std::vector< NLPConstraint* >::iterator it = constraints_.begin();
 		it != constraints_.end(); ++it)
@@ -317,21 +340,39 @@ void NLPFormulation::get_constraint_bounds(Number* _lower_bound, Number* _upper_
 
 Number NLPFormulation::eval_function(const Number* _x) const
 {
-	assert(function_);
-	return function_->eval(_x);
+	Number output = 0;
+	for (std::vector<NLPFunction*>::const_iterator it = functions_.begin();
+		it != functions_.end(); ++it)
+	{
+		assert(*it);
+		output += (*it)->eval(_x);
+	}
+	return output;
 }
 
 void NLPFormulation::eval_function_gredient(const Number* _x, Number* _output) const
 {
-	assert(function_);
-	function_->eval_gradient(_x, _output);
+	for (std::vector<NLPFunction*>::const_iterator it = functions_.begin();
+		it != functions_.end(); ++it)
+	{
+		assert(*it);
+		Number* temp = new Number[num_vars_];
+		(*it)->eval_gradient(_x, temp);
+
+		for (int i = 0; i < num_vars_; ++i)
+			_output[i] += temp[i];
+	}
 }
 
 void NLPFormulation::eval_function_hessian(const Number* _x,
 	const Number _obj_factor, Number* _output) const
 {
-	assert(function_);
-	function_->eval_hessian(_x, _obj_factor, _output);
+	for (std::vector<NLPFunction*>::const_iterator it = functions_.begin();
+		it != functions_.end(); ++it)
+	{
+		assert(*it);
+		(*it)->eval_hessian(_x, _obj_factor, _output);
+	}
 }
 
 void NLPFormulation::eval_constraints(const Number* _x, Number* _output) const

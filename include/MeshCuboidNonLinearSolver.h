@@ -66,18 +66,19 @@ public:
 
 
 	void optimize(
-		const Eigen::MatrixXd& _quadratic_term,
-		const Eigen::VectorXd& _linear_term,
-		const double _constant_term,
+		const Eigen::MatrixXd& _cuboid_quadratic_term,
+		const Eigen::VectorXd& _cuboid_linear_term,
+		const double _cuboid_constant_term,
 		Eigen::VectorXd* _init_values_vec = NULL);
 
 
 private:
 	// Core functions.
-	NLPEigenQuadFunction* create_quadratic_energy_function(
-		const Eigen::MatrixXd& _quadratic_term,
-		const Eigen::VectorXd& _linear_term,
-		const double _constant_term);
+	void create_energy_functions(
+		const Eigen::MatrixXd &_quadratic_term,
+		const Eigen::VectorXd &_linear_term,
+		const double _constant_term,
+		std::vector<NLPFunction *> &_functions);
 
 	void add_constraints(NLPFormulation &_formulation);
 
@@ -87,12 +88,9 @@ private:
 
 
 	// Energy functions.
-	void add_reflection_symmetry_group_energy_functions(
-		Eigen::MatrixXd& _quadratic_term,
-		Eigen::VectorXd& _linear_term,
-		double &_constant_term);
+	NLPFunction *create_reflection_symmetry_group_energy_function();
 
-	void add_reflection_symmetry_group_energy_functions(
+	void create_reflection_symmetry_group_energy_function(
 		const unsigned int _symmetry_group_index,
 		const std::vector<ANNpointArray>& _cuboid_ann_points,
 		const std::vector<ANNkd_tree *>& _cuboid_ann_kd_tree,
@@ -100,10 +98,7 @@ private:
 		Eigen::VectorXd& _linear_term,
 		double &_constant_term);
 
-	void add_rotation_symmetry_group_energy_functions(
-		Eigen::MatrixXd& _quadratic_term,
-		Eigen::VectorXd& _linear_term,
-		double &_constant_term);
+	NLPFunction *create_rotation_symmetry_group_energy_function();
 
 	void create_cuboid_sample_point_ann_trees(
 		std::vector<ANNpointArray>& _cuboid_ann_points,
@@ -178,10 +173,6 @@ private:
 	const unsigned int num_cuboid_axis_variables_;
 	const unsigned int num_reflection_symmetry_group_variables_;
 	const unsigned int num_rotation_symmetry_group_variables_;
-
-	Eigen::MatrixXd quadratic_term_;
-	Eigen::VectorXd linear_term_;
-	double constant_term_;
 };
 
 #endif	// _MESH_CUBOID_NON_LINEAR_SOLVER_H_

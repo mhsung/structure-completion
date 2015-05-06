@@ -423,10 +423,10 @@ bool NLPExpression::get_sparse_gradient(const Index _num_vars,
 		ret = (*it).get_sparse_gradient(_num_vars, gradient_terms_indices, gradient_terms);
 		if (!ret) return false;
 
-		unsigned int num_gradient_termss = gradient_terms.size();
-		assert(gradient_terms_indices.size() == num_gradient_termss);
+		unsigned int num_gradient_terms = gradient_terms.size();
+		assert(gradient_terms_indices.size() == num_gradient_terms);
 
-		for (unsigned int i = 0; i < num_gradient_termss; ++i)
+		for (unsigned int i = 0; i < num_gradient_terms; ++i)
 		{
 			Index index_i = gradient_terms_indices[i];
 			NLPTerm term = gradient_terms[i];

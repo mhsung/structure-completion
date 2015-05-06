@@ -95,7 +95,8 @@ private:
 class NLPFormulation
 {
 public:
-	NLPFormulation(const NLPFunction *_function);
+	NLPFormulation(NLPFunction *_function);
+	NLPFormulation(const std::vector<NLPFunction *> &_functions);
 	~NLPFormulation();
 
 	Index num_variables() const { return num_vars_; }
@@ -141,7 +142,8 @@ public:
 
 private:
 	Index num_vars_;
-	const NLPFunction *function_;
+	//const NLPFunction *function_;
+	std::vector< NLPFunction *> functions_;
 	std::vector< Number > lower_bound_;
 	std::vector< Number > upper_bound_;
 	std::vector< Number > values_;

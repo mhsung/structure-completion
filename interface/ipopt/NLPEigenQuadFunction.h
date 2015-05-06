@@ -34,9 +34,9 @@ public:
 	virtual Number eval(const Eigen::VectorXd &_x) const;
 
 private:
-	const Eigen::MatrixXd &quadratic_term_;
-	const Eigen::VectorXd &linear_term_;
-	const double &constant_term_;
+	const Eigen::MatrixXd quadratic_term_;
+	const Eigen::VectorXd linear_term_;
+	const double constant_term_;
 };
 
 #endif	// __NLP_EIGEN_QUAD_FUNCTION_H__

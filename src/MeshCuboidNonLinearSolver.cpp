@@ -20,7 +20,6 @@ MeshCuboidNonLinearSolver::MeshCuboidNonLinearSolver(
 	, num_cuboid_axis_variables_(3 * 3)
 	, num_reflection_symmetry_group_variables_(MeshCuboidReflectionSymmetryGroup::num_axis_parameters())
 	, num_rotation_symmetry_group_variables_(MeshCuboidRotationSymmetryGroup::num_axis_parameters())
-	, constant_term_(0)
 {
 	num_cuboids_ = _cuboids.size();
 	//assert(num_cuboids_ > 0);
@@ -196,46 +195,49 @@ NLPVectorExpression MeshCuboidNonLinearSolver::create_rotation_symmetry_group_va
 		_symmetry_group_index));
 }
 
-NLPEigenQuadFunction* MeshCuboidNonLinearSolver::create_quadratic_energy_function(
-	const Eigen::MatrixXd& _quadratic_term,
-	const Eigen::VectorXd& _linear_term,
-	const double _constant_term)
+void MeshCuboidNonLinearSolver::create_energy_functions(
+	const Eigen::MatrixXd &_cuboid_quadratic_term,
+	const Eigen::VectorXd &_cuboid_linear_term,
+	const double _cuboid_constant_term,
+	std::vector<NLPFunction *> &_functions)
 {
-	if (_quadratic_term.rows() != num_total_cuboid_corner_variables()
-		|| _quadratic_term.cols() != num_total_cuboid_corner_variables()
-		|| _linear_term.rows() != num_total_cuboid_corner_variables())
+	if (_cuboid_quadratic_term.rows() != num_total_cuboid_corner_variables()
+		|| _cuboid_quadratic_term.cols() != num_total_cuboid_corner_variables()
+		|| _cuboid_linear_term.rows() != num_total_cuboid_corner_variables())
 	{
 		std::cerr << "Error: " << std::endl;
-		return NULL;
+		assert(false);
 	}
 
-	quadratic_term_ = Eigen::MatrixXd::Zero(num_total_variables(), num_total_variables());
-	linear_term_ = Eigen::VectorXd::Zero(num_total_variables());
-	constant_term_ = _constant_term;
+	_functions.clear();
 
-	quadratic_term_.block(0, 0,
-		num_total_cuboid_corner_variables(), num_total_cuboid_corner_variables()) = _quadratic_term;
-	linear_term_.segment(0, num_total_cuboid_corner_variables()) = _linear_term;
+	Eigen::MatrixXd quadratic_term = Eigen::MatrixXd::Zero(num_total_variables(), num_total_variables());
+	Eigen::VectorXd linear_term = Eigen::VectorXd::Zero(num_total_variables());
+	double constant_term = _cuboid_constant_term;
+
+	quadratic_term.block(0, 0,
+		num_total_cuboid_corner_variables(), num_total_cuboid_corner_variables()) = _cuboid_quadratic_term;
+	linear_term.segment(0, num_total_cuboid_corner_variables()) = _cuboid_linear_term;
+
+	NLPFunction *function_1 = new NLPEigenQuadFunction(quadratic_term, linear_term, constant_term);
+	_functions.push_back(function_1);
 
 	//
-	add_reflection_symmetry_group_energy_functions(quadratic_term_, linear_term_, constant_term_);
-	add_rotation_symmetry_group_energy_functions(quadratic_term_, linear_term_, constant_term_);
+	NLPFunction *fuction_2 = create_reflection_symmetry_group_energy_function();
+	assert(fuction_2);
+	_functions.push_back(fuction_2);
+
+	NLPFunction *fuction_3 = create_rotation_symmetry_group_energy_function();
+	assert(fuction_3);
+	_functions.push_back(fuction_3);
 	//
-
-	NLPEigenQuadFunction *function = new NLPEigenQuadFunction(
-		quadratic_term_, linear_term_, constant_term_);
-
-	return function;
 }
 
-void MeshCuboidNonLinearSolver::add_reflection_symmetry_group_energy_functions(
-	Eigen::MatrixXd& _quadratic_term,
-	Eigen::VectorXd& _linear_term,
-	double &_constant_term)
+NLPFunction *MeshCuboidNonLinearSolver::create_reflection_symmetry_group_energy_function()
 {
-	assert(_quadratic_term.rows() == num_total_variables());
-	assert(_quadratic_term.cols() == num_total_variables());
-	assert(_linear_term.rows() == num_total_variables());
+	Eigen::MatrixXd quadratic_term = Eigen::MatrixXd::Zero(num_total_variables(), num_total_variables());
+	Eigen::VectorXd linear_term = Eigen::VectorXd::Zero(num_total_variables());
+	double constant_term = 0;
 
 	std::vector<ANNpointArray> cuboid_ann_points;
 	std::vector<ANNkd_tree *> cuboid_ann_kd_tree;
@@ -245,15 +247,18 @@ void MeshCuboidNonLinearSolver::add_reflection_symmetry_group_energy_functions(
 	for (unsigned int symmetry_group_index = 0; symmetry_group_index < num_reflection_symmetry_groups_;
 		++symmetry_group_index)
 	{
-		add_reflection_symmetry_group_energy_functions(symmetry_group_index,
+		create_reflection_symmetry_group_energy_function(symmetry_group_index,
 			cuboid_ann_points, cuboid_ann_kd_tree,
-			_quadratic_term, _linear_term, _constant_term);
+			quadratic_term, linear_term, constant_term);
 	}
 
 	delete_cuboid_sample_point_ann_trees(cuboid_ann_points, cuboid_ann_kd_tree);
+
+	NLPFunction *function = new NLPEigenQuadFunction(quadratic_term, linear_term, constant_term);
+	return function;
 }
 
-void MeshCuboidNonLinearSolver::add_reflection_symmetry_group_energy_functions(
+void MeshCuboidNonLinearSolver::create_reflection_symmetry_group_energy_function(
 	const unsigned int _symmetry_group_index,
 	const std::vector<ANNpointArray>& _cuboid_ann_points,
 	const std::vector<ANNkd_tree *>& _cuboid_ann_kd_tree,
@@ -279,6 +284,7 @@ void MeshCuboidNonLinearSolver::add_reflection_symmetry_group_energy_functions(
 
 	Eigen::Matrix3d A1 = Eigen::Matrix3d::Zero();
 	Eigen::MatrixXd A2 = Eigen::MatrixXd::Zero(3 + 1, 3 + 1);
+	Real c = 0;
 
 	Real sum_weight = 0.0;
 	for (std::list<MeshCuboidSymmetryGroup::WeightedPointPair>::iterator it = sample_point_pairs.begin();
@@ -304,8 +310,7 @@ void MeshCuboidNonLinearSolver::add_reflection_symmetry_group_energy_functions(
 		}
 
 		A1 += (weight * (-1) * diff_p * diff_p.transpose());
-
-		_constant_term += (diff_p.transpose() * diff_p);
+		c += (weight * diff_p.transpose() * diff_p);
 
 		Eigen::VectorXd b(3 + 1);
 		b << sum_p, -2;
@@ -322,30 +327,26 @@ void MeshCuboidNonLinearSolver::add_reflection_symmetry_group_energy_functions(
 	// Variables 'n' and 't' are adjacent in the variable list.
 	_quadratic_term.block<3 + 1, 3 + 1>(index_size_pair.first, index_size_pair.first) +=
 		symmetry_energy_term_weight_ * A2;
+
+	_constant_term += symmetry_energy_term_weight_ * c;
 }
 
-void MeshCuboidNonLinearSolver::add_rotation_symmetry_group_energy_functions(
-	Eigen::MatrixXd& _quadratic_term,
-	Eigen::VectorXd& _linear_term,
-	double &_constant_term)
+NLPFunction *MeshCuboidNonLinearSolver::create_rotation_symmetry_group_energy_function()
 {
-	assert(_quadratic_term.rows() == num_total_variables());
-	assert(_quadratic_term.cols() == num_total_variables());
-	assert(_linear_term.rows() == num_total_variables());
+	NLPExpression expression;
 
 	for (unsigned int symmetry_group_index = 0; symmetry_group_index < num_rotation_symmetry_groups_;
 		++symmetry_group_index)
 	{
-		const MeshCuboidSymmetryGroup* symmetry_group = rotation_symmetry_groups_[symmetry_group_index];
-		assert(symmetry_group);
-
-		std::pair<Index, Index> index_size_pair;
-		index_size_pair = get_rotation_symmetry_group_variable_t_index_size(symmetry_group_index);
-
 		// Minimize \| t \|_2^2.
-		_quadratic_term.block<3, 3>(index_size_pair.first, index_size_pair.first) +=
-			Eigen::MatrixXd::Identity(index_size_pair.second, index_size_pair.second);
+		NLPVectorExpression t_variable = create_rotation_symmetry_group_variable_t(symmetry_group_index);
+		expression += NLPVectorExpression::dot_product(t_variable, t_variable);
 	}
+
+	expression *= symmetry_energy_term_weight_;
+
+	NLPFunction *function = new NLPSparseFunction(num_total_variables(), expression);
+	return function;
 }
 
 void MeshCuboidNonLinearSolver::add_constraints(NLPFormulation &_formulation)
@@ -599,6 +600,7 @@ void MeshCuboidNonLinearSolver::add_rotation_symmetry_group_constraints(
 		NLPVectorExpression expression_1 = n_variable - axis_variable;
 		_formulation.add_constraint(expression_1, 0, 0);
 
+
 		NLPVectorExpression cuboid_center_variable(dimension);
 		for (unsigned int corner_index = 0; corner_index < MeshCuboid::k_num_corners; ++corner_index)
 			cuboid_center_variable += create_cuboid_corner_variable(cuboid_index, corner_index);
@@ -640,6 +642,15 @@ bool MeshCuboidNonLinearSolver::compute_initial_values(const Eigen::VectorXd &_i
 	compute_cuboid_axis_values(_output);
 	compute_reflection_symmetry_group_values(_output);
 	compute_rotation_symmetry_group_values(_output);
+
+	// DEBUG.
+	for (int i = 0; i < num_total_variables(); ++i)
+	{
+		if (isnan(_output[i]) || isinf(_output[i]))
+		{
+			assert(false);
+		}
+	}
 
 	return true;
 }
@@ -716,26 +727,32 @@ void MeshCuboidNonLinearSolver::compute_rotation_symmetry_group_values(Eigen::Ve
 }
 
 void MeshCuboidNonLinearSolver::optimize(
-	const Eigen::MatrixXd& _quadratic_term,
-	const Eigen::VectorXd& _linear_term,
-	const double _constant_term,
+	const Eigen::MatrixXd& _cuboid_quadratic_term,
+	const Eigen::VectorXd& _cuboid_linear_term,
+	const double _cuboid_constant_term,
 	Eigen::VectorXd* _init_values_vec)
 {
-	NLPEigenQuadFunction* function = create_quadratic_energy_function(
-		_quadratic_term, _linear_term, _constant_term);
-	assert(function);
-	NLPFormulation formulation(function);
+	std::vector<NLPFunction *> functions;
+	create_energy_functions(_cuboid_quadratic_term, _cuboid_linear_term, _cuboid_constant_term, functions);
+	NLPFormulation formulation(functions);
 	add_constraints(formulation);
 
-
-	std::cout << "Energy: (";
 
 	if (_init_values_vec)
 	{
 		Eigen::VectorXd all_init_values_vec;
 		bool ret = compute_initial_values(*_init_values_vec, all_init_values_vec);
-		std::cout << "initial = " << function->eval(all_init_values_vec) << ", ";
+		assert(ret);
 		formulation.set_values(all_init_values_vec.data());
+
+		std::vector< Number > all_init_values(all_init_values_vec.rows());
+		for (int i = 0; i < all_init_values_vec.rows(); ++i)
+			all_init_values[i] = all_init_values_vec[i];
+
+		std::cout << "Initial error = ";
+		for (int i = 0; i < functions.size(); ++i)
+			std::cout << functions[i]->eval(&all_init_values[0]) << ", ";
+		std::cout << std::endl;
 	}
 
 
@@ -796,7 +813,12 @@ void MeshCuboidNonLinearSolver::optimize(
 	std::vector< Number > output;
 	formulation.get_values(output);
 	assert(output.size() == num_total_variables());
-	std::cout << "final = " << function->eval(&(output[0])) << ")" << std::endl;
+	//std::cout << "final = " << formulation.eval_function(&(output[0])) << ")" << std::endl;
+
+	std::cout << "Final error = ";
+	for (int i = 0; i < functions.size(); ++i)
+		std::cout << functions[i]->eval(&output[0]) << ", ";
+	std::cout << std::endl;
 
 
 	// Update symmetry groups.

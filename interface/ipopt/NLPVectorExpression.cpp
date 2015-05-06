@@ -104,6 +104,19 @@ NLPExpression NLPVectorExpression::dot_product(
 	return output;
 }
 
+NLPExpression NLPVectorExpression::dot_product(
+	const NLPVectorExpression& _vector, const Eigen::VectorXd& _constant_vector)
+{
+	assert(_vector.dimension() == _constant_vector.rows());
+	const Index dimension = _vector.dimension();
+
+	NLPExpression output;
+	for (unsigned int i = 0; i < dimension; ++i)
+		output += (_vector.expressions_[i] * _constant_vector[i]);
+
+	return output;
+}
+
 NLPVectorExpression NLPVectorExpression::cross_product(
 	const NLPVectorExpression& _vector_1, const NLPVectorExpression& _vector_2)
 {
@@ -128,6 +141,39 @@ NLPVectorExpression NLPVectorExpression::cross_product(
 		{
 			output[i] += (_vector_1.expressions_[cross_product_terms[i][j][1]]
 				* _vector_2.expressions_[cross_product_terms[i][j][2]]);
+
+			// Coefficient.
+			output[i] *= static_cast<Number>(cross_product_terms[i][j][0]);
+		}
+	}
+
+	return output;
+}
+
+NLPVectorExpression NLPVectorExpression::cross_product(
+	const NLPVectorExpression& _vector, const Eigen::VectorXd& _scalar_vector)
+{
+	assert(_vector.dimension() == _scalar_vector.rows());
+	const Index dimension = _vector.dimension();
+
+	// NOTE:
+	// Implemented only for 3 dimension.
+	assert(dimension == 3);
+
+	// (coeff, v1_index, v2_index);
+	const int cross_product_terms[3][2][3] = {
+		{ { 1, 0, 1 }, { -1, 1, 0 } },
+		{ { 1, 1, 2 }, { -1, 2, 1 } },
+		{ { 1, 2, 0 }, { -1, 0, 2 } }
+	};
+
+	NLPVectorExpression output(dimension);
+	for (int i = 0; i < 3; ++i)
+	{
+		for (int j = 0; j < 2; ++j)
+		{
+			output[i] += (_vector.expressions_[cross_product_terms[i][j][1]]
+				* _scalar_vector[cross_product_terms[i][j][2]]);
 
 			// Coefficient.
 			output[i] *= static_cast<Number>(cross_product_terms[i][j][0]);
