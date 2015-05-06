@@ -56,6 +56,20 @@ public:
 		return lhs *= rhs;
 	}
 
+
+	NLPVectorExpression& operator+=(const Eigen::VectorXd& rhs);
+	friend NLPVectorExpression operator+(NLPVectorExpression lhs, const Eigen::VectorXd& rhs)
+	{
+		return lhs += rhs;
+	}
+
+	NLPVectorExpression& operator-=(const Eigen::VectorXd& rhs);
+	friend NLPVectorExpression operator-(NLPVectorExpression lhs, const Eigen::VectorXd& rhs)
+	{
+		return lhs -= rhs;
+	}
+
+
 	NLPExpression& operator[](const Index i);
 
 	const NLPExpression& operator[](const Index i) const;

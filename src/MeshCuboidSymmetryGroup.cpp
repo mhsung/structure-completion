@@ -198,7 +198,8 @@ void MeshCuboidSymmetryGroup::get_symmetric_sample_point_pairs(
 				q[i] = symmetric_point_1[i];
 
 			int num_searched_neighbors = _cuboid_ann_kd_tree_2->annkFRSearch(
-				q, _neighbor_distance, 1, nn_idx, dd);
+				q, _neighbor_distance * _neighbor_distance, 1, nn_idx, dd);
+
 			if (num_searched_neighbors > 0)
 			{
 				int point_index_2 = (int)nn_idx[0];
@@ -208,8 +209,13 @@ void MeshCuboidSymmetryGroup::get_symmetric_sample_point_pairs(
 				for (unsigned int i = 0; i < 3; ++i)
 					point_2[i] = _cuboid_ann_points_2[point_index_2][i];
 
+				// Debug.
+				Real test_distance = (symmetric_point_1 - point_2).norm();
+				CHECK_NUMERICAL_ERROR(__FUNCTION__, test_distance, std::sqrt(dd[0]));
+
 				//
-				double distance = (_neighbor_distance - dd[0]);
+				double distance = std::sqrt(dd[0]);
+				distance = (_neighbor_distance - distance);
 				assert(distance >= 0);
 				//
 

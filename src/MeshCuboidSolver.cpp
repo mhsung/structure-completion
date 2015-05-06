@@ -552,7 +552,7 @@ void segment_sample_points(
 			q[i] = sample_points.col(point_index)[i];
 
 		int num_searched_neighbors = sample_kd_tree->annkFRSearch(q,
-			neighbor_distance, num_neighbors, nn_idx, dd);
+			neighbor_distance * neighbor_distance, num_neighbors, nn_idx, dd);
 
 		for (int i = 0; i < std::min(num_neighbors, num_searched_neighbors); i++)
 		{
@@ -563,7 +563,8 @@ void segment_sample_points(
 				continue;
 
 			//
-			double distance = (neighbor_distance - dd[i]);
+			double distance = std::sqrt(dd[i]);
+			distance = (neighbor_distance - distance);
 			assert(distance >= 0);
 			//
 

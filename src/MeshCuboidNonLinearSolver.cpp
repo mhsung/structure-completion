@@ -254,6 +254,10 @@ NLPFunction *MeshCuboidNonLinearSolver::create_reflection_symmetry_group_energy_
 
 	delete_cuboid_sample_point_ann_trees(cuboid_ann_points, cuboid_ann_kd_tree);
 
+	quadratic_term *= symmetry_energy_term_weight_;
+	linear_term *= symmetry_energy_term_weight_;
+	constant_term *= symmetry_energy_term_weight_;
+
 	NLPFunction *function = new NLPEigenQuadFunction(quadratic_term, linear_term, constant_term);
 	return function;
 }
@@ -274,6 +278,9 @@ void MeshCuboidNonLinearSolver::create_reflection_symmetry_group_energy_function
 		_cuboid_ann_points, _cuboid_ann_kd_tree, neighbor_distance_,
 		sample_point_pairs);
 
+	if (sample_point_pairs.empty())
+		return;
+
 	// Eq (1):
 	// min {(I - nn^T)(x - y)}^2. Let d = (x - y).
 	// Since (I - nn^T)^2 = (I - nn^T),
@@ -284,7 +291,6 @@ void MeshCuboidNonLinearSolver::create_reflection_symmetry_group_energy_function
 
 	Eigen::Matrix3d A1 = Eigen::Matrix3d::Zero();
 	Eigen::MatrixXd A2 = Eigen::MatrixXd::Zero(3 + 1, 3 + 1);
-	Real c = 0;
 
 	Real sum_weight = 0.0;
 	for (std::list<MeshCuboidSymmetryGroup::WeightedPointPair>::iterator it = sample_point_pairs.begin();
@@ -310,7 +316,7 @@ void MeshCuboidNonLinearSolver::create_reflection_symmetry_group_energy_function
 		}
 
 		A1 += (weight * (-1) * diff_p * diff_p.transpose());
-		c += (weight * diff_p.transpose() * diff_p);
+		_constant_term += (weight * diff_p.transpose() * diff_p);
 
 		Eigen::VectorXd b(3 + 1);
 		b << sum_p, -2;
@@ -320,20 +326,21 @@ void MeshCuboidNonLinearSolver::create_reflection_symmetry_group_energy_function
 	std::pair<Index, Index> index_size_pair;
 	index_size_pair = get_reflection_symmetry_group_variable_n_index_size(_symmetry_group_index);
 
-	_quadratic_term.block<3, 3>(index_size_pair.first, index_size_pair.first) +=
-		symmetry_energy_term_weight_ * A1;
+	_quadratic_term.block<3, 3>(index_size_pair.first, index_size_pair.first) += A1;
 	
 	// NOTE:
 	// Variables 'n' and 't' are adjacent in the variable list.
-	_quadratic_term.block<3 + 1, 3 + 1>(index_size_pair.first, index_size_pair.first) +=
-		symmetry_energy_term_weight_ * A2;
-
-	_constant_term += symmetry_energy_term_weight_ * c;
+	_quadratic_term.block<3 + 1, 3 + 1>(index_size_pair.first, index_size_pair.first) += A2;
 }
 
 NLPFunction *MeshCuboidNonLinearSolver::create_rotation_symmetry_group_energy_function()
 {
 	NLPExpression expression;
+
+	std::vector<ANNpointArray> cuboid_ann_points;
+	std::vector<ANNkd_tree *> cuboid_ann_kd_tree;
+
+	create_cuboid_sample_point_ann_trees(cuboid_ann_points, cuboid_ann_kd_tree);
 
 	for (unsigned int symmetry_group_index = 0; symmetry_group_index < num_rotation_symmetry_groups_;
 		++symmetry_group_index)
@@ -341,12 +348,118 @@ NLPFunction *MeshCuboidNonLinearSolver::create_rotation_symmetry_group_energy_fu
 		// Minimize \| t \|_2^2.
 		NLPVectorExpression t_variable = create_rotation_symmetry_group_variable_t(symmetry_group_index);
 		expression += NLPVectorExpression::dot_product(t_variable, t_variable);
+
+		// TEST.
+		//create_rotation_symmetry_group_energy_function(symmetry_group_index,
+		//	cuboid_ann_points, cuboid_ann_kd_tree, expression);
 	}
+
+	delete_cuboid_sample_point_ann_trees(cuboid_ann_points, cuboid_ann_kd_tree);
 
 	expression *= symmetry_energy_term_weight_;
 
 	NLPFunction *function = new NLPSparseFunction(num_total_variables(), expression);
 	return function;
+}
+
+void MeshCuboidNonLinearSolver::create_rotation_symmetry_group_energy_function(
+	const unsigned int _symmetry_group_index,
+	const std::vector<ANNpointArray>& _cuboid_ann_points,
+	const std::vector<ANNkd_tree *>& _cuboid_ann_kd_tree,
+	NLPExpression &_expression)
+{
+	const MeshCuboidSymmetryGroup* symmetry_group = rotation_symmetry_groups_[_symmetry_group_index];
+	assert(symmetry_group);
+
+	NLPVectorExpression n_variable = create_rotation_symmetry_group_variable_n(_symmetry_group_index);
+	NLPVectorExpression t_variable = create_rotation_symmetry_group_variable_t(_symmetry_group_index);
+
+
+	std::list<MeshCuboidSymmetryGroup::WeightedPointPair> sample_point_pairs;
+	symmetry_group->get_symmetric_sample_point_pairs(cuboids_,
+		_cuboid_ann_points, _cuboid_ann_kd_tree, neighbor_distance_,
+		sample_point_pairs);
+
+	if (sample_point_pairs.empty())
+		return;
+
+
+	Real sum_weight = 0.0;
+	for (std::list<MeshCuboidSymmetryGroup::WeightedPointPair>::iterator it = sample_point_pairs.begin();
+		it != sample_point_pairs.end(); ++it)
+	{
+		assert((*it).weight_ >= 0);
+		sum_weight += (*it).weight_;
+	}
+
+	double error = 0.0;
+
+	for (std::list<MeshCuboidSymmetryGroup::WeightedPointPair>::iterator it = sample_point_pairs.begin();
+		it != sample_point_pairs.end(); ++it)
+	{
+		Real weight = (*it).weight_ / sum_weight;
+		
+		MyMesh::Normal n; MyMesh::Point t;
+		dynamic_cast<const MeshCuboidRotationSymmetryGroup *>(symmetry_group)->get_rotation_axis(n, t);
+
+		int symmetry_order = static_cast<int>(std::round((*it).angle_ / symmetry_group->get_rotation_angle()));
+		MyMesh::Point symmetry_point_1 = symmetry_group->get_symmetric_point((*it).p1_, symmetry_order);
+
+		Eigen::VectorXd x_vec(3), y_vec(3), n_vec(3), t_vec(3), symm_x_vec(3);
+		for (int i = 0; i < 3; ++i)
+		{
+			x_vec[i] = (*it).p1_[i];
+			y_vec[i] = (*it).p2_[i];
+			n_vec[i] = n[i];
+			t_vec[i] = t[i];
+			symm_x_vec[i] = symmetry_point_1[i];
+		}
+
+		Eigen::AngleAxisd axis_rotation((*it).angle_, n_vec);
+		Eigen::VectorXd transf_x_vec = axis_rotation.toRotationMatrix() * (x_vec - t_vec) + t_vec;
+
+		Eigen::VectorXd diff_1 = transf_x_vec - symm_x_vec;
+		if (diff_1.norm() > 1.0E-8)
+		{
+			std::cout << "distance = " << diff_1.norm() << std::endl;
+			std::cout << "angle = " << (*it).angle_ << std::endl;
+			std::cout << "symmetry_order = " << symmetry_order << std::endl;
+			std::cout << symm_x_vec.transpose() << std::endl;
+			std::cout << transf_x_vec.transpose() << std::endl;
+			system("pause");
+		}
+
+
+		Eigen::VectorXd diff_2 = transf_x_vec - y_vec;
+		if (diff_2.norm() > neighbor_distance_)
+		{
+			std::cout << "distance = " << diff_2.norm() << std::endl;
+			std::cout << "neighbor_distance = " << neighbor_distance_ << std::endl;
+			std::cout << "weight = " << (neighbor_distance_ - sqrt((*it).weight_)) << std::endl;
+			std::cout << symm_x_vec.transpose() << std::endl;
+			std::cout << transf_x_vec.transpose() << std::endl;
+			system("pause");
+		}
+
+		Real distance = diff_2.norm();
+		error += distance;
+
+		Real sin_angle = std::sin((*it).angle_);
+		Real cos_angle = std::cos((*it).angle_);
+
+		NLPVectorExpression x_minus_t = (t_variable - x_vec) * (-1);
+		NLPVectorExpression y_minus_t = (t_variable - y_vec) * (-1);
+
+		NLPVectorExpression term_1 = x_minus_t * cos_angle;
+		NLPVectorExpression term_2 = NLPVectorExpression::cross_product(n_variable, x_minus_t) * sin_angle;
+		NLPVectorExpression term_3 = n_variable * NLPVectorExpression::dot_product(n_variable, x_minus_t) * (1 - cos_angle);
+		NLPVectorExpression all_terms = term_1 + term_2 + term_3 - y_minus_t;
+
+		_expression += NLPVectorExpression::dot_product(all_terms, all_terms);
+	}
+
+	error /= sample_point_pairs.size();
+	std::cout << "error = " << error << std::endl;
 }
 
 void MeshCuboidNonLinearSolver::add_constraints(NLPFormulation &_formulation)
@@ -610,6 +723,13 @@ void MeshCuboidNonLinearSolver::add_rotation_symmetry_group_constraints(
 		NLPVectorExpression expression_2 = NLPVectorExpression::cross_product(
 			n_variable, cuboid_center_variable - t_variable);
 		_formulation.add_constraint(NLPVectorExpression::dot_product(expression_2, expression_2), -1.0E-12, 1.0E-12);
+
+		// Alternative.
+		//  dot(n, (c - t))^2 = dot((c - t), (c - t)).
+		//NLPExpression expression_2 = NLPVectorExpression::dot_product(n_variable, cuboid_center_variable - t_variable);
+		//NLPExpression expression_3 = NLPVectorExpression::dot_product(cuboid_center_variable - t_variable, cuboid_center_variable - t_variable);
+		//NLPExpression expression_4 = expression_2 * expression_2 - expression_3;
+		//_formulation.add_constraint(expression_4, -1.0E-12, 1.0E-12);
 	}
 
 	// Ignore pairs of cuboids.

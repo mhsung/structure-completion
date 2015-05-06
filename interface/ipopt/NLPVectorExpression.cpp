@@ -47,6 +47,16 @@ NLPVectorExpression& NLPVectorExpression::operator+=(const NLPVectorExpression& 
 	return *this;
 }
 
+NLPVectorExpression& NLPVectorExpression::operator+=(const Eigen::VectorXd& rhs)
+{
+	assert(this->dimension() == rhs.rows());
+	for (Index i = 0; i < dimension(); ++i)
+	{
+		expressions_[i] += static_cast<Number>(rhs[i]);
+	}
+	return *this;
+}
+
 NLPVectorExpression& NLPVectorExpression::operator-=(const NLPVectorExpression& rhs)
 {
 	assert(this->dimension() == rhs.dimension());
@@ -55,6 +65,16 @@ NLPVectorExpression& NLPVectorExpression::operator-=(const NLPVectorExpression& 
 	for (; it != this->expressions_.end() && jt != rhs.expressions_.end(); ++it, ++jt)
 	{
 		(*it) -= (*jt);
+	}
+	return *this;
+}
+
+NLPVectorExpression& NLPVectorExpression::operator-=(const Eigen::VectorXd& rhs)
+{
+	assert(this->dimension() == rhs.rows());
+	for (Index i = 0; i < dimension(); ++i)
+	{
+		expressions_[i] -= static_cast<Number>(rhs[i]);
 	}
 	return *this;
 }

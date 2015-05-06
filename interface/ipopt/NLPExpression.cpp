@@ -12,6 +12,11 @@ NLPTerm::NLPTerm()
 
 }
 
+NLPTerm::NLPTerm(const Number _coeff)
+{
+	set_coeff(_coeff);
+}
+
 NLPTerm::NLPTerm(const Number _coeff, const Index _index)
 {
 	set_coeff(_coeff);
@@ -311,7 +316,6 @@ NLPTerm& NLPTerm::operator*=(const NLPTerm& rhs)
 	return *this;
 }
 
-
 NLPExpression::NLPExpression()
 {
 
@@ -522,6 +526,12 @@ std::string NLPExpression::to_string()
 	return sstr.str();
 }
 
+NLPExpression& NLPExpression::operator+=(const Number& rhs)
+{
+	terms_.push_back(NLPTerm(rhs));
+	return *this;
+}
+
 NLPExpression& NLPExpression::operator+=(const NLPTerm& rhs)
 {
 	if (!rhs.empty())
@@ -532,6 +542,12 @@ NLPExpression& NLPExpression::operator+=(const NLPTerm& rhs)
 NLPExpression& NLPExpression::operator+=(const NLPExpression& rhs)
 {
 	terms_.insert(terms_.end(), rhs.terms_.begin(), rhs.terms_.end());
+	return *this;
+}
+
+NLPExpression& NLPExpression::operator-=(const Number& rhs)
+{
+	terms_.push_back(NLPTerm(-rhs));
 	return *this;
 }
 

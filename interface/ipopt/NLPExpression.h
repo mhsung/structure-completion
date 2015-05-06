@@ -22,6 +22,7 @@ class NLPTerm
 {
 public:
 	NLPTerm();
+	NLPTerm(const Number _coeff);
 	NLPTerm(const Number _coeff, const Index _index);
 	NLPTerm(const Number _coeff, const std::vector<Index> &_indices);
 	NLPTerm(const NLPTerm &_term);
@@ -51,6 +52,7 @@ public:
 		std::vector< NLPTerm > &_hessian_terms) const;
 
 	std::string to_string();
+
 
 	NLPTerm& operator*=(const Number& rhs);
 	friend NLPTerm operator*(NLPTerm lhs, const Number& rhs)
@@ -101,6 +103,13 @@ public:
 
 	std::string to_string();
 
+
+	NLPExpression& operator+=(const Number& rhs);
+	friend NLPExpression operator+(NLPExpression lhs, const Number& rhs)
+	{
+		return lhs += rhs;
+	}
+
 	NLPExpression& operator+=(const NLPTerm& rhs);
 	friend NLPExpression operator+(NLPExpression lhs, const NLPTerm& rhs)
 	{
@@ -111,6 +120,13 @@ public:
 	friend NLPExpression operator+(NLPExpression lhs, const NLPExpression& rhs)
 	{
 		return lhs += rhs;
+	}
+
+
+	NLPExpression& operator-=(const Number& rhs);
+	friend NLPExpression operator-(NLPExpression lhs, const Number& rhs)
+	{
+		return lhs -= rhs;
 	}
 
 	NLPExpression& operator-=(const NLPTerm& rhs);
@@ -124,6 +140,7 @@ public:
 	{
 		return lhs -= rhs;
 	}
+
 
 	NLPExpression& operator*=(const Number& rhs);
 	friend NLPExpression operator*(NLPExpression lhs, const Number& rhs)

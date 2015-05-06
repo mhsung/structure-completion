@@ -20,6 +20,7 @@ DECLARE_double(param_min_num_confidence_tol_sample_points);
 DECLARE_double(param_min_cuboid_bbox_size);
 DECLARE_double(param_min_cuboid_bbox_diag_length);
 DECLARE_double(param_sample_point_neighbor_distance);
+DECLARE_double(param_dense_sample_point_neighbor_distance);
 DECLARE_double(param_occlusion_test_neighbor_distance);
 DECLARE_double(param_eval_max_neighbor_distance);
 DECLARE_double(param_min_cuboid_overall_visibility);
