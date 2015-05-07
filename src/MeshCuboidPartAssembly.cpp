@@ -6,6 +6,7 @@
 #include <QDir>
 #include <QFileInfo>
 
+
 void get_bounding_cylinder(const MeshCuboidStructure &_cuboid_structure,
 	Eigen::MatrixXd &_sample_points, Eigen::VectorXd &_bbox_center,
 	Real &_xy_size, Real &_z_size)
@@ -434,3 +435,4 @@ void MeshViewerCore::run_part_assembly()
 
 	//run_part_assembly_match_parts(mesh_filepath, angle);
 }
+

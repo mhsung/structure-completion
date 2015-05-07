@@ -25,8 +25,8 @@ thumbname_width = 150
 #
 dataset_name = 'Assembly Chairs'
 symmetry_part_names = ['seat', 'back', 'legs', 'wheels', 'leg_column', 'armrests']
-input_path = '/home/mhsung/app/cuboid-prediction/experiments/exp8_assembly_chairs/output'
-output_path = '/home/mhsung/Dropbox/Public/web/exp8_assembly_chairs'
+input_path = '/home/mhsung/app/cuboid-prediction/experiments/exp9_assembly_chairs/output'
+output_path = '/home/mhsung/Dropbox/Public/web/exp9_assembly_chairs'
 
 #dataset_name = 'Assembly Airplanes'
 #symmetry_part_names = ['body', 'wings', 'tail_wings', 'fuselages', 'body']
