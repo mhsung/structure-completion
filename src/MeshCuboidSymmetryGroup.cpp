@@ -198,8 +198,7 @@ void MeshCuboidSymmetryGroup::get_symmetric_sample_point_pairs(
 				q[i] = symmetric_point_1[i];
 
 			int num_searched_neighbors = _cuboid_ann_kd_tree_2->annkFRSearch(
-				q, _neighbor_distance * _neighbor_distance, 1, nn_idx, dd);
-
+				q, _neighbor_distance, 1, nn_idx, dd);
 			if (num_searched_neighbors > 0)
 			{
 				int point_index_2 = (int)nn_idx[0];
@@ -209,13 +208,8 @@ void MeshCuboidSymmetryGroup::get_symmetric_sample_point_pairs(
 				for (unsigned int i = 0; i < 3; ++i)
 					point_2[i] = _cuboid_ann_points_2[point_index_2][i];
 
-				// Debug.
-				Real test_distance = (symmetric_point_1 - point_2).norm();
-				CHECK_NUMERICAL_ERROR(__FUNCTION__, test_distance, std::sqrt(dd[0]));
-
 				//
-				double distance = std::sqrt(dd[0]);
-				distance = (_neighbor_distance - distance);
+				double distance = (_neighbor_distance - dd[0]);
 				assert(distance >= 0);
 				//
 
@@ -263,7 +257,6 @@ MeshCuboidReflectionSymmetryGroup::MeshCuboidReflectionSymmetryGroup(
 	, n_(_other.n_)
 	, t_(_other.t_)
 {
-	n_.normalize();
 	assert(info_.symmetry_type_ == ReflectionSymmetryType);
 }
 
@@ -308,7 +301,6 @@ void MeshCuboidReflectionSymmetryGroup::set_reflection_plane(const MyMesh::Norma
 {
 	n_ = _n;
 	t_ = _t;
-	n_.normalize();
 }
 
 bool MeshCuboidReflectionSymmetryGroup::compute_symmetry_axis(const std::vector<MeshCuboid *>& _cuboids)
@@ -561,7 +553,7 @@ MeshCuboidRotationSymmetryGroup::MeshCuboidRotationSymmetryGroup(
 	, n_(_other.n_)
 	, t_(_other.t_)
 {
-	n_.normalize();
+
 }
 
 MeshCuboidRotationSymmetryGroup::~MeshCuboidRotationSymmetryGroup()
@@ -692,7 +684,6 @@ void MeshCuboidRotationSymmetryGroup::set_rotation_axis(const MyMesh::Normal &_n
 {
 	n_ = _n;
 	t_ = _t;
-	n_.normalize();
 }
 
 void MeshCuboidRotationSymmetryGroup::get_rotation_axis_corners(
