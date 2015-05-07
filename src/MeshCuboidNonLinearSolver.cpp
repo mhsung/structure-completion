@@ -461,9 +461,7 @@ void MeshCuboidNonLinearSolver::add_reflection_symmetry_group_constraints(
 	const MeshCuboidReflectionSymmetryGroup *symmetry_group = reflection_symmetry_groups_[_symmetry_group_index];
 	assert(symmetry_group);
 
-	const unsigned int dimension = 3;
 	NLPVectorExpression n_variable = create_reflection_symmetry_group_variable_n(_symmetry_group_index);
-
 
 	std::vector< unsigned int > single_cuboid_indices;
 	symmetry_group->get_single_cuboid_indices(cuboids_, single_cuboid_indices);
@@ -473,20 +471,12 @@ void MeshCuboidNonLinearSolver::add_reflection_symmetry_group_constraints(
 	{
 		unsigned int cuboid_index = (*it);
 		
-		// FIXME:
-		// This for loop semantically useless, but the optimization fails without this loop.
-		// The following constraint should be fixed.
-		for (unsigned int i = 0; i < dimension; ++i)
-		{
-			NLPVectorExpression axis_variable = create_cuboid_axis_variable(cuboid_index,
-				symmetry_group->get_aligned_global_axis_index());
-
-			// The symmetry axis should be identical with the cuboid axis.
-			NLPVectorExpression expression = n_variable - axis_variable;
-			_formulation.add_constraint(expression, 0, 0);
-		}
+		add_single_cuboid_reflection_constraints(
+			cuboid_index,
+			_symmetry_group_index,
+			symmetry_group->get_aligned_global_axis_index(),
+			_formulation);
 	}
-
 
 	std::vector< std::pair<unsigned int, unsigned int> > pair_cuboid_indices;
 	symmetry_group->get_pair_cuboid_indices(cuboids_, pair_cuboid_indices);
@@ -494,24 +484,17 @@ void MeshCuboidNonLinearSolver::add_reflection_symmetry_group_constraints(
 	for (std::vector< std::pair<unsigned int, unsigned int> >::const_iterator it = pair_cuboid_indices.begin();
 		it != pair_cuboid_indices.end(); ++it)
 	{
-		add_cuboid_reflection_constraints(
+		add_pair_cuboid_reflection_constraints(
 			(*it).first, (*it).second,
 			_symmetry_group_index,
 			symmetry_group->get_aligned_global_axis_index(),
 			_formulation);
 	}
 
-
-	if (single_cuboid_indices.empty())
-	{
-		// Unit vector constraint.
-		// NOTE:
-		// If there is an identical cuboid axis,
-		// the unit vector constraint is added from the cuboid constraint.
-		NLPExpression expression = NLPVectorExpression::dot_product(
-			n_variable, n_variable);
-		_formulation.add_constraint(expression, 1, 1);
-	}
+	// Unit vector constraint.
+	NLPExpression expression = NLPVectorExpression::dot_product(
+		n_variable, n_variable);
+	_formulation.add_constraint(expression, 1, 1);
 }
 
 void MeshCuboidNonLinearSolver::add_reflection_constraints(
@@ -550,7 +533,43 @@ void MeshCuboidNonLinearSolver::add_reflection_constraints(
 	_formulation.add_constraint(expression_2, -1.0E-12, 1.0E-12);
 }
 
-void MeshCuboidNonLinearSolver::add_cuboid_reflection_constraints(
+void MeshCuboidNonLinearSolver::add_single_cuboid_reflection_constraints(
+	const unsigned int _cuboid_index,
+	const unsigned int _symmetry_group_index,
+	const unsigned int _reflection_axis_index,
+	NLPFormulation &_formulation)
+{
+	const unsigned int dimension = 3;
+	assert(_reflection_axis_index < dimension);
+
+	bool *is_corner_visited = new bool[MeshCuboid::k_num_corners];
+	memset(is_corner_visited, false, MeshCuboid::k_num_corners * sizeof(bool));
+
+	for (unsigned int corner_index_1 = 0; corner_index_1 < MeshCuboid::k_num_corners; ++corner_index_1)
+	{
+		if (is_corner_visited[corner_index_1])
+			continue;
+
+		std::bitset<3> bits(corner_index_1);
+		bits[_reflection_axis_index].flip();
+		unsigned int corner_index_2 = bits.to_ulong();
+
+		assert(!is_corner_visited[corner_index_2]);
+
+		add_reflection_constraints(
+			create_cuboid_corner_variable(_cuboid_index, corner_index_1),
+			create_cuboid_corner_variable(_cuboid_index, corner_index_2),
+			create_reflection_symmetry_group_variable_n(_symmetry_group_index),
+			create_reflection_symmetry_group_variable_t(_symmetry_group_index),
+			_formulation);
+
+		is_corner_visited[corner_index_1] = is_corner_visited[corner_index_2] = true;
+	}
+
+	delete[] is_corner_visited;
+}
+
+void MeshCuboidNonLinearSolver::add_pair_cuboid_reflection_constraints(
 	const unsigned int _cuboid_index_1,
 	const unsigned int _cuboid_index_2,
 	const unsigned int _symmetry_group_index,
@@ -559,10 +578,6 @@ void MeshCuboidNonLinearSolver::add_cuboid_reflection_constraints(
 {
 	const unsigned int dimension = 3;
 	assert(_reflection_axis_index < dimension);
-
-	// NOTE:
-	// Implemented only for 3 dimension.
-	assert(dimension == 3);
 
 	for (unsigned int corner_index_1 = 0; corner_index_1 < MeshCuboid::k_num_corners; ++corner_index_1)
 	{
@@ -603,9 +618,8 @@ void MeshCuboidNonLinearSolver::add_rotation_symmetry_group_constraints(
 			symmetry_group->get_aligned_global_axis_index());
 
 		// The symmetry axis should be identical with the cuboid axis.
-		NLPVectorExpression expression_1 = n_variable - axis_variable;
-		_formulation.add_constraint(expression_1, 0, 0);
-
+		//NLPVectorExpression expression_1 = n_variable - axis_variable;
+		//_formulation.add_constraint(expression_1, 0, 0);
 
 		NLPVectorExpression cuboid_center_variable(dimension);
 		for (unsigned int corner_index = 0; corner_index < MeshCuboid::k_num_corners; ++corner_index)
@@ -621,16 +635,10 @@ void MeshCuboidNonLinearSolver::add_rotation_symmetry_group_constraints(
 	// Ignore pairs of cuboids.
 
 
-	if (single_cuboid_indices.empty())
-	{
-		// Unit vector constraint.
-		// NOTE:
-		// If there is an identical cuboid axis,
-		// the unit vector constraint is added from the cuboid constraint.
-		NLPExpression expression = NLPVectorExpression::dot_product(
-			n_variable, n_variable);
-		_formulation.add_constraint(expression, 1, 1);
-	}
+	// Unit vector constraint.
+	NLPExpression expression = NLPVectorExpression::dot_product(
+		n_variable, n_variable);
+	_formulation.add_constraint(expression, 1, 1);
 }
 
 bool MeshCuboidNonLinearSolver::compute_initial_values(const Eigen::VectorXd &_input,

@@ -41,7 +41,7 @@ void MeshViewerCore::parse_arguments()
 	else if (FLAGS_run_part_assembly)
 	{
 		std::cout << "mesh_filename = " << FLAGS_mesh_filename << std::endl;
-		run_part_assembly();
+		//run_part_assembly();
 		exit(EXIT_FAILURE);
 	}
 }

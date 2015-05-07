@@ -129,7 +129,13 @@ private:
 		const NLPVectorExpression& _t_variable,
 		NLPFormulation &_formulation);
 
-	void add_cuboid_reflection_constraints(
+	void add_single_cuboid_reflection_constraints(
+		const unsigned int _cuboid_index,
+		const unsigned int _symmetry_group_index,
+		const unsigned int _reflection_axis_index,
+		NLPFormulation &_formulation);
+
+	void add_pair_cuboid_reflection_constraints(
 		const unsigned int _cuboid_index_1,
 		const unsigned int _cuboid_index_2,
 		const unsigned int _symmetry_group_index,
