@@ -7,6 +7,7 @@
 #include "MyMesh.h"
 
 #include "MeshCuboidStructure.h"
+#include "MeshCuboidParameters.h"
 #include "MeshCuboidPredictor.h"
 #include "MeshCuboidSymmetryGroup.h"
 
@@ -53,7 +54,6 @@ public:
 	void remove_occluded_points();
 
 	// Experiment functions.
-	void parse_arguments();
 	void train();
 	void train_file_files();
 	void batch_predict();
@@ -74,6 +74,36 @@ public:
 	void test_rotate(const Real _angle);
 	void test_optimize();
 	//
+
+
+	void MeshViewerCore::parse_arguments()
+	{
+		std::cout << "data_root_path = " << FLAGS_data_root_path << std::endl;
+		std::cout << "label_info_path = " << FLAGS_data_root_path + FLAGS_label_info_path << std::endl;
+		std::cout << "mesh_path = " << FLAGS_data_root_path + FLAGS_mesh_path << std::endl;
+		std::cout << "sample_path = " << FLAGS_data_root_path + FLAGS_sample_path << std::endl;
+		std::cout << "sample_label_path = " << FLAGS_data_root_path + FLAGS_sample_label_path << std::endl;
+		std::cout << "mesh_label_path = " << FLAGS_data_root_path + FLAGS_mesh_label_path << std::endl;
+		std::cout << "output_dir = " << FLAGS_output_dir << std::endl;
+
+		if (FLAGS_run_training)
+		{
+			train();
+			exit(EXIT_FAILURE);
+		}
+		else if (FLAGS_run_prediction)
+		{
+			std::cout << "mesh_filename = " << FLAGS_mesh_filename << std::endl;
+			predict();
+			exit(EXIT_FAILURE);
+		}
+		else if (FLAGS_run_part_assembly)
+		{
+			std::cout << "mesh_filename = " << FLAGS_mesh_filename << std::endl;
+			run_part_assembly();
+			exit(EXIT_FAILURE);
+		}
+	}
 
 
 private:
