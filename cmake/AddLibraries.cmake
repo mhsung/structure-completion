@@ -2,7 +2,23 @@
 #### Additional library files ####
 ##################################
 
-if (UNIX)
+if (APPLE)
+find_package (GLEW)
+
+target_link_libraries (${targetName}
+  ${LIBRARY_ROOT_PATH}/ann-1.1.2/lib/libANN.a
+)
+
+target_link_libraries (${targetName}
+  ${LIBRARY_ROOT_PATH}/gflags/build/lib/libgflags.a
+  ${LIBRARY_ROOT_PATH}/Ipopt-3.12.1/build/lib/libipopt.dylib
+  ${LIBRARY_ROOT_PATH}/Ipopt-3.12.1/build/lib/libcoinmetis.dylib
+  ${LIBRARY_ROOT_PATH}/Ipopt-3.12.1/build/lib/libcoinmumps.dylib
+  #${LIBRARY_ROOT_PATH}/ceres-solver-1.10.0/build/lib/libceres.a
+  #${LIBRARY_ROOT_PATH}/glog/build/lib/libglog.a
+  #${LIBRARY_ROOT_PATH}/glog/build/lib/libglog.so
+)
+elseif (UNIX)
 target_link_libraries (${targetName}
   ${LIBRARY_ROOT_PATH}/ann-1.1.2/lib/libANN.a
   ${LIBRARY_ROOT_PATH}/glew-1.12.0/build/lib/libGLEW.a
@@ -18,9 +34,7 @@ target_link_libraries (${targetName}
   #${LIBRARY_ROOT_PATH}/glog/build/lib/libglog.a
   #${LIBRARY_ROOT_PATH}/glog/build/lib/libglog.so
 )
-endif()
-
-if (WIN32)
+elseif (WIN32)
 target_link_libraries (${targetName}
   ${LIBRARY_ROOT_PATH}/ann-1.1.2/build/bin/ANN.lib
   ${LIBRARY_ROOT_PATH}/glew-1.11.0/lib/Release/x64/glew32.lib
