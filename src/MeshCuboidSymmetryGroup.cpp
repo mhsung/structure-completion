@@ -263,6 +263,7 @@ MeshCuboidReflectionSymmetryGroup::MeshCuboidReflectionSymmetryGroup(
 	, n_(_other.n_)
 	, t_(_other.t_)
 {
+	n_.normalize();
 	assert(info_.symmetry_type_ == ReflectionSymmetryType);
 }
 
@@ -307,6 +308,7 @@ void MeshCuboidReflectionSymmetryGroup::set_reflection_plane(const MyMesh::Norma
 {
 	n_ = _n;
 	t_ = _t;
+	n_.normalize();
 }
 
 bool MeshCuboidReflectionSymmetryGroup::compute_symmetry_axis(const std::vector<MeshCuboid *>& _cuboids)
@@ -559,7 +561,7 @@ MeshCuboidRotationSymmetryGroup::MeshCuboidRotationSymmetryGroup(
 	, n_(_other.n_)
 	, t_(_other.t_)
 {
-
+	n_.normalize();
 }
 
 MeshCuboidRotationSymmetryGroup::~MeshCuboidRotationSymmetryGroup()
@@ -690,6 +692,7 @@ void MeshCuboidRotationSymmetryGroup::set_rotation_axis(const MyMesh::Normal &_n
 {
 	n_ = _n;
 	t_ = _t;
+	n_.normalize();
 }
 
 void MeshCuboidRotationSymmetryGroup::get_rotation_axis_corners(
