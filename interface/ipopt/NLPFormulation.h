@@ -142,7 +142,6 @@ public:
 
 private:
 	Index num_vars_;
-	//const NLPFunction *function_;
 	std::vector< NLPFunction *> functions_;
 	std::vector< Number > lower_bound_;
 	std::vector< Number > upper_bound_;

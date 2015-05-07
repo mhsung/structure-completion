@@ -6,10 +6,10 @@
 
 
 NLPEigenQuadFunction::NLPEigenQuadFunction(const Eigen::MatrixXd &_quadratic_term_,
-	const Eigen::VectorXd &_linear_term_, const double &_constant_term)
+	const Eigen::VectorXd &_linear_term, const double &_constant_term)
 	: NLPFunction(0)
 	, quadratic_term_(_quadratic_term_)
-	, linear_term_(_linear_term_)
+	, linear_term_(_linear_term)
 	, constant_term_(_constant_term)
 {
 	num_vars_ = quadratic_term_.cols();

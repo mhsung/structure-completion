@@ -473,12 +473,18 @@ void MeshCuboidNonLinearSolver::add_reflection_symmetry_group_constraints(
 	{
 		unsigned int cuboid_index = (*it);
 		
-		NLPVectorExpression axis_variable = create_cuboid_axis_variable(cuboid_index,
-			symmetry_group->get_aligned_global_axis_index());
+		// FIXME:
+		// This for loop semantically useless, but the optimization fails without this loop.
+		// The following constraint should be fixed.
+		for (unsigned int i = 0; i < dimension; ++i)
+		{
+			NLPVectorExpression axis_variable = create_cuboid_axis_variable(cuboid_index,
+				symmetry_group->get_aligned_global_axis_index());
 
-		// The symmetry axis should be identical with the cuboid axis.
-		NLPVectorExpression expression = n_variable - axis_variable;
-		_formulation.add_constraint(expression, 0, 0);
+			// The symmetry axis should be identical with the cuboid axis.
+			NLPVectorExpression expression = n_variable - axis_variable;
+			_formulation.add_constraint(expression, 0, 0);
+		}
 	}
 
 

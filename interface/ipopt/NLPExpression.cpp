@@ -357,10 +357,10 @@ Number NLPExpression::eval(const Number* _x) const
 {
 	Number ret = 0;
 	for (std::list< NLPTerm >::const_iterator it = terms_.begin(); it != terms_.end(); ++it)
-        {
+	{
 		ret += (*it).eval(_x);
-        }
-        return ret;
+	}
+	return ret;
 }
 
 bool NLPExpression::get_gradient(const Index _num_vars,
