@@ -38,6 +38,7 @@ DECLARE_double(param_opt_symmetry_energy_term_weight);
 //
 DECLARE_bool(run_training);
 DECLARE_bool(run_prediction);
+DECLARE_bool(run_part_assembly);
 DECLARE_string(mesh_filename);
 
 DECLARE_string(data_root_path);

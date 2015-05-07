@@ -38,6 +38,12 @@ void MeshViewerCore::parse_arguments()
 		predict();
 		exit(EXIT_FAILURE);
 	}
+	else if (FLAGS_run_part_assembly)
+	{
+		std::cout << "mesh_filename = " << FLAGS_mesh_filename << std::endl;
+		run_part_assembly();
+		exit(EXIT_FAILURE);
+	}
 }
 
 bool MeshViewerCore::load_object_info(
@@ -1214,7 +1220,7 @@ void MeshViewerCore::reconstruct_database_prior(
 			if (mesh_filepath.compare(_mesh_filepath) == 0)
 				continue;
 
-			QFileInfo file_info(mesh_filepath.c_str());
+			//QFileInfo file_info(mesh_filepath.c_str());
 			std::string mesh_name(file_info.baseName().toLocal8Bit());
 			std::string cuboid_filepath = FLAGS_training_dir + std::string("/") + mesh_name + std::string(".arff");
 
@@ -1645,7 +1651,7 @@ void MeshViewerCore::run_reconstruction_test()
 	cuboid_structure_.save_sample_points_to_ply("test");
 }
 
-void MeshViewerCore::do_occlusion_test()
+void MeshViewerCore::run_occlusion_test()
 {
 	assert(occlusion_test_widget_);
 

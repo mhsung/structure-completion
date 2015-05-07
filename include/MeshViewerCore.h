@@ -58,13 +58,14 @@ public:
 	void train_file_files();
 	void batch_predict();
 	void predict();
+	void run_part_assembly();
 	void batch_render_point_clusters();
 	void batch_render_cuboids();
 	void batch_render_points();
 	void print_mesh_info();
-	//void do_occlusion_test();
 	void run_fusion_test();
-	//
+	//void run_occlusion_test();
+
 
 	// TEST.
 	void test_initialize();
@@ -114,6 +115,10 @@ private:
 	void reconstruct_database_prior(
 		const char *_mesh_filepath,
 		const std::vector<LabelIndex> *_reconstructed_label_indices = NULL);
+
+	Real run_part_assembly_align_front(const std::string _mesh_filepath);
+
+	void run_part_assembly_match_parts(const std::string _mesh_filepath, const Real _angle);
 
 	void set_view_direction();
 

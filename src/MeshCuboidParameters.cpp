@@ -35,6 +35,7 @@ DEFINE_double(param_opt_symmetry_energy_term_weight, 1.0E6, "");
 //
 DEFINE_bool(run_training, false, "");
 DEFINE_bool(run_prediction, false, "");
+DEFINE_bool(run_part_assembly, false, "");
 DEFINE_string(mesh_filename, "", "");
 
 DEFINE_string(data_root_path, "D:/Data/shape2pose/", "");

@@ -209,6 +209,10 @@ void MeshCuboidSymmetryGroup::get_symmetric_sample_point_pairs(
 					point_2[i] = _cuboid_ann_points_2[point_index_2][i];
 
 				//
+				// Debug.
+				Real test_distance = (symmetric_point_1 - point_2).norm();
+				CHECK_NUMERICAL_ERROR(__FUNCTION__, test_distance, std::sqrt(dd[0]));
+
 				double distance = (_neighbor_distance - dd[0]);
 				assert(distance >= 0);
 				//
