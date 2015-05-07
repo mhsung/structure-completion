@@ -199,7 +199,17 @@ target_link_libraries (${targetName}
   ${GLUT_LIBRARIES}
 )
 
-if (UNIX)
+if (APPLE)
+target_link_libraries (${targetName}
+  debug ${OPENMESH_LIBRARY_DIR}/libOpenMeshCore${CMAKE_DEBUG_POSTFIX}.dylib
+  debug ${OPENMESH_LIBRARY_DIR}/libOpenMeshTools${CMAKE_DEBUG_POSTFIX}.dylib
+)
+  
+target_link_libraries (${targetName}
+  ${OPENMESH_LIBRARY_DIR}/libOpenMeshCore.dylib
+  ${OPENMESH_LIBRARY_DIR}/libOpenMeshTools.dylib
+)
+elseif (UNIX)
 target_link_libraries (${targetName}
   debug ${OPENMESH_LIBRARY_DIR}/libOpenMeshCore${CMAKE_DEBUG_POSTFIX}.so
   debug ${OPENMESH_LIBRARY_DIR}/libOpenMeshTools${CMAKE_DEBUG_POSTFIX}.so
