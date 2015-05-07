@@ -116,7 +116,11 @@ private:
 		const char *_mesh_filepath,
 		const std::vector<LabelIndex> *_reconstructed_label_indices = NULL);
 
-	Real run_part_assembly_align_front(const std::string _mesh_filepath);
+	void run_part_assembly_align_database(const std::string _mesh_filepath,
+		Real &_xy_size, Real &_z_size, Real &_angle);
+
+	void run_part_assembly_render_alignment(const std::string _mesh_filepath,
+		const Real _xy_size, const Real _z_size, const Real _angle, const std::string _output_filename);
 
 	void run_part_assembly_match_parts(const std::string _mesh_filepath, const Real _angle);
 
