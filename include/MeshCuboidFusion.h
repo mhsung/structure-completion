@@ -2,6 +2,9 @@
 #define _MESH_CUBOID_FUSION_H_
 
 #include "MeshCuboidStructure.h"
+#include "ICP.h"
+
+#include <Eigen/Core>
 
 
 typedef OpenMesh::Vec3i MeshCuboidVoxelIndex3D;
@@ -22,6 +25,12 @@ public:
 		const std::vector<MyMesh::Point> &_points,
 		std::vector<int> &_points_to_voxels,
 		std::vector< std::list<int> > &_voxels_to_points) const;
+	void get_voxel_occupancies(
+		const std::vector<MyMesh::Point> &_points,
+		Eigen::VectorXd &_voxel_occupancies) const;
+	void get_distance_map(
+		ANNpointArray &_ann_points, ANNkd_tree *_ann_kd_tree,
+		Eigen::VectorXd &_voxel_to_point_distances) const;
 
 private:
 	MyMesh::Point min_;

@@ -357,7 +357,7 @@ bool MeshCuboidStructure::load_cuboids(const std::string _filename, bool _verbos
 	query_label_index_ = num_labels();
 
 
-	std::cout << "Done." << std::endl;
+	if (_verbose) std::cout << "Done." << std::endl;
 	return true;
 }
 
@@ -728,7 +728,7 @@ bool MeshCuboidStructure::load_symmetry_groups(const char *_filename, bool _verb
 
 	file.close();
 
-	std::cout << "Done." << std::endl;
+	if (_verbose) std::cout << "Done." << std::endl;
 	return true;
 }
 
@@ -824,8 +824,7 @@ bool MeshCuboidStructure::load_sample_points(const char *_filename, bool _verbos
 	}
 	*/
 
-	if (_verbose)
-		std::cout << "Done." << std::endl;
+	if (_verbose) std::cout << "Done." << std::endl;
 
 	return true;
 }
@@ -1005,7 +1004,7 @@ bool MeshCuboidStructure::load_dense_sample_points(const char *_filename, bool _
 	sparse_sample_points_copy.clear();
 	//
 
-	std::cout << "Done." << std::endl;
+	if (_verbose) std::cout << "Done." << std::endl;
 
 	return true;
 }
@@ -1048,7 +1047,7 @@ bool MeshCuboidStructure::save_sample_points(const char *_filename, bool _verbos
 
 	file.close();
 
-	std::cout << "Done." << std::endl;
+	if (_verbose) std::cout << "Done." << std::endl;
 
 	return true;
 }
@@ -1106,7 +1105,7 @@ bool MeshCuboidStructure::save_sample_points_to_ply(const char *_filename, bool 
 
 	file.close();
 
-	std::cout << "Done." << std::endl;
+	if (_verbose) std::cout << "Done." << std::endl;
 
 	return true;
 }
@@ -1194,7 +1193,7 @@ bool MeshCuboidStructure::load_sample_point_labels(const char *_filename, bool _
 	query_label_index_ = num_labels();
 
 
-	std::cout << "Done." << std::endl;
+	if (_verbose) std::cout << "Done." << std::endl;
 	return true;
 }
 
@@ -1230,6 +1229,7 @@ bool MeshCuboidStructure::save_sample_point_labels(const char *_filename, bool _
 		it != sample_points_.end(); ++it)
 	{
 		const MeshSamplePoint *sample_point = (*it);
+		assert(sample_point);
 		assert(sample_point->label_index_confidence_.size() == num_labels());
 
 		for (LabelIndex label_index = 0; label_index < num_labels(); ++label_index)
@@ -1243,7 +1243,7 @@ bool MeshCuboidStructure::save_sample_point_labels(const char *_filename, bool _
 
 	file.close();
 
-	std::cout << "Done." << std::endl;
+	if (_verbose) std::cout << "Done." << std::endl;
 	return true;
 }
 
@@ -1394,7 +1394,7 @@ bool MeshCuboidStructure::test_load_cuboids(const char *_filename, bool _verbose
 	// Draws all points.
 	query_label_index_ = num_labels();
 
-	std::cout << "Done." << std::endl;
+	if (_verbose) std::cout << "Done." << std::endl;
 
 	return true;
 }

@@ -263,6 +263,21 @@ const std::vector<MeshSamplePoint *> &MeshCuboid::get_sample_points() const
 	return sample_points_;
 }
 
+void MeshCuboid::get_sample_points(std::vector<MyMesh::Point> &_sample_points) const
+{
+	_sample_points.clear();
+	_sample_points.reserve(num_sample_points());
+
+	for (SamplePointIndex sample_point_index = 0; sample_point_index < num_sample_points();
+		++sample_point_index)
+	{
+		MeshSamplePoint *sample_point = get_sample_point(sample_point_index);
+		assert(sample_point);
+		MyMesh::Point point = sample_point->point_;
+		_sample_points.push_back(point);
+	}
+}
+
 void MeshCuboid::get_sample_points(Eigen::MatrixXd &_sample_points) const
 {
 	_sample_points = Eigen::MatrixXd(3, num_sample_points());

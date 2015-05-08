@@ -1,5 +1,8 @@
 #include "MeshViewerCore.h"
+#include "MeshCuboidEvaluator.h"
+#include "MeshCuboidFusion.h"
 #include "MeshCuboidParameters.h"
+#include "MeshCuboidTrainer.h"
 
 #include <Eigen/Core>
 #include <Eigen/Geometry> 
@@ -19,6 +22,7 @@ void get_bounding_cylinder(const MeshCuboidStructure &_cuboid_structure,
 		++sample_point_index)
 	{
 		const MeshSamplePoint *sample_point = _cuboid_structure.sample_points_[sample_point_index];
+		assert(sample_point);
 		for (int i = 0; i < 3; ++i)
 			_sample_points.col(sample_point_index)[i] = sample_point->point_[i];
 	}
@@ -88,21 +92,21 @@ void MeshViewerCore::run_part_assembly_align_database(const std::string _mesh_fi
 	QFileInfoList dir_list = input_dir.entryInfoList();
 	for (int i = 0; i < dir_list.size(); i++)
 	{
-		QFileInfo other_file_info = dir_list.at(i);
-		if (other_file_info.exists() &&
-			(other_file_info.suffix().compare("obj") == 0
-			|| other_file_info.suffix().compare("off") == 0))
+		QFileInfo example_file_info = dir_list.at(i);
+		if (example_file_info.exists() &&
+			(example_file_info.suffix().compare("obj") == 0
+			|| example_file_info.suffix().compare("off") == 0))
 		{
-			std::string other_mesh_filepath = std::string(other_file_info.filePath().toLocal8Bit());
+			std::string example_mesh_filepath = std::string(example_file_info.filePath().toLocal8Bit());
 
 			// Skip if the mesh is the same with the input mesh.
-			if (other_mesh_filepath.compare(_mesh_filepath) == 0)
+			if (example_mesh_filepath.compare(_mesh_filepath) == 0)
 				continue;
 
-			std::string other_mesh_name(other_file_info.baseName().toLocal8Bit());
+			std::string other_mesh_name(example_file_info.baseName().toLocal8Bit());
 
 			bool ret = load_object_info(example_mesh, example_cuboid_structure,
-				other_mesh_filepath.c_str(), LoadSamplePoints);
+				example_mesh_filepath.c_str(), LoadSamplePoints, NULL, false);
 			if (!ret) continue;
 
 
@@ -134,7 +138,8 @@ void MeshViewerCore::run_part_assembly_align_database(const std::string _mesh_fi
 		}
 	}
 
-	annDeallocPts(input_ann_points); delete input_ann_kd_tree;
+	annDeallocPts(input_ann_points);
+	delete input_ann_kd_tree;
 
 	Real min_score = std::numeric_limits<Real>::max();
 	unsigned int min_angle_index = 0;
@@ -157,10 +162,12 @@ void MeshViewerCore::run_part_assembly_render_alignment(const std::string _mesh_
 	MyMesh example_mesh;
 	MeshCuboidStructure example_cuboid_structure(&example_mesh);
 
+	// Load the same object.
 	bool ret = load_object_info(example_mesh, example_cuboid_structure,
-		_mesh_filepath.c_str(), LoadDenseSamplePoints);
+		_mesh_filepath.c_str(), LoadDenseSamplePoints, NULL, false);
 	assert(ret);
 
+	// Render partial scanned input points with error = 0 (for coloring).
 	Eigen::MatrixXd aligned_example_points;
 	get_transformed_sample_points(example_cuboid_structure, _xy_size, _z_size, _angle, aligned_example_points);
 
@@ -171,6 +178,7 @@ void MeshViewerCore::run_part_assembly_render_alignment(const std::string _mesh_
 		sample_point->error_ = 0.0;
 	}
 
+	// Render transformed original points with error = 1 (for coloring).
 	assert(aligned_example_points.cols() == example_cuboid_structure.num_sample_points());
 	for (SamplePointIndex sample_point_index = 0; sample_point_index < example_cuboid_structure.num_sample_points();
 		++sample_point_index)
@@ -184,47 +192,43 @@ void MeshViewerCore::run_part_assembly_render_alignment(const std::string _mesh_
 		new_sample_point->error_ = 1.0;
 	}
 
-	setDrawMode(COLORED_POINT_SAMPLES);
-	updateGL();
-	snapshot(_output_filename);
+	//setDrawMode(COLORED_POINT_SAMPLES);
+	//updateGL();
+	//snapshot(_output_filename);
 
 	setDrawMode(CUSTOM_VIEW);
 }
 
-void MeshViewerCore::run_part_assembly_match_parts(const std::string _mesh_filepath, const Real _angle)
+void MeshViewerCore::run_part_assembly_match_parts(const std::string _mesh_filepath,
+	const Real _xy_size, const Real _z_size, const Real _angle,
+	const MeshCuboidTrainer &_trainer, std::vector<std::string> &_label_matched_objects)
 {
-	// ---- //
-	unsigned int num_input_points = cuboid_structure_.sample_points_.size();
-	assert(num_input_points > 0);
-	Eigen::MatrixXd input_points(3, num_input_points);
+	// Parameters.
+	const Real part_assembly_window_size = 0.1 * cuboid_structure_.mesh_->get_object_diameter();
+	const Real part_assembly_voxel_size = 0.005 * cuboid_structure_.mesh_->get_object_diameter();
+	const Real part_assembly_voxel_variance = 0.01 * cuboid_structure_.mesh_->get_object_diameter();
+	const Real distance_param = 2 * part_assembly_voxel_variance * part_assembly_voxel_variance;
+	assert(distance_param > 0);
 
-	for (SamplePointIndex sample_point_index = 0; sample_point_index < num_input_points;
+
+	// Create input point KD tree.
+	unsigned int num_labels = cuboid_structure_.num_labels();
+
+	Eigen::MatrixXd input_sample_points(3, cuboid_structure_.num_sample_points());
+	for (SamplePointIndex sample_point_index = 0; sample_point_index < cuboid_structure_.num_sample_points();
 		++sample_point_index)
 	{
 		MeshSamplePoint *sample_point = cuboid_structure_.sample_points_[sample_point_index];
-		for (int i = 0; i < 3; ++i)
-			input_points.col(sample_point_index)[i] = sample_point->point_[i];
+		assert(sample_point);
+		for (unsigned int i = 0; i < 3; ++i)
+			input_sample_points.col(sample_point_index)(i) = sample_point->point_[i];
 	}
 
-	Eigen::VectorXd input_bbox_min = input_points.rowwise().minCoeff();
-	Eigen::VectorXd input_bbox_max = input_points.rowwise().maxCoeff();
-	Eigen::VectorXd input_bbox_size = input_bbox_max - input_bbox_min;
-	Eigen::VectorXd input_bbox_center = 0.5 * (input_bbox_min + input_bbox_max);
-
-	Real input_z_size = input_bbox_size[2];
-	Real input_xy_size = std::sqrt(input_bbox_size[0] * input_bbox_size[0]
-		+ input_bbox_size[1] * input_bbox_size[1]);
-
 	ANNpointArray input_ann_points;
-	ANNkd_tree* input_ann_kd_tree = ICP::create_kd_tree(input_points, input_ann_points);
+	ANNkd_tree* input_ann_kd_tree = ICP::create_kd_tree(input_sample_points, input_ann_points);
 
 
-	const unsigned int num_angles = 180;
-	Real angle_unit = 2 * M_PI / static_cast<Real>(num_angles);
-	std::vector<Real> angle_scores(180, 0);
-	// ---- //
-
-
+	// Load database.
 	MyMesh example_mesh;
 	MeshCuboidStructure example_cuboid_structure(&example_mesh);
 
@@ -254,87 +258,248 @@ void MeshViewerCore::run_part_assembly_match_parts(const std::string _mesh_filep
 	input_dir.setSorting(QDir::Name);
 
 
+	// (Score, mesh_filepath)
+	std::vector< std::pair<Real, std::string> > label_matched_object_scores(num_labels);
+	for (LabelIndex label_index = 0; label_index < num_labels; ++label_index)
+		label_matched_object_scores[label_index].first = 0;
+
+
 	QFileInfoList dir_list = input_dir.entryInfoList();
 	for (int i = 0; i < dir_list.size(); i++)
 	{
-		QFileInfo other_file_info = dir_list.at(i);
-		if (other_file_info.exists() &&
-			(other_file_info.suffix().compare("obj") == 0
-			|| other_file_info.suffix().compare("off") == 0))
+		QFileInfo example_file_info = dir_list.at(i);
+		if (example_file_info.exists() &&
+			(example_file_info.suffix().compare("obj") == 0
+			|| example_file_info.suffix().compare("off") == 0))
 		{
-			std::string other_mesh_filepath = std::string(other_file_info.filePath().toLocal8Bit());
+			std::string example_mesh_filepath = std::string(example_file_info.filePath().toLocal8Bit());
 
 			// Skip if the mesh is the same with the input mesh.
-			if (other_mesh_filepath.compare(_mesh_filepath) == 0)
+			if (example_mesh_filepath.compare(_mesh_filepath) == 0)
 				continue;
 
-			std::string other_mesh_name(other_file_info.baseName().toLocal8Bit());
+			std::string other_mesh_name(example_file_info.baseName().toLocal8Bit());
 
 			bool ret = load_object_info(example_mesh, example_cuboid_structure,
-				other_mesh_filepath.c_str(), LoadDenseTestData);
+				example_mesh_filepath.c_str(), LoadGroundTruthData, NULL, false);
 			if (!ret) continue;
 
-			// ---- //
-			unsigned int num_example_points = example_cuboid_structure.sample_points_.size();
-			assert(num_example_points > 0);
-			Eigen::MatrixXd example_points(3, num_example_points);
 
-			for (SamplePointIndex sample_point_index = 0; sample_point_index < num_example_points;
+			Eigen::MatrixXd transformed_example_points;
+			get_transformed_sample_points(example_cuboid_structure, _xy_size, _z_size, _angle, transformed_example_points);
+
+			// Assign transformed points.
+			for (SamplePointIndex sample_point_index = 0; sample_point_index < example_cuboid_structure.num_sample_points();
 				++sample_point_index)
 			{
 				MeshSamplePoint *sample_point = example_cuboid_structure.sample_points_[sample_point_index];
 				for (int i = 0; i < 3; ++i)
-					example_points.col(sample_point_index)[i] = sample_point->point_[i];
+					sample_point->point_[i] = transformed_example_points.col(sample_point_index)[i];
 			}
 
-			Eigen::VectorXd example_bbox_min = example_points.rowwise().minCoeff();
-			Eigen::VectorXd example_bbox_max = example_points.rowwise().maxCoeff();
-			Eigen::VectorXd example_bbox_size = example_bbox_max - example_bbox_min;
-			Eigen::VectorXd example_bbox_center = 0.5 * (example_bbox_min + example_bbox_max);
 
-			Real example_z_size = example_bbox_size[2];
-			Real example_xy_size = std::sqrt(example_bbox_size[0] * example_bbox_size[0]
-				+ example_bbox_size[1] * example_bbox_size[1]);
-
-			Eigen::MatrixXd transformed_example_points = example_points.colwise() - example_bbox_center;
-			for (SamplePointIndex sample_point_index = 0; sample_point_index < num_example_points;
-				++sample_point_index)
+			for (LabelIndex label_index = 0; label_index < num_labels; ++label_index)
 			{
-				transformed_example_points.col(sample_point_index)[0] *= (input_xy_size / example_xy_size);
-				transformed_example_points.col(sample_point_index)[1] *= (input_xy_size / example_xy_size);
-				transformed_example_points.col(sample_point_index)[2] *= (input_z_size / example_z_size);
+				MeshCuboid *cuboid = NULL;
+
+				// NOTE:
+				// The current implementation assumes that there is only one part for each label.
+				assert(example_cuboid_structure.label_cuboids_[label_index].size() <= 1);
+				if (!example_cuboid_structure.label_cuboids_[label_index].empty())
+					cuboid = example_cuboid_structure.label_cuboids_[label_index].front();
+
+				if (!cuboid) continue;
+				else if (cuboid->num_sample_points() == 0) continue;
+
+				// Create cuboid KD-tree.
+				std::vector<MyMesh::Point> cuboid_sample_points;
+				cuboid->get_sample_points(cuboid_sample_points);
+
+				MyMesh::Point local_coord_bbox_min = cuboid->get_bbox_center() - 0.5 * MyMesh::Point(part_assembly_window_size);
+				MyMesh::Point local_coord_bbox_max = cuboid->get_bbox_center() + 0.5 * MyMesh::Point(part_assembly_window_size);
+				MeshCuboidVoxelGrid local_coord_voxels(local_coord_bbox_min, local_coord_bbox_max,
+					part_assembly_voxel_size);
+				int num_voxels = local_coord_voxels.n_voxels();
+
+				// Compute distance maps.
+				Eigen::VectorXd input_distance_map;
+				local_coord_voxels.get_distance_map(input_ann_points, input_ann_kd_tree, input_distance_map);
+				assert(input_distance_map.rows() == num_voxels);
+				for (unsigned int i = 0; i < num_voxels; ++i)
+					input_distance_map[i] = std::exp(-input_distance_map[i] * input_distance_map[i] / distance_param);
+
+				Eigen::VectorXd cuboid_voxel_occupancies;
+				local_coord_voxels.get_voxel_occupancies(cuboid_sample_points, cuboid_voxel_occupancies);
+				assert(cuboid_voxel_occupancies.rows() == num_voxels);
+				int num_occupied_voxels = (cuboid_voxel_occupancies.array() > 0).count();
+
+				if (num_occupied_voxels == 0)
+					continue;
+
+				// Equation (1) ~ (3).
+				Real score = input_distance_map.dot(cuboid_voxel_occupancies);
+				assert(score >= 0);
+				score = (1 - 0.7) * (score / num_voxels) + (0.7) * (score / num_occupied_voxels);
+
+				if (score > label_matched_object_scores[label_index].first)
+				{
+					label_matched_object_scores[label_index].first = score;
+					label_matched_object_scores[label_index].second = example_mesh_filepath;
+				}
 			}
-			transformed_example_points = transformed_example_points.colwise() + example_bbox_center;
-
-
-
-			Eigen::AngleAxisd axis_rotation(_angle, Eigen::Vector3d::UnitZ());
-			Eigen::MatrixXd rotated_example_points = axis_rotation.toRotationMatrix() * transformed_example_points;
-
-			ANNpointArray example_ann_points;
-			ANNkd_tree* example_ann_kd_tree = ICP::create_kd_tree(rotated_example_points, example_ann_points);
-
-			Eigen::VectorXd input_to_example_distances;
-			ICP::get_closest_points(example_ann_kd_tree, input_points, input_to_example_distances);
-
-			Eigen::VectorXd example_to_input_distances;
-			ICP::get_closest_points(input_ann_kd_tree, example_points, example_to_input_distances);
-
-			annDeallocPts(example_ann_points); delete example_ann_kd_tree;
-			// ---- //
 		}
 	}
 
-	annDeallocPts(input_ann_points); delete input_ann_kd_tree;
+	annDeallocPts(input_ann_points);
+	delete input_ann_kd_tree;
 
-	Real min_score = std::numeric_limits<Real>::max();
-	unsigned int min_angle_index = 0;
-	for (unsigned int angle_index = 0; angle_index < num_angles; ++angle_index)
+
+	_label_matched_objects.clear();
+	_label_matched_objects.resize(num_labels, "");
+
+	// Remove conflicted labels.
+	std::vector< std::list<LabelIndex> > conflicted_labels;
+	_trainer.get_conflicted_labels(conflicted_labels);
+	assert(conflicted_labels.size() == num_labels);
+
+	bool *is_label_index_visited = new bool[num_labels];
+	memset(is_label_index_visited, false, num_labels * sizeof(bool));
+
+	while (true)
 	{
-		if (angle_scores[angle_index] < min_score)
+		Real max_score = 0;
+		LabelIndex max_score_label_index = 0;
+
+		for (LabelIndex label_index = 0; label_index < num_labels; ++label_index)
 		{
-			min_angle_index = angle_index;
-			min_score = angle_scores[angle_index];
+			Real score = label_matched_object_scores[label_index].first;
+			if (!is_label_index_visited[label_index] && score > max_score)
+			{
+				max_score = label_matched_object_scores[label_index].first;
+				max_score_label_index = label_index;
+			}
+		}
+
+		if (max_score == 0)
+			break;
+
+		std::string other_mesh_filepath = label_matched_object_scores[max_score_label_index].second;
+		_label_matched_objects[max_score_label_index] = other_mesh_filepath;
+		is_label_index_visited[max_score_label_index] = true;
+
+		for (std::list<LabelIndex>::iterator it = conflicted_labels[max_score_label_index].begin();
+			it != conflicted_labels[max_score_label_index].end(); ++it)
+		{
+			assert(*it < num_labels);
+			is_label_index_visited[*it] = true;
+		}
+	}
+
+	delete[] is_label_index_visited;
+
+
+	// Add symmetry parts.
+	for (LabelIndex label_index = 0; label_index < num_labels; ++label_index)
+	{
+		if (_label_matched_objects[label_index] == "")
+			continue;
+
+		for (std::vector< MeshCuboidSymmetryGroupInfo >::iterator jt = cuboid_structure_.symmetry_group_info_.begin();
+			jt != cuboid_structure_.symmetry_group_info_.end(); ++jt)
+		{
+			MeshCuboidSymmetryGroupInfo &symmetry_group = (*jt);
+			for (std::vector< std::pair<LabelIndex, LabelIndex> >::iterator kt = symmetry_group.pair_label_indices_.begin();
+				kt != symmetry_group.pair_label_indices_.end(); ++kt)
+			{
+				LabelIndex symmetric_label_index = 0;
+				if (label_index == (*kt).first)
+					symmetric_label_index = (*kt).second;
+				else if (label_index == (*kt).second)
+					symmetric_label_index = (*kt).first;
+				else continue;
+
+				if (_label_matched_objects[symmetric_label_index] == "")
+					_label_matched_objects[symmetric_label_index] == _label_matched_objects[label_index];
+			}
+		}
+	}
+}
+
+void MeshViewerCore::run_part_assembly_reconstruction(const std::string _mesh_filepath,
+	const Real _xy_size, const Real _z_size, const Real _angle,
+	const std::vector<std::string> &_label_matched_objects)
+{
+	unsigned int num_labels = cuboid_structure_.num_labels();
+	assert(_label_matched_objects.size() == num_labels);
+
+	MyMesh example_mesh;
+	MeshCuboidStructure example_cuboid_structure(&example_mesh);
+
+	bool ret = example_cuboid_structure.load_labels((FLAGS_data_root_path +
+		FLAGS_label_info_path + FLAGS_label_info_filename).c_str());
+
+	if (!ret)
+	{
+		do {
+			std::cout << "Error: Cannot open label information files.";
+			std::cout << '\n' << "Press the Enter key to continue.";
+		} while (std::cin.get() != '\n');
+	}
+
+
+	cuboid_structure_.clear_sample_points();
+
+	for (LabelIndex label_index = 0; label_index < num_labels; ++label_index)
+	{
+		std::string mesh_filepath = _label_matched_objects[label_index];
+		if (mesh_filepath == "")
+			continue;
+
+		QFileInfo file_info(mesh_filepath.c_str());
+		std::string mesh_name(file_info.baseName().toLocal8Bit());
+		std::string cuboid_filepath = FLAGS_training_dir + std::string("/") + mesh_name + std::string(".arff");
+
+		bool ret = load_object_info(example_mesh, example_cuboid_structure,
+			mesh_filepath.c_str(), LoadGroundTruthData, cuboid_filepath.c_str());
+		assert(ret);
+
+		Eigen::MatrixXd transformed_example_points;
+		get_transformed_sample_points(example_cuboid_structure, _xy_size, _z_size, _angle, transformed_example_points);
+
+		// Assign transformed points.
+		for (SamplePointIndex sample_point_index = 0; sample_point_index < example_cuboid_structure.num_sample_points();
+			++sample_point_index)
+		{
+			MeshSamplePoint *sample_point = example_cuboid_structure.sample_points_[sample_point_index];
+			for (int i = 0; i < 3; ++i)
+				sample_point->point_[i] = transformed_example_points.col(sample_point_index)[i];
+		}
+
+
+		assert(example_cuboid_structure.label_cuboids_[label_index].size() <= 1);
+		MeshCuboid *example_cuboid = NULL;
+		if (!example_cuboid_structure.label_cuboids_[label_index].empty())
+			example_cuboid = example_cuboid_structure.label_cuboids_[label_index].front();
+		assert(example_cuboid);
+
+		const int num_points = example_cuboid->num_sample_points();
+
+		std::cout << "--------" << std::endl;
+		std::cout << "Label (" << label_index << "):" << std::endl;
+		std::cout << "Mesh name: " << mesh_name << std::endl;
+		std::cout << "# of sample points: " << num_points << std::endl;
+		std::cout << "Copying... ";
+
+		for (int point_index = 0; point_index < num_points; ++point_index)
+		{
+			const MeshSamplePoint* sample_point = example_cuboid->get_sample_point(point_index);
+
+			MyMesh::Point point = sample_point->point_;
+			MyMesh::Normal normal = sample_point->normal_;
+			MeshSamplePoint *new_sample_point = cuboid_structure_.add_sample_point(point, normal);
+
+			new_sample_point->label_index_confidence_.resize(num_labels, 0.0);
+			new_sample_point->label_index_confidence_[label_index] = 1.0;
 		}
 	}
 }
@@ -357,6 +522,21 @@ void MeshViewerCore::run_part_assembly()
 	{
 		do {
 			std::cout << "Error: Cannot open label information files.";
+			std::cout << '\n' << "Press the Enter key to continue.";
+		} while (std::cin.get() != '\n');
+	}
+
+
+	ret = true;
+	MeshCuboidTrainer trainer;
+	ret = ret & trainer.load_object_list(FLAGS_training_dir + std::string("/") + FLAGS_object_list_filename);
+	ret = ret & trainer.load_features(FLAGS_training_dir + std::string("/") + FLAGS_feature_filename_prefix);
+	ret = ret & trainer.load_transformations(FLAGS_training_dir + std::string("/") + FLAGS_transformation_filename_prefix);
+
+	if (!ret)
+	{
+		do {
+			std::cout << "Error: Cannot open training files.";
 			std::cout << '\n' << "Press the Enter key to continue.";
 		} while (std::cin.get() != '\n');
 	}
@@ -387,6 +567,14 @@ void MeshViewerCore::run_part_assembly()
 	std::string part_assembly_output_path = FLAGS_output_dir + std::string("/part_assembly/");
 	output_dir.mkpath(FLAGS_output_dir.c_str());
 	output_dir.mkpath(part_assembly_output_path.c_str());
+
+	std::list<std::string> ignored_object_list;
+	ignored_object_list.push_back(mesh_name);
+
+	std::vector< std::vector<MeshCuboidJointNormalRelations *> > joint_normal_relations;
+	//MeshCuboidTrainer::load_joint_normal_relations(num_labels, "joint_normal_", joint_normal_relations);
+	trainer.get_joint_normal_relations(joint_normal_relations, &ignored_object_list);
+	MeshCuboidJointNormalRelationPredictor joint_normal_predictor(joint_normal_relations);
 
 
 	// Initialize basic information.
@@ -419,6 +607,7 @@ void MeshViewerCore::run_part_assembly()
 	remove_occluded_points();
 	set_modelview_matrix(snapshot_modelview_matrix);
 
+	std::cout << "Align database... " << std::endl;
 	Real xy_size, z_size, angle;
 	run_part_assembly_align_database(mesh_filepath, xy_size, z_size, angle);
 
@@ -429,10 +618,60 @@ void MeshViewerCore::run_part_assembly()
 	remove_occluded_points();
 	set_modelview_matrix(snapshot_modelview_matrix);
 
+	std::cout << "Render alignment... " << std::endl;
 	output_filename_sstr.clear(); output_filename_sstr.str("");
-	output_filename_sstr << part_assembly_output_path << filename_prefix << std::string("align");
+	output_filename_sstr << part_assembly_output_path << filename_prefix << std::string("assembly");
 	run_part_assembly_render_alignment(mesh_filepath, xy_size, z_size, angle, output_filename_sstr.str());
 
-	//run_part_assembly_match_parts(mesh_filepath, angle);
-}
+	std::vector<std::string> label_matched_objects;
+	run_part_assembly_match_parts(mesh_filepath, xy_size, z_size, angle,
+		trainer, label_matched_objects);
 
+	std::cout << "Assemble parts... " << std::endl;
+	run_part_assembly_reconstruction(mesh_filepath, xy_size, z_size, angle, label_matched_objects);
+
+
+	// Evaluation.
+	MyMesh ground_truth_mesh;
+	MeshCuboidStructure ground_truth_cuboid_structure(&ground_truth_mesh);
+
+	ret = true;
+	ret = ret & ground_truth_cuboid_structure.load_labels((FLAGS_data_root_path +
+		FLAGS_label_info_path + FLAGS_label_info_filename).c_str());
+	ret = ret & ground_truth_cuboid_structure.load_label_symmetries((FLAGS_data_root_path +
+		FLAGS_label_info_path + FLAGS_label_symmetry_info_filename).c_str());
+
+	if (!ret)
+	{
+		do {
+			std::cout << "Error: Cannot open label information files.";
+			std::cout << '\n' << "Press the Enter key to continue.";
+		} while (std::cin.get() != '\n');
+	}
+
+	ret = load_object_info(ground_truth_mesh, ground_truth_cuboid_structure,
+		mesh_filepath.c_str(), LoadGroundTruthData);
+	assert(ret);
+	MeshCuboidEvaluator evaluator(&ground_truth_cuboid_structure);
+
+	evaluator.evaluate_point_to_point_distances(&cuboid_structure_, output_filename_sstr.str().c_str());
+	cuboid_structure_.save_sample_points_to_ply(output_filename_sstr.str().c_str());
+	cuboid_structure_.save_sample_points((output_filename_sstr.str() + std::string(".pts")).c_str());
+	cuboid_structure_.save_sample_point_labels((output_filename_sstr.str() + std::string("_label.arff")).c_str());
+
+	setDrawMode(COLORED_POINT_SAMPLES);
+
+	updateGL();
+	output_filename_sstr.clear(); output_filename_sstr.str("");
+	output_filename_sstr << part_assembly_output_path << mesh_name << std::string("_assembly_accuracy");
+	snapshot(output_filename_sstr.str().c_str());
+
+	cuboid_structure_ = ground_truth_cuboid_structure;
+	updateGL();
+	output_filename_sstr.clear(); output_filename_sstr.str("");
+	output_filename_sstr << part_assembly_output_path << mesh_name << std::string("_assembly_completeness");
+	snapshot(output_filename_sstr.str().c_str()); updateGL();
+	snapshot(output_filename_sstr.str().c_str());
+
+	setDrawMode(CUSTOM_VIEW);
+}

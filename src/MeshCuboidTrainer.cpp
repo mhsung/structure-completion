@@ -455,13 +455,13 @@ void MeshCuboidTrainer::get_cond_normal_relations(
 	}
 }
 
-void MeshCuboidTrainer::get_conflicted_labels(std::vector< std::list<LabelIndex> > &_coflicted_labels)const
+void MeshCuboidTrainer::get_conflicted_labels(std::vector< std::list<LabelIndex> > &_conflicted_labels)const
 {
 	unsigned int num_labels = feature_list_.size();
 	assert(transformation_list_.size() == num_labels);
 
-	_coflicted_labels.clear();
-	_coflicted_labels.resize(num_labels);
+	_conflicted_labels.clear();
+	_conflicted_labels.resize(num_labels);
 
 	for (unsigned int label_index_1 = 0; label_index_1 < num_labels; ++label_index_1)
 	{
@@ -496,7 +496,7 @@ void MeshCuboidTrainer::get_conflicted_labels(std::vector< std::list<LabelIndex>
 			// NOTE: If both labels have never appeared simultaneously in any object,
 			// they are defined as conflicted labels.
 			if (num_objects == 0)
-				_coflicted_labels[label_index_1].push_back(label_index_2);
+				_conflicted_labels[label_index_1].push_back(label_index_2);
 		}
 	}
 }

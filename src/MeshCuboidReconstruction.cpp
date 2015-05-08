@@ -211,31 +211,31 @@ void MeshViewerCore::reconstruct_database_prior(
 
 
 	// (Dissimilarity, mesh_filepath)
-	std::vector< std::pair<Real, std::string> > label_matched_object(num_labels);
-	for (unsigned int label_index = 0; label_index < num_labels; ++label_index)
-		label_matched_object[label_index].first = std::numeric_limits<Real>::max();
+	std::vector< std::pair<Real, std::string> > label_matched_objects(num_labels);
+	for (LabelIndex label_index = 0; label_index < num_labels; ++label_index)
+		label_matched_objects[label_index].first = std::numeric_limits<Real>::max();
 
 
 	QFileInfoList dir_list = input_dir.entryInfoList();
 	for (int i = 0; i < dir_list.size(); i++)
 	{
-		QFileInfo file_info = dir_list.at(i);
-		if (file_info.exists() &&
-			(file_info.suffix().compare("obj") == 0
-			|| file_info.suffix().compare("off") == 0))
+		QFileInfo example_file_info = dir_list.at(i);
+		if (example_file_info.exists() &&
+			(example_file_info.suffix().compare("obj") == 0
+			|| example_file_info.suffix().compare("off") == 0))
 		{
-			std::string mesh_filepath = std::string(file_info.filePath().toLocal8Bit());
+			std::string example_mesh_filepath = std::string(example_file_info.filePath().toLocal8Bit());
 
 			// Skip if the mesh is the same with the input mesh.
-			if (mesh_filepath.compare(_mesh_filepath) == 0)
+			if (example_mesh_filepath.compare(_mesh_filepath) == 0)
 				continue;
 
 			//QFileInfo file_info(mesh_filepath.c_str());
-			std::string mesh_name(file_info.baseName().toLocal8Bit());
+			std::string mesh_name(example_file_info.baseName().toLocal8Bit());
 			std::string cuboid_filepath = FLAGS_training_dir + std::string("/") + mesh_name + std::string(".arff");
 
 			bool ret = load_object_info(example_mesh, example_cuboid_structure,
-				mesh_filepath.c_str(), LoadMesh, cuboid_filepath.c_str());
+				example_mesh_filepath.c_str(), LoadMesh, cuboid_filepath.c_str());
 			if (!ret) continue;
 
 			assert(example_cuboid_structure.num_labels() == num_labels);
@@ -262,10 +262,10 @@ void MeshViewerCore::reconstruct_database_prior(
 					for (unsigned int i = 0; i < 3; ++i)
 						dissimilarity += std::abs(diff_size[i]);
 
-					if (dissimilarity < label_matched_object[label_index].first)
+					if (dissimilarity < label_matched_objects[label_index].first)
 					{
-						label_matched_object[label_index].first = dissimilarity;
-						label_matched_object[label_index].second = mesh_filepath;
+						label_matched_objects[label_index].first = dissimilarity;
+						label_matched_objects[label_index].second = example_mesh_filepath;
 					}
 				}
 			}
@@ -285,10 +285,10 @@ void MeshViewerCore::reconstruct_database_prior(
 			LabelIndex label_index_1 = (*kt).first;
 			LabelIndex label_index_2 = (*kt).second;
 
-			if (label_matched_object[label_index_1].first <= label_matched_object[label_index_2].first)
-				label_matched_object[label_index_2] = label_matched_object[label_index_1];
+			if (label_matched_objects[label_index_1].first <= label_matched_objects[label_index_2].first)
+				label_matched_objects[label_index_2] = label_matched_objects[label_index_1];
 			else
-				label_matched_object[label_index_1] = label_matched_object[label_index_2];
+				label_matched_objects[label_index_1] = label_matched_objects[label_index_2];
 		}
 	}
 
@@ -317,16 +317,16 @@ void MeshViewerCore::reconstruct_database_prior(
 			if (!exist) continue;
 		}
 
-		if (label_matched_object[label_index].first == std::numeric_limits<Real>::max())
+		if (label_matched_objects[label_index].first == std::numeric_limits<Real>::max())
 			continue;
 
-		std::string mesh_filepath = label_matched_object[label_index].second;
+		std::string mesh_filepath = label_matched_objects[label_index].second;
 		QFileInfo file_info(mesh_filepath.c_str());
 		std::string mesh_name(file_info.baseName().toLocal8Bit());
 		std::string cuboid_filepath = FLAGS_training_dir + std::string("/") + mesh_name + std::string(".arff");
 
 		bool ret = load_object_info(example_mesh, example_cuboid_structure,
-			mesh_filepath.c_str(), LoadDenseSamplePoints, cuboid_filepath.c_str());
+			mesh_filepath.c_str(), LoadGroundTruthData, cuboid_filepath.c_str());
 		assert(ret);
 
 		assert(cuboid_structure_.label_cuboids_[label_index].size() <= 1);

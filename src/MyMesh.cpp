@@ -89,7 +89,7 @@ void MyMesh::clear()
 	scale_ = 1.0;
 }
 
-void MyMesh::initialize()
+void MyMesh::initialize(bool _verbose)
 {
 	// Check unreferenced vertices
 	//bool *referenced_vertex = new bool[n_vertices()];
@@ -140,8 +140,8 @@ void MyMesh::initialize()
 
 	// NOTE:
 	// Change scale so that the object diameter becomes 1.
-	std::cout << "Object diameter: " << get_object_diameter() << std::endl;
-	std::cout << "Now scaled to become 1..." << std::endl;
+	if (_verbose) std::cout << "Object diameter: " << get_object_diameter() << std::endl;
+	if (_verbose) std::cout << "Now scaled to become 1..." << std::endl;
 	scale(1.0 / get_object_diameter());
 
 	// Move mesh so that the object stands on the z = 0 plane.
@@ -190,7 +190,7 @@ bool MyMesh::open_mesh(const char *_filename, bool _verbose)
 		&& _verbose)
 		std::cout << "File provides texture coordinates\n";
 
-	initialize();
+	initialize(_verbose);
 	return true;
 }
 
@@ -397,8 +397,7 @@ bool MyMesh::load_feature_vertices( const char *_filename, bool _verbose )
 	}
 	file.close();
 
-	if (_verbose)
-		std::cout << "Done." << std::endl;
+	if (_verbose) std::cout << "Done." << std::endl;
 
 	// Eliminate duplicate features.
 	//std::sort(feature_vertex_indices_.begin(), feature_vertex_indices_.end());
@@ -442,8 +441,7 @@ bool MyMesh::save_feature_vertices( const char *_filename, bool _verbose ) const
 
 	file.close();
 
-	if (_verbose)
-		std::cout << "Done." << std::endl;
+	if (_verbose) std::cout << "Done." << std::endl;
 
 	return true;
 }
@@ -495,8 +493,7 @@ bool MyMesh::load_color_map(const char *_filename, bool _verbose)
 	else if( mesh_coloring_option_ == FACE_COLOR ) set_face_color_map();
 	//
 
-	if (_verbose)
-		std::cout << "Done." << std::endl;
+	if (_verbose) std::cout << "Done." << std::endl;
 
 	return true;
 }
@@ -528,8 +525,7 @@ bool MyMesh::save_color_map(const char *_filename, bool _verbose) const
 
 	file.close();
 
-	if (_verbose)
-		std::cout << "Done." << std::endl;
+	if (_verbose) std::cout << "Done." << std::endl;
 
 	return true;
 }
@@ -606,7 +602,7 @@ bool MyMesh::load_face_label_simple(const char *_filename, bool _verbose)
 	//set_vertex_label_from_face_label();
 	set_face_label_colors(_verbose);
 
-	std::cout << "Done." << std::endl;
+	if (_verbose) std::cout << "Done." << std::endl;
 
 	return true;
 }
@@ -635,8 +631,7 @@ bool MyMesh::save_face_label_simple(const char *_filename, bool _verbose) const
 
 	file.close();
 
-	if (_verbose)
-		std::cout << "Done." << std::endl;
+	if (_verbose) std::cout << "Done." << std::endl;
 
 	return true;
 }
@@ -713,8 +708,7 @@ bool MyMesh::load_face_label(const char *_filename, bool _verbose)
 	//set_vertex_label_from_face_label();
 	set_face_label_colors(_verbose);
 
-	if (_verbose)
-		std::cout << "Done." << std::endl;
+	if (_verbose) std::cout << "Done." << std::endl;
 
 	return true;
 }
@@ -765,8 +759,7 @@ bool MyMesh::save_face_label(const char *_filename, bool _verbose) const
 
 	file.close();
 
-	if (_verbose)
-		std::cout << "Done." << std::endl;
+	if (_verbose) std::cout << "Done." << std::endl;
 
 	return true;
 }

@@ -9,6 +9,7 @@
 #include "MeshCuboidStructure.h"
 #include "MeshCuboidPredictor.h"
 #include "MeshCuboidSymmetryGroup.h"
+#include "MeshCuboidTrainer.h"
 
 
 //== DEFINES ==================================================================
@@ -91,7 +92,8 @@ private:
 		MeshCuboidStructure &_cuboid_structure,
 		const char* _mesh_filepath,
 		const LoadObjectInfoOption _option,
-		const char* _cuboid_filepath = NULL);
+		const char* _cuboid_filepath = NULL,
+		bool _verbose = true);
 
 	bool load_result_info(
 		MyMesh &_mesh,
@@ -122,7 +124,14 @@ private:
 	void run_part_assembly_render_alignment(const std::string _mesh_filepath,
 		const Real _xy_size, const Real _z_size, const Real _angle, const std::string _output_filename);
 
-	void run_part_assembly_match_parts(const std::string _mesh_filepath, const Real _angle);
+	void run_part_assembly_match_parts(const std::string _mesh_filepath,
+		const Real _xy_size, const Real _z_size, const Real _angle,
+		const MeshCuboidTrainer &_trainer, std::vector<std::string> &_label_matched_objects);
+
+	void run_part_assembly_reconstruction(const std::string _mesh_filepath,
+		const Real _xy_size, const Real _z_size, const Real _angle,
+		const std::vector<std::string> &_label_matched_objects);
+		
 
 	void set_view_direction();
 

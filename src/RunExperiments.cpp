@@ -51,7 +51,8 @@ bool MeshViewerCore::load_object_info(
 	MeshCuboidStructure &_cuboid_structure,
 	const char* _mesh_filepath,
 	const LoadObjectInfoOption _option,
-	const char* _cuboid_filepath)
+	const char* _cuboid_filepath,
+	bool _verbose)
 {
 	bool ret;
 	QFileInfo file_info(_mesh_filepath);
@@ -104,17 +105,17 @@ bool MeshViewerCore::load_object_info(
 	}
 	else
 	{
-		ret = _mesh.open_mesh(_mesh_filepath);
+		ret = _mesh.open_mesh(_mesh_filepath, _verbose);
 		assert(ret);
 	}
 
 	if (_option == LoadSamplePoints)
 	{
-		std::cout << " - Load mesh face labels." << std::endl;
+		if (_verbose) std::cout << " - Load mesh face labels." << std::endl;
 		ret = _mesh.load_face_label_simple(mesh_label_filepath.c_str(), false);
 		assert(ret);
 
-		std::cout << " - Load sample points." << std::endl;
+		if (_verbose) std::cout << " - Load sample points." << std::endl;
 		ret = _cuboid_structure.load_sample_points(sample_filepath.c_str(), false);
 		assert(ret);
 
@@ -122,7 +123,7 @@ bool MeshViewerCore::load_object_info(
 	}
 	else if (_option == LoadDenseSamplePoints)
 	{
-		std::cout << " - Load mesh face labels." << std::endl;
+		if (_verbose) std::cout << " - Load mesh face labels." << std::endl;
 		ret = _mesh.load_face_label_simple(mesh_label_filepath.c_str(), false);
 		assert(ret);
 
@@ -130,7 +131,7 @@ bool MeshViewerCore::load_object_info(
 		// Load dense sample points as base sample points.
 		// Do not use load_dense_sample_points() function,
 		// which requires to load sparse sample point first.
-		std::cout << " - Load dense sample points." << std::endl;
+		if (_verbose) std::cout << " - Load dense sample points." << std::endl;
 		ret = _cuboid_structure.load_sample_points(dense_sample_filepath.c_str(), false);
 		assert(ret);
 
@@ -138,7 +139,7 @@ bool MeshViewerCore::load_object_info(
 	}
 	else if (_option == LoadGroundTruthData)
 	{
-		std::cout << " - Load mesh face labels." << std::endl;
+		if (_verbose) std::cout << " - Load mesh face labels." << std::endl;
 		ret = _mesh.load_face_label_simple(mesh_label_filepath.c_str(), false);
 		assert(ret);
 
@@ -146,27 +147,27 @@ bool MeshViewerCore::load_object_info(
 		// Load dense sample points as base sample points.
 		// Do not use load_dense_sample_points() function,
 		// which requires to load sparse sample point first.
-		std::cout << " - Load dense sample points." << std::endl;
+		if (_verbose) std::cout << " - Load dense sample points." << std::endl;
 		ret = _cuboid_structure.load_sample_points(dense_sample_filepath.c_str(), false);
 		assert(ret);
 
-		std::cout << " - Compute ground truth cuboids." << std::endl;
+		if (_verbose) std::cout << " - Compute ground truth cuboids." << std::endl;
 		_cuboid_structure.get_mesh_face_label_cuboids();
 	}
 	else if (_option == LoadTestData || _option == LoadDenseTestData)
 	{
-		std::cout << " - Load sample points." << std::endl;
+		if (_verbose) std::cout << " - Load sample points." << std::endl;
 		ret = _cuboid_structure.load_sample_points(sample_filepath.c_str(), false);
 		assert(ret);
 		assert(_cuboid_structure.num_sample_points() > 0);
 
-		std::cout << " - Load sample point labels." << std::endl;
+		if (_verbose) std::cout << " - Load sample point labels." << std::endl;
 		ret = _cuboid_structure.load_sample_point_labels(sample_label_filepath.c_str());
 		assert(ret);
 
 		if (_option == LoadDenseTestData)
 		{
-			std::cout << " - Load dense sample points." << std::endl;
+			if (_verbose) std::cout << " - Load dense sample points." << std::endl;
 			ret = _cuboid_structure.load_dense_sample_points(dense_sample_filepath.c_str(), false);
 			assert(ret);
 		}
@@ -174,7 +175,7 @@ bool MeshViewerCore::load_object_info(
 
 	if (_cuboid_filepath)
 	{
-		ret = _cuboid_structure.load_cuboids(_cuboid_filepath, false);
+		ret = _cuboid_structure.load_cuboids(_cuboid_filepath, _verbose);
 		assert(ret);
 
 		std::vector<MeshCuboid *> all_cuboids = _cuboid_structure.get_all_cuboids();

@@ -86,7 +86,7 @@ public:
 	MeshColorMap;
 
 	virtual void clear();
-	void initialize();
+	void initialize(bool _verbose = true);
 	bool open_mesh(const char* _filename, bool _verbose = true);
 
 	OpenMesh::IO::Options& options() { return options_; }

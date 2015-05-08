@@ -94,9 +94,17 @@ int MeshCuboidVoxelGrid::get_voxel_index(const MyMesh::Point _point) const
 	for (unsigned int i = 0; i < 3; ++i)
 	{
 		assert(diff[i] > 0);
-		xyz_index[i] = static_cast<int>((_point[i] - min_[i]) / diff[i] * n_voxels_[i]);
-		xyz_index[i] = std::max(xyz_index[i], 0);
-		xyz_index[i] = std::min(xyz_index[i], n_voxels_[i] - 1);
+		if (_point[i] < min_[i] || _point[i] > max_[i])
+		{
+			// Out of voxel grid range.
+			return -1;
+		}
+		else
+		{
+			xyz_index[i] = static_cast<int>((_point[i] - min_[i]) / diff[i] * n_voxels_[i]);
+			xyz_index[i] = std::max(xyz_index[i], 0);
+			xyz_index[i] = std::min(xyz_index[i], n_voxels_[i] - 1);
+		}
 	}
 
 	return get_voxel_index(xyz_index);
@@ -140,10 +148,51 @@ void MeshCuboidVoxelGrid::get_point_correspondences(
 	for (unsigned int point_index = 0; point_index < num_points; ++point_index)
 	{
 		int voxel_index = get_voxel_index(_points[point_index]);
+
+		// Out of voxel grid range.
+		if (voxel_index < 0)
+			continue;
+
 		assert(voxel_index < n_voxels());
 		_points_to_voxels[point_index] = voxel_index;
 		_voxels_to_points[voxel_index].push_back(point_index);
 	}
+}
+
+void MeshCuboidVoxelGrid::get_voxel_occupancies(const std::vector<MyMesh::Point> &_points,
+	Eigen::VectorXd &_voxel_occupancies) const
+{
+	const unsigned int num_points = _points.size();
+	_voxel_occupancies = Eigen::VectorXd::Zero(n_voxels());
+
+	for (unsigned int point_index = 0; point_index < num_points; ++point_index)
+	{
+		int voxel_index = get_voxel_index(_points[point_index]);
+
+		// Out of voxel grid range.
+		if (voxel_index < 0)
+			continue;
+
+		assert(voxel_index < n_voxels());
+		_voxel_occupancies[voxel_index] = 1;
+	}
+}
+
+void MeshCuboidVoxelGrid::get_distance_map(ANNpointArray &_ann_points, ANNkd_tree *__ann_kd_tree,
+	Eigen::VectorXd &_voxel_to_point_distances) const
+{
+	std::vector<MyMesh::Point> center_points;
+	get_centers(center_points);
+	assert(center_points.size() == n_voxels());
+
+	Eigen::MatrixXd center_points_mat(3, center_points.size());
+	for (unsigned int voxel_index = 0; voxel_index < center_points.size(); ++voxel_index)
+	{
+		for (int i = 0; i < 3; ++i)
+			center_points_mat.col(voxel_index)[i] = center_points[voxel_index][i];
+	}
+
+	ICP::get_closest_points(__ann_kd_tree, center_points_mat, _voxel_to_point_distances);
 }
 
 void run_part_ICP(MeshCuboidStructure &_input, const MeshCuboidStructure &_ground_truth)

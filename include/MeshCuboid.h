@@ -159,6 +159,7 @@ public:
 	LabelIndex get_label_index()const { return label_index_; }
 
 	const std::vector<MeshSamplePoint *> &get_sample_points()const;
+	void get_sample_points(std::vector<MyMesh::Point> &_sample_points)const;
 	void get_sample_points(Eigen::MatrixXd &_sample_points)const;
 	MeshSamplePoint *get_sample_point(const unsigned int _point_index)const;
 
