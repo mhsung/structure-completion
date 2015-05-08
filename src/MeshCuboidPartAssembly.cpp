@@ -448,6 +448,7 @@ void MeshViewerCore::run_part_assembly_reconstruction(const std::string _mesh_fi
 
 
 	cuboid_structure_.clear_sample_points();
+	cuboid_structure_.clear_cuboids();
 
 	for (LabelIndex label_index = 0; label_index < num_labels; ++label_index)
 	{
@@ -490,6 +491,9 @@ void MeshViewerCore::run_part_assembly_reconstruction(const std::string _mesh_fi
 		std::cout << "# of sample points: " << num_points << std::endl;
 		std::cout << "Copying... ";
 
+		MeshCuboid *cuboid = new MeshCuboid(label_index);
+		cuboid_structure_.label_cuboids_[label_index].push_back(cuboid);
+
 		for (int point_index = 0; point_index < num_points; ++point_index)
 		{
 			const MeshSamplePoint* sample_point = example_cuboid->get_sample_point(point_index);
@@ -500,6 +504,8 @@ void MeshViewerCore::run_part_assembly_reconstruction(const std::string _mesh_fi
 
 			new_sample_point->label_index_confidence_.resize(num_labels, 0.0);
 			new_sample_point->label_index_confidence_[label_index] = 1.0;
+
+			cuboid->add_sample_point(new_sample_point);
 		}
 	}
 }
@@ -607,6 +613,7 @@ void MeshViewerCore::run_part_assembly()
 	remove_occluded_points();
 	set_modelview_matrix(snapshot_modelview_matrix);
 
+
 	std::cout << "Align database... " << std::endl;
 	Real xy_size, z_size, angle;
 	run_part_assembly_align_database(mesh_filepath, xy_size, z_size, angle);
@@ -616,7 +623,14 @@ void MeshViewerCore::run_part_assembly()
 	if (!ret) return;
 	set_modelview_matrix(occlusion_modelview_matrix, false);
 	remove_occluded_points();
+
+	updateGL();
+	output_filename_sstr.clear(); output_filename_sstr.str("");
+	output_filename_sstr << mesh_output_path << filename_prefix << std::string("view");
+	snapshot(output_filename_sstr.str().c_str());
 	set_modelview_matrix(snapshot_modelview_matrix);
+	updateGL();
+
 
 	std::cout << "Render alignment... " << std::endl;
 	output_filename_sstr.clear(); output_filename_sstr.str("");
@@ -626,6 +640,7 @@ void MeshViewerCore::run_part_assembly()
 	std::vector<std::string> label_matched_objects;
 	run_part_assembly_match_parts(mesh_filepath, xy_size, z_size, angle,
 		trainer, label_matched_objects);
+
 
 	std::cout << "Assemble parts... " << std::endl;
 	run_part_assembly_reconstruction(mesh_filepath, xy_size, z_size, angle, label_matched_objects);
