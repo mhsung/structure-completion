@@ -47,6 +47,7 @@ DEFINE_string(mesh_label_path, "data/1_input/assembly_chairs/gt/", "");
 DEFINE_string(sample_label_path, "data/4_experiments/exp1_assembly_chairs/1_prediction/", "");
 DEFINE_string(output_dir, "output", "");
 DEFINE_string(training_dir, "training", "");
+DEFINE_string(part_assembly_dir, "part_assembly", "");
 
 DEFINE_string(label_info_filename, "regions.txt", "");
 DEFINE_string(label_symmetry_info_filename, "regions_symmetry.txt", "");

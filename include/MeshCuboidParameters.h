@@ -50,6 +50,7 @@ DECLARE_string(mesh_label_path);
 DECLARE_string(sample_label_path);
 DECLARE_string(output_dir);
 DECLARE_string(training_dir);
+DECLARE_string(part_assembly_dir);
 
 DECLARE_string(label_info_filename);
 DECLARE_string(label_symmetry_info_filename);

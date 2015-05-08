@@ -564,9 +564,9 @@ void MeshViewerCore::run_part_assembly()
 	std::stringstream output_filename_sstr;
 
 	QDir output_dir;
-	std::string part_assembly_output_path = FLAGS_output_dir + std::string("/part_assembly/");
-	output_dir.mkpath(FLAGS_output_dir.c_str());
-	output_dir.mkpath(part_assembly_output_path.c_str());
+	std::string mesh_output_path = FLAGS_part_assembly_dir + std::string("/") + mesh_name;
+	output_dir.mkpath(FLAGS_part_assembly_dir.c_str());
+	output_dir.mkpath(mesh_output_path.c_str());
 
 	std::list<std::string> ignored_object_list;
 	ignored_object_list.push_back(mesh_name);
@@ -620,7 +620,7 @@ void MeshViewerCore::run_part_assembly()
 
 	std::cout << "Render alignment... " << std::endl;
 	output_filename_sstr.clear(); output_filename_sstr.str("");
-	output_filename_sstr << part_assembly_output_path << filename_prefix << std::string("assembly");
+	output_filename_sstr << mesh_output_path << filename_prefix << std::string("assembly");
 	run_part_assembly_render_alignment(mesh_filepath, xy_size, z_size, angle, output_filename_sstr.str());
 
 	std::vector<std::string> label_matched_objects;
@@ -663,13 +663,13 @@ void MeshViewerCore::run_part_assembly()
 
 	updateGL();
 	output_filename_sstr.clear(); output_filename_sstr.str("");
-	output_filename_sstr << part_assembly_output_path << mesh_name << std::string("_assembly_accuracy");
+	output_filename_sstr << mesh_output_path << filename_prefix << std::string("assembly_accuracy");
 	snapshot(output_filename_sstr.str().c_str());
 
 	cuboid_structure_ = ground_truth_cuboid_structure;
 	updateGL();
 	output_filename_sstr.clear(); output_filename_sstr.str("");
-	output_filename_sstr << part_assembly_output_path << mesh_name << std::string("_assembly_completeness");
+	output_filename_sstr << mesh_output_path << filename_prefix << std::string("assembly_completeness");
 	snapshot(output_filename_sstr.str().c_str()); updateGL();
 	snapshot(output_filename_sstr.str().c_str());
 
