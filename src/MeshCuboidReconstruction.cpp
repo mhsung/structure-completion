@@ -285,10 +285,15 @@ void MeshViewerCore::reconstruct_database_prior(
 			LabelIndex label_index_1 = (*kt).first;
 			LabelIndex label_index_2 = (*kt).second;
 
-			if (label_matched_objects[label_index_1].first <= label_matched_objects[label_index_2].first)
-				label_matched_objects[label_index_2] = label_matched_objects[label_index_1];
-			else
-				label_matched_objects[label_index_1] = label_matched_objects[label_index_2];
+			// If both symmetric cuboids exist.
+			if (label_matched_objects[label_index_1].first < std::numeric_limits<Real>::max()
+				&& label_matched_objects[label_index_2].first < std::numeric_limits<Real>::max())
+			{
+				if (label_matched_objects[label_index_1].first <= label_matched_objects[label_index_2].first)
+					label_matched_objects[label_index_2] = label_matched_objects[label_index_1];
+				else
+					label_matched_objects[label_index_1] = label_matched_objects[label_index_2];
+			}
 		}
 	}
 
