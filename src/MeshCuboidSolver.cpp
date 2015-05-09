@@ -1452,13 +1452,9 @@ void optimize_attributes(
 
 
 	// NOTE: Keep the lowest energy cuboids.
-	std::vector<MeshCuboid *> final_all_cuboids;
 	double final_total_energy = std::numeric_limits<double>::max();
 	unsigned int final_cuboid_iteration = 0;
-
-	final_all_cuboids.resize(num_cuboids);
-	for (unsigned int cuboid_index = 0; cuboid_index < num_cuboids; ++cuboid_index)
-		final_all_cuboids[cuboid_index] = new MeshCuboid(*all_cuboids[cuboid_index]);
+	MeshCuboidStructure final_cuboid_structure = _cuboid_structure;
 
 	update_cuboid_surface_points(_cuboid_structure, _modelview_matrix);
 	if (_viewer) _viewer->updateGL();
@@ -1548,18 +1544,9 @@ void optimize_attributes(
 				
 		if (total_energy < final_total_energy)
 		{
-			//
 			final_total_energy = total_energy;
 			final_cuboid_iteration = iteration;
-
-			for (std::vector<MeshCuboid *>::iterator it = final_all_cuboids.begin();
-				it != final_all_cuboids.end(); ++it)
-				delete (*it);
-
-			final_all_cuboids.resize(num_cuboids);
-			for (unsigned int cuboid_index = 0; cuboid_index < num_cuboids; ++cuboid_index)
-				final_all_cuboids[cuboid_index] = new MeshCuboid(*all_cuboids[cuboid_index]);
-			//
+			final_cuboid_structure = _cuboid_structure;
 		}
 		else if (total_energy > 1.5 * final_total_energy)
 		{
@@ -1580,13 +1567,10 @@ void optimize_attributes(
 		std::cout << sstr.str(); log_file << sstr.str();
 	}
 
-	// Copy final cuboids.
-	for (unsigned int cuboid_index = 0; cuboid_index < num_cuboids; ++cuboid_index)
-		(*all_cuboids[cuboid_index]) = (*final_all_cuboids[cuboid_index]);
-	
-	for (std::vector<MeshCuboid *>::iterator it = final_all_cuboids.begin();
-		it != final_all_cuboids.end(); ++it)
-		delete (*it);
+	// Copy final result.
+	_cuboid_structure = final_cuboid_structure;
+	all_cuboids = _cuboid_structure.get_all_cuboids();
+	num_cuboids = all_cuboids.size();
 
 	update_cuboid_surface_points(_cuboid_structure, _modelview_matrix);
 	if (_viewer) _viewer->updateGL();

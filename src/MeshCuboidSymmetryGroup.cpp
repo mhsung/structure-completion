@@ -541,8 +541,6 @@ MeshCuboidRotationSymmetryGroup* MeshCuboidRotationSymmetryGroup::constructor(
 		delete group;
 		group = NULL;
 	}
-	// TEST.
-	group->num_symmetry_orders_ = 5;
 	return group;
 }
 

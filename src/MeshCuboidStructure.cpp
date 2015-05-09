@@ -2024,21 +2024,18 @@ void MeshCuboidStructure::copy_sample_points_to_symmetric_position(
 			MyMesh::Point point_1 = sample_point_1->point_;
 			MyMesh::Normal normal_1 = sample_point_1->normal_;
 
-			MyMesh::Point symmetric_point_1;
+			MyMesh::Point symmetric_point_1 = _symmetry_group->get_symmetric_point(point_1, symmetry_order);
+			MyMesh::Normal symmetric_normal_1 = _symmetry_group->get_symmetric_normal(normal_1, symmetry_order);
+
 			/*
 			if (icp_error >= 0)
 			{
-			// If ICP succeeded, copy the aligned point.
-			for (unsigned int i = 0; i < 3; ++i)
-			symmetric_point_1[i] = symmetric_sample_points_1.col(point_index_1)[i];
+				// If ICP succeeded, copy the aligned point.
+				// How to compute the symmetric normal direction?
+				for (unsigned int i = 0; i < 3; ++i)
+				symmetric_point_1[i] = symmetric_sample_points_1.col(point_index_1)[i];
 			}
-			else
 			*/
-			symmetric_point_1 = _symmetry_group->get_symmetric_point(point_1, symmetry_order);
-
-			// FIXME:
-			// IF ICP succeeded, how to compute the symmetric normal direction?
-			MyMesh::Normal symmetric_normal_1 = _symmetry_group->get_symmetric_normal(normal_1, symmetry_order);
 
 			MeshSamplePoint *symmetric_sample_point = add_sample_point(symmetric_point_1, symmetric_normal_1);
 
