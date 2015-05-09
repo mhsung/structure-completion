@@ -425,10 +425,10 @@ void segment_sample_points(
 	const double null_cuboid_probability = 0.1;
 	
 	assert(_cuboid_structure.mesh_);
-	double neighbor_distance = FLAGS_param_sample_point_neighbor_distance *
+	double squared_neighbor_distance = FLAGS_param_sparse_neighbor_distance *
+		FLAGS_param_sparse_neighbor_distance *
 		_cuboid_structure.mesh_->get_object_diameter();
-	double lambda = -(neighbor_distance * neighbor_distance)
-		/ std::log(null_cuboid_probability);
+	double lambda = -squared_neighbor_distance / std::log(null_cuboid_probability);
 	double min_probability = 1 / FLAGS_param_max_potential;
 
 	unsigned int num_sample_points = _cuboid_structure.num_sample_points();
@@ -552,7 +552,7 @@ void segment_sample_points(
 			q[i] = sample_points.col(point_index)[i];
 
 		int num_searched_neighbors = sample_kd_tree->annkFRSearch(q,
-			neighbor_distance, num_neighbors, nn_idx, dd);
+			squared_neighbor_distance, num_neighbors, nn_idx, dd);
 
 		for (int i = 0; i < std::min(num_neighbors, num_searched_neighbors); i++)
 		{
@@ -563,7 +563,7 @@ void segment_sample_points(
 				continue;
 
 			//
-			double distance = (neighbor_distance - dd[i]);
+			double distance = (squared_neighbor_distance - dd[i]);
 			assert(distance >= 0);
 			//
 
@@ -1389,7 +1389,7 @@ void optimize_attributes_once_with_constraints(
 	const double _single_energy_term_weight,
 	const double _symmetry_energy_term_weight)
 {
-	const Real neighbor_distance = FLAGS_param_sample_point_neighbor_distance *
+	const Real squared_neighbor_distance = FLAGS_param_sparse_neighbor_distance *
 		_cuboid_structure.mesh_->get_object_diameter();
 
 	std::vector<MeshCuboid *> all_cuboids = _cuboid_structure.get_all_cuboids();
@@ -1423,7 +1423,8 @@ void optimize_attributes_once_with_constraints(
 		all_cuboids,
 		all_reflection_symmetry_groups,
 		all_rotation_symmetry_groups,
-		neighbor_distance,
+		squared_neighbor_distance,
+		FLAGS_param_min_num_symmetric_point_pairs,
 		_symmetry_energy_term_weight);
 
 	non_linear_solver.optimize(quadratic_term, linear_term, constant_term, &init_values);

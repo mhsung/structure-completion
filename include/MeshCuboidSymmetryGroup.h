@@ -77,14 +77,14 @@ public:
 		const std::vector<MeshCuboid *> &_cuboids,
 		const std::vector<ANNpointArray> &_cuboid_ann_points,
 		const std::vector<ANNkd_tree *> &_cuboid_ann_kd_tree,
-		const Real _neighbor_distance,
+		const Real _squared_neighbor_distance,
 		std::list<WeightedPointPair> &_sample_point_pairs) const;
 
 	void get_symmetric_sample_point_pairs(
 		const MeshCuboid *_cuboid_1,
 		const ANNpointArray &_cuboid_ann_points_2,
 		ANNkd_tree *_cuboid_ann_kd_tree_2,
-		const Real _neighbor_distance,
+		const Real _squared_neighbor_distance,
 		std::list<WeightedPointPair> &_sample_point_pairs) const;
 
 protected:

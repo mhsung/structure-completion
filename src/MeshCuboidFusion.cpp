@@ -197,7 +197,7 @@ void MeshCuboidVoxelGrid::get_distance_map(ANNpointArray &_ann_points, ANNkd_tre
 
 void run_part_ICP(MeshCuboidStructure &_input, const MeshCuboidStructure &_ground_truth)
 {
-	const Real neighbor_distance = FLAGS_param_sample_point_neighbor_distance
+	const Real neighbor_distance = FLAGS_param_sparse_neighbor_distance
 		* _ground_truth.mesh_->get_object_diameter();
 
 	unsigned int num_labels = _ground_truth.num_labels();
@@ -477,7 +477,7 @@ void reconstruct_fusion_simple(
 {
 	assert(_symmetry_cuboid_structure.num_labels() == _database_cuboid_structure.num_labels());
 
-	const Real neighbor_distance = FLAGS_param_sample_point_neighbor_distance
+	const Real neighbor_distance = FLAGS_param_sparse_neighbor_distance
 		* _output_cuboid_structure.mesh_->get_object_diameter();
 
 	_output_cuboid_structure = _symmetry_cuboid_structure;
@@ -617,7 +617,7 @@ void reconstruct_fusion(const char *_mesh_filepath,
 {
 	assert(_symmetry_cuboid_structure.num_labels() == _database_cuboid_structure.num_labels());
 
-	const Real neighbor_distance = FLAGS_param_sample_point_neighbor_distance
+	const Real neighbor_distance = FLAGS_param_sparse_neighbor_distance
 		* _output_cuboid_structure.mesh_->get_object_diameter();
 	const Real occlusion_radius = FLAGS_param_occlusion_test_neighbor_distance
 		* _output_cuboid_structure.mesh_->get_object_diameter();

@@ -10,6 +10,7 @@ DECLARE_bool(param_optimize_training_cuboids);
 
 DECLARE_int32(param_num_sample_point_neighbors);
 DECLARE_int32(param_min_num_cuboid_sample_points);
+DECLARE_int32(param_min_num_symmetric_point_pairs);
 DECLARE_int32(param_num_cuboid_surface_points);
 DECLARE_int32(param_intra_cuboid_symmetry_axis);
 DECLARE_int32(param_eval_num_neighbor_range_samples);
@@ -19,7 +20,8 @@ DECLARE_double(param_min_sample_point_confidence);
 DECLARE_double(param_min_num_confidence_tol_sample_points);
 DECLARE_double(param_min_cuboid_bbox_size);
 DECLARE_double(param_min_cuboid_bbox_diag_length);
-DECLARE_double(param_sample_point_neighbor_distance);
+DECLARE_double(param_sparse_neighbor_distance);
+DECLARE_double(param_cuboid_split_neighbor_distance);
 DECLARE_double(param_occlusion_test_neighbor_distance);
 DECLARE_double(param_eval_max_neighbor_distance);
 DECLARE_double(param_min_cuboid_overall_visibility);

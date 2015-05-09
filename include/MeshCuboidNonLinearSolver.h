@@ -24,7 +24,9 @@ public:
 		const std::vector<MeshCuboid *>& _cuboids,
 		const std::vector<MeshCuboidReflectionSymmetryGroup *>& _reflection_symmetry_groups,
 		const std::vector<MeshCuboidRotationSymmetryGroup *>& _rotation_symmetry_groups,
-		const Real _neighbor_distance, const Real _symmetry_energy_term_weight);
+		const Real _squared_neighbor_distance,
+		const unsigned int _min_num_symmetry_point_pairs,
+		const Real _symmetry_energy_term_weight);
 	~MeshCuboidNonLinearSolver();
 
 
@@ -169,8 +171,9 @@ private:
 	const std::vector<MeshCuboid *>& cuboids_;
 	const std::vector<MeshCuboidReflectionSymmetryGroup *>& reflection_symmetry_groups_;
 	const std::vector<MeshCuboidRotationSymmetryGroup *>& rotation_symmetry_groups_;
-	const Real neighbor_distance_;
+	const Real squared_neighbor_distance_;
 	const double symmetry_energy_term_weight_;
+	const unsigned int min_num_symmetric_point_pairs_;
 
 	unsigned int num_cuboids_;
 	unsigned int num_reflection_symmetry_groups_;

@@ -112,7 +112,7 @@ void MeshCuboidSymmetryGroup::get_symmetric_sample_point_pairs(
 	const std::vector<MeshCuboid *> &_cuboids,
 	const std::vector<ANNpointArray> &_cuboid_ann_points,
 	const std::vector<ANNkd_tree *> &_cuboid_ann_kd_tree,
-	const Real _neighbor_distance,
+	const Real _squared_neighbor_distance,
 	std::list<WeightedPointPair> &_sample_point_pairs) const
 {
 	const unsigned int num_cuboids = _cuboids.size();
@@ -134,7 +134,7 @@ void MeshCuboidSymmetryGroup::get_symmetric_sample_point_pairs(
 			_cuboids[cuboid_index],
 			_cuboid_ann_points[cuboid_index],
 			_cuboid_ann_kd_tree[cuboid_index],
-			_neighbor_distance, _sample_point_pairs);
+			_squared_neighbor_distance, _sample_point_pairs);
 	}
 
 	// NOTE:
@@ -155,14 +155,14 @@ void MeshCuboidSymmetryGroup::get_symmetric_sample_point_pairs(
 				_cuboids[cuboid_index_1],
 				_cuboid_ann_points[cuboid_index_2],
 				_cuboid_ann_kd_tree[cuboid_index_2],
-				_neighbor_distance, _sample_point_pairs);
+				_squared_neighbor_distance, _sample_point_pairs);
 
 			// 2 -> 1.
 			get_symmetric_sample_point_pairs(
 				_cuboids[cuboid_index_2],
 				_cuboid_ann_points[cuboid_index_1],
 				_cuboid_ann_kd_tree[cuboid_index_1],
-				_neighbor_distance, _sample_point_pairs);
+				_squared_neighbor_distance, _sample_point_pairs);
 		}
 	}
 }
@@ -171,7 +171,7 @@ void MeshCuboidSymmetryGroup::get_symmetric_sample_point_pairs(
 	const MeshCuboid *_cuboid_1,
 	const ANNpointArray &_cuboid_ann_points_2,
 	ANNkd_tree *_cuboid_ann_kd_tree_2,
-	const Real _neighbor_distance,
+	const Real _squared_neighbor_distance,
 	std::list<WeightedPointPair> &_sample_point_pairs) const
 {
 	if (!_cuboid_1 || !_cuboid_ann_points_2 || !_cuboid_ann_kd_tree_2)
@@ -198,7 +198,7 @@ void MeshCuboidSymmetryGroup::get_symmetric_sample_point_pairs(
 				q[i] = symmetric_point_1[i];
 
 			int num_searched_neighbors = _cuboid_ann_kd_tree_2->annkFRSearch(
-				q, _neighbor_distance, 1, nn_idx, dd);
+				q, _squared_neighbor_distance, 1, nn_idx, dd);
 			if (num_searched_neighbors > 0)
 			{
 				int point_index_2 = (int)nn_idx[0];
@@ -213,7 +213,7 @@ void MeshCuboidSymmetryGroup::get_symmetric_sample_point_pairs(
 				Real test_distance = (symmetric_point_1 - point_2).norm();
 				CHECK_NUMERICAL_ERROR(__FUNCTION__, test_distance, std::sqrt(dd[0]));
 
-				double distance = (_neighbor_distance - dd[0]);
+				double distance = (_squared_neighbor_distance - dd[0]);
 				assert(distance >= 0);
 				//
 
@@ -727,7 +727,7 @@ void MeshCuboidRotationSymmetryGroup::compute_rotation_plane(
 bool MeshCuboidRotationSymmetryGroup::compute_rotation_angle(
 	const std::vector<MeshCuboid *> &_cuboids)
 {
-	const Real neighbor_distance = FLAGS_param_sample_point_neighbor_distance;
+	const Real squared_neighbor_distance = FLAGS_param_sparse_neighbor_distance;
 	const unsigned int num_cuboids = _cuboids.size();
 
 	//
@@ -773,7 +773,7 @@ bool MeshCuboidRotationSymmetryGroup::compute_rotation_angle(
 	const unsigned int max_num_symmetry_orders = 6;
 	const unsigned int default_num_symmetry_orders = 5;
 
-	Real max_sum_point_pair_weights = 0.0;
+	Real max_num_point_pairs = 0.0;
 	unsigned int best_num_symmetry_orders = default_num_symmetry_orders;
 
 	for (unsigned int num_symmetry_orders = min_num_symmetry_orders; num_symmetry_orders <= max_num_symmetry_orders;
@@ -785,23 +785,18 @@ bool MeshCuboidRotationSymmetryGroup::compute_rotation_angle(
 		num_symmetry_orders_ = num_symmetry_orders;
 		std::list<WeightedPointPair> sample_point_pairs;
 		get_symmetric_sample_point_pairs(_cuboids, cuboid_ann_points, cuboid_ann_kd_tree,
-			neighbor_distance, sample_point_pairs);
+			squared_neighbor_distance, sample_point_pairs);
 
-		Real sum_point_pair_weights = 0.0;
-		for (std::list<WeightedPointPair>::iterator it = sample_point_pairs.begin();
-			it != sample_point_pairs.end(); ++it)
-		{
-			assert((*it).weight_ >= 0);
-			sum_point_pair_weights += (*it).weight_;
-		}
+		Real num_point_pairs = sample_point_pairs.size();
 
 		// Divide by the number of rotations.
-		sum_point_pair_weights /= (num_symmetry_orders - 1);
-		std::cout << "[" << num_symmetry_orders << "]: " << sum_point_pair_weights << std::endl;
+		num_point_pairs /= (num_symmetry_orders - 1);
 
-		if (sum_point_pair_weights > max_sum_point_pair_weights)
+		std::cout << "[" << num_symmetry_orders << "]: " << num_point_pairs << std::endl;
+
+		if (num_point_pairs > max_num_point_pairs)
 		{
-			max_sum_point_pair_weights = sum_point_pair_weights;
+			max_num_point_pairs = num_point_pairs;
 			best_num_symmetry_orders = num_symmetry_orders;
 		}
 	}

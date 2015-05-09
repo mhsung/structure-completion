@@ -2002,7 +2002,7 @@ void MeshCuboidStructure::copy_sample_points_to_symmetric_position(
 				sample_points_2.col(sample_point_index)(i) = point_2[i];
 		}
 
-		const Real neighbor_distance = FLAGS_param_sample_point_neighbor_distance * mesh_->get_object_diameter();
+		const Real neighbor_distance = FLAGS_param_sparse_neighbor_distance * mesh_->get_object_diameter();
 
 		Eigen::Matrix3d rotation_mat;
 		Eigen::Vector3d translation_vec;

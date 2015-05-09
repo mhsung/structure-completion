@@ -1541,6 +1541,8 @@ void MeshCuboid::create_sub_cuboids(const Real _object_diameter,
 	ANNkd_tree* _kd_tree, std::vector<MeshCuboid *> &_sub_cuboids)
 {
 	const int dim = 3;
+	const Real squared_neighbor_distance = FLAGS_param_cuboid_split_neighbor_distance *
+		FLAGS_param_cuboid_split_neighbor_distance * _object_diameter;
 	const int num_neighbors = std::min(FLAGS_param_num_sample_point_neighbors,
 		static_cast<int>(num_sample_points()));
 	
@@ -1617,7 +1619,7 @@ void MeshCuboid::create_sub_cuboids(const Real _object_diameter,
 			q[0] = curr_pos[0]; q[1] = curr_pos[1]; q[2] = curr_pos[2];
 
 			int num_searched_neighbors = _kd_tree->annkFRSearch(q,
-				FLAGS_param_sample_point_neighbor_distance * _object_diameter, num_neighbors, nn_idx, dd);
+				squared_neighbor_distance, num_neighbors, nn_idx, dd);
 
 			for (int i = 0; i < std::min(num_neighbors, num_searched_neighbors); i++)
 			{

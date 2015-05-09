@@ -9,12 +9,14 @@ MeshCuboidNonLinearSolver::MeshCuboidNonLinearSolver(
 	const std::vector<MeshCuboid *>& _cuboids,
 	const std::vector<MeshCuboidReflectionSymmetryGroup *>& _reflection_symmetry_groups,
 	const std::vector<MeshCuboidRotationSymmetryGroup *>& _rotation_symmetry_groups,
-	const Real _neighbor_distance,
+	const Real _squared_neighbor_distance,
+	const unsigned int _min_num_symmetry_point_pairs,
 	const Real _symmetry_energy_term_weight)
 	: cuboids_(_cuboids)
 	, reflection_symmetry_groups_(_reflection_symmetry_groups)
 	, rotation_symmetry_groups_(_rotation_symmetry_groups)
-	, neighbor_distance_(_neighbor_distance)
+	, squared_neighbor_distance_(_squared_neighbor_distance)
+	, min_num_symmetric_point_pairs_(_min_num_symmetry_point_pairs)
 	, symmetry_energy_term_weight_(_symmetry_energy_term_weight)
 	, num_cuboid_corner_variables_(MeshCuboidAttributes::k_num_attributes)
 	, num_cuboid_axis_variables_(3 * 3)
@@ -271,8 +273,11 @@ void MeshCuboidNonLinearSolver::create_reflection_symmetry_group_energy_function
 
 	std::list<MeshCuboidSymmetryGroup::WeightedPointPair> sample_point_pairs;
 	symmetry_group->get_symmetric_sample_point_pairs(cuboids_,
-		_cuboid_ann_points, _cuboid_ann_kd_tree, neighbor_distance_,
+		_cuboid_ann_points, _cuboid_ann_kd_tree, squared_neighbor_distance_,
 		sample_point_pairs);
+
+	if (sample_point_pairs.size() < min_num_symmetric_point_pairs_)
+		return;
 
 	// Eq (1):
 	// min {(I - nn^T)(x - y)}^2. Let d = (x - y).
@@ -374,13 +379,11 @@ void MeshCuboidNonLinearSolver::create_rotation_symmetry_group_energy_function(
 
 	std::list<MeshCuboidSymmetryGroup::WeightedPointPair> sample_point_pairs;
 	symmetry_group->get_symmetric_sample_point_pairs(cuboids_,
-		_cuboid_ann_points, _cuboid_ann_kd_tree, std::sqrt(neighbor_distance_),
+		_cuboid_ann_points, _cuboid_ann_kd_tree, squared_neighbor_distance_,
 		sample_point_pairs);
 
-
-	if (sample_point_pairs.empty())
+	if (sample_point_pairs.size() < min_num_symmetric_point_pairs_)
 		return;
-
 
 	Real sum_weight = 0.0;
 	for (std::list<MeshCuboidSymmetryGroup::WeightedPointPair>::iterator it = sample_point_pairs.begin();
