@@ -1,6 +1,7 @@
 #include "NLPVectorExpression.h"
 
 #include <cassert>
+#include <iostream>
 
 
 NLPVectorExpression::NLPVectorExpression(const Index _dimension)
@@ -33,6 +34,17 @@ void NLPVectorExpression::set_segment(const Index _index, const NLPVectorExpress
 	{
 		this->expressions_[i] = _segment.expressions_[_index + i];
 	}
+}
+
+NLPVectorExpression NLPVectorExpression::operator-()
+{
+	NLPVectorExpression other(*this);
+	for (std::vector< NLPExpression >::iterator it = other.expressions_.begin();
+		it != other.expressions_.end(); ++it)
+	{
+		(*it) *= (-1);
+	}
+	return other;
 }
 
 NLPVectorExpression& NLPVectorExpression::operator+=(const NLPVectorExpression& rhs)
@@ -145,27 +157,24 @@ NLPVectorExpression NLPVectorExpression::cross_product(
 
 	// NOTE:
 	// Implemented only for 3 dimension.
-	assert(dimension == 3);
-
-	// (coeff, v1_index, v2_index);
-	const int cross_product_terms[3][2][3] = {
-		{ { 1, 0, 1 }, { -1, 1, 0 } },
-		{ { 1, 1, 2 }, { -1, 2, 1 } },
-		{ { 1, 2, 0 }, { -1, 0, 2 } }
-	};
+	if (dimension != 3)
+	{
+		do {
+			std::cout << "Error: Cross product is implemented only for 3-dimension." << std::endl;
+			std::cout << '\n' << "Press the Enter key to continue.";
+		} while (std::cin.get() != '\n');
+	}
 
 	NLPVectorExpression output(dimension);
-	for (int i = 0; i < 3; ++i)
-	{
-		for (int j = 0; j < 2; ++j)
-		{
-			output[i] += (_vector_1.expressions_[cross_product_terms[i][j][1]]
-				* _vector_2.expressions_[cross_product_terms[i][j][2]]);
 
-			// Coefficient.
-			output[i] *= static_cast<Number>(cross_product_terms[i][j][0]);
-		}
-	}
+	output[0] = _vector_1.expressions_[1] * _vector_2.expressions_[2]
+		- _vector_1.expressions_[2] * _vector_2.expressions_[1];
+
+	output[1] = _vector_1.expressions_[2] * _vector_2.expressions_[0]
+		- _vector_1.expressions_[0] * _vector_2.expressions_[2];
+
+	output[2] = _vector_1.expressions_[0] * _vector_2.expressions_[1]
+		- _vector_1.expressions_[1] * _vector_2.expressions_[0];
 
 	return output;
 }
@@ -178,27 +187,24 @@ NLPVectorExpression NLPVectorExpression::cross_product(
 
 	// NOTE:
 	// Implemented only for 3 dimension.
-	assert(dimension == 3);
-
-	// (coeff, v1_index, v2_index);
-	const int cross_product_terms[3][2][3] = {
-		{ { 1, 0, 1 }, { -1, 1, 0 } },
-		{ { 1, 1, 2 }, { -1, 2, 1 } },
-		{ { 1, 2, 0 }, { -1, 0, 2 } }
-	};
+	if (dimension != 3)
+	{
+		do {
+			std::cout << "Error: Cross product is implemented only for 3-dimension." << std::endl;
+			std::cout << '\n' << "Press the Enter key to continue.";
+		} while (std::cin.get() != '\n');
+	}
 
 	NLPVectorExpression output(dimension);
-	for (int i = 0; i < 3; ++i)
-	{
-		for (int j = 0; j < 2; ++j)
-		{
-			output[i] += (_vector.expressions_[cross_product_terms[i][j][1]]
-				* _scalar_vector[cross_product_terms[i][j][2]]);
 
-			// Coefficient.
-			output[i] *= static_cast<Number>(cross_product_terms[i][j][0]);
-		}
-	}
+	output[0] = _vector.expressions_[1] * _scalar_vector[2]
+		- _vector.expressions_[2] * _scalar_vector[1];
+
+	output[1] = _vector.expressions_[2] * _scalar_vector[0]
+		- _vector.expressions_[0] * _scalar_vector[2];
+
+	output[2] = _vector.expressions_[0] * _scalar_vector[1]
+		- _vector.expressions_[1] * _scalar_vector[0];
 
 	return output;
 }

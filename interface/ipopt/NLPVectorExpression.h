@@ -25,17 +25,42 @@ public:
 	static NLPExpression dot_product(const NLPVectorExpression& _vector,
 		const Eigen::VectorXd& _constant_vector);
 
+	static NLPExpression dot_product(const Eigen::VectorXd& _constant_vector,
+		const NLPVectorExpression& _vector)
+	{
+		return dot_product(_vector, _constant_vector);
+	}
+
 	static NLPVectorExpression cross_product(const NLPVectorExpression& _vector_1,
 		const NLPVectorExpression& _vector_2);
 
 	static NLPVectorExpression cross_product(const NLPVectorExpression& _vector,
 		const Eigen::VectorXd& _constant_vector);
 
+	static NLPVectorExpression cross_product(const Eigen::VectorXd& _constant_vector,
+		const NLPVectorExpression& _vector)
+	{
+		return -cross_product(_vector, _constant_vector);
+	}
+
+
+	NLPVectorExpression operator-();
 
 	NLPVectorExpression& operator+=(const NLPVectorExpression& rhs);
 	friend NLPVectorExpression operator+(NLPVectorExpression lhs, const NLPVectorExpression& rhs)
 	{
 		return lhs += rhs;
+	}
+
+	NLPVectorExpression& operator+=(const Eigen::VectorXd& rhs);
+	friend NLPVectorExpression operator+(NLPVectorExpression lhs, const Eigen::VectorXd& rhs)
+	{
+		return lhs += rhs;
+	}
+
+	friend NLPVectorExpression operator+(const Eigen::VectorXd& lhs, NLPVectorExpression rhs)
+	{
+		return (rhs) += lhs;
 	}
 
 	NLPVectorExpression& operator-=(const NLPVectorExpression& rhs);
@@ -44,10 +69,26 @@ public:
 		return lhs -= rhs;
 	}
 
+	NLPVectorExpression& operator-=(const Eigen::VectorXd& rhs);
+	friend NLPVectorExpression operator-(NLPVectorExpression lhs, const Eigen::VectorXd& rhs)
+	{
+		return lhs -= rhs;
+	}
+
+	friend NLPVectorExpression operator-(const Eigen::VectorXd& lhs, NLPVectorExpression rhs)
+	{
+		return (-rhs) += lhs;
+	}
+
 	NLPVectorExpression& operator*=(const Number& rhs);
 	friend NLPVectorExpression operator*(NLPVectorExpression lhs, const Number& rhs)
 	{
 		return lhs *= rhs;
+	}
+
+	friend NLPVectorExpression operator*(const Number& lhs, NLPVectorExpression rhs)
+	{
+		return (rhs) *= lhs;
 	}
 
 	NLPVectorExpression& operator*=(const NLPExpression& rhs);
@@ -56,17 +97,9 @@ public:
 		return lhs *= rhs;
 	}
 
-
-	NLPVectorExpression& operator+=(const Eigen::VectorXd& rhs);
-	friend NLPVectorExpression operator+(NLPVectorExpression lhs, const Eigen::VectorXd& rhs)
+	friend NLPVectorExpression operator*(const NLPExpression& lhs, NLPVectorExpression rhs)
 	{
-		return lhs += rhs;
-	}
-
-	NLPVectorExpression& operator-=(const Eigen::VectorXd& rhs);
-	friend NLPVectorExpression operator-(NLPVectorExpression lhs, const Eigen::VectorXd& rhs)
-	{
-		return lhs -= rhs;
+		return (rhs) *= lhs;
 	}
 
 

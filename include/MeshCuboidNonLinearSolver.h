@@ -100,6 +100,12 @@ private:
 
 	NLPFunction *create_rotation_symmetry_group_energy_function();
 
+	void create_rotation_symmetry_group_energy_function(
+		const unsigned int _symmetry_group_index,
+		const std::vector<ANNpointArray>& _cuboid_ann_points,
+		const std::vector<ANNkd_tree *>& _cuboid_ann_kd_tree,
+		NLPExpression &_expression);
+
 	void create_cuboid_sample_point_ann_trees(
 		std::vector<ANNpointArray>& _cuboid_ann_points,
 		std::vector<ANNkd_tree *>& _cuboid_ann_kd_tree) const;

@@ -299,6 +299,13 @@ std::string NLPTerm::to_string()
 	return sstr.str();
 }
 
+NLPTerm NLPTerm::operator-()
+{
+	NLPTerm other(*this);
+	other.coeff_ *= -1;
+	return other;
+}
+
 NLPTerm& NLPTerm::operator*=(const Number& rhs)
 {
 	coeff_ *= rhs;
@@ -524,6 +531,17 @@ std::string NLPExpression::to_string()
 	}
 
 	return sstr.str();
+}
+
+NLPExpression NLPExpression::operator-()
+{
+	NLPExpression other(*this);
+	for (std::list< NLPTerm >::iterator it = other.terms_.begin();
+		it != other.terms_.end(); ++it)
+	{
+		(*it) *= (-1);
+	}
+	return other;
 }
 
 NLPExpression& NLPExpression::operator+=(const Number& rhs)

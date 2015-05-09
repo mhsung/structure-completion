@@ -54,6 +54,8 @@ public:
 	std::string to_string();
 
 
+	NLPTerm operator-();
+
 	NLPTerm& operator*=(const Number& rhs);
 	friend NLPTerm operator*(NLPTerm lhs, const Number& rhs)
 	{
@@ -103,6 +105,8 @@ public:
 
 	std::string to_string();
 
+
+	NLPExpression operator-();
 
 	NLPExpression& operator+=(const Number& rhs);
 	friend NLPExpression operator+(NLPExpression lhs, const Number& rhs)
