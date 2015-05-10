@@ -175,6 +175,8 @@ bool MeshViewerCore::load_object_info(
 
 	if (_cuboid_filepath)
 	{
+		assert(_option != LoadGroundTruthData);
+
 		ret = _cuboid_structure.load_cuboids(_cuboid_filepath, _verbose);
 		assert(ret);
 
@@ -185,17 +187,21 @@ bool MeshViewerCore::load_object_info(
 			cuboid->clear_sample_points();
 		}
 
-		// Assign sample points to cuboids.
-		std::vector<LabelIndex> sample_point_label_indices = _cuboid_structure.get_sample_point_label_indices();
-		assert(sample_point_label_indices.size() == _cuboid_structure.num_sample_points());
-
 		for (SamplePointIndex sample_point_index = 0; sample_point_index < _cuboid_structure.num_sample_points();
 			++sample_point_index)
 		{
 			MeshSamplePoint* sample_point = _cuboid_structure.sample_points_[sample_point_index];
 			assert(sample_point);
-			LabelIndex label_index = sample_point_label_indices[sample_point_index];
-			if (label_index >= _cuboid_structure.num_labels())
+
+			FaceIndex fid = sample_point->corr_fid_;
+			assert(fid < _cuboid_structure.mesh_->n_faces());
+
+			MyMesh::FaceHandle fh = _cuboid_structure.mesh_->face_handle(fid);
+			Label label = _cuboid_structure.mesh_->property(_cuboid_structure.mesh_->face_label_, fh);
+			LabelIndex label_index;
+			bool ret = _cuboid_structure.exist_label(label, &label_index);
+
+			if (!ret || label_index >= _cuboid_structure.num_labels())
 				continue;
 
 			MeshCuboid *cuboid = NULL;

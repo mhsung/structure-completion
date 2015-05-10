@@ -29,6 +29,9 @@ DECLARE_double(param_max_potential);
 DECLARE_double(param_dummy_potential);
 DECLARE_double(param_opt_single_energy_term_weight);
 DECLARE_double(param_opt_symmetry_energy_term_weight);
+DECLARE_double(param_part_assembly_window_size);
+DECLARE_double(param_part_assembly_voxel_size);
+DECLARE_double(param_part_assembly_voxel_variance);
 
 //DECLARE_double(param_sim_abs_attr_tol);
 //DECLARE_double(param_zero_tol);

@@ -9,6 +9,64 @@
 #include <QFileInfo>
 
 
+MyMesh::Point get_transformed_point(const MyMesh::Point _input_point,
+	MeshCuboid *_input_cuboid, MeshCuboid *_target_cuboid)
+{
+	assert(_input_cuboid);
+	assert(_target_cuboid);
+
+	MyMesh::Point local_coord;
+	MyMesh::Point point = _input_point - _input_cuboid->get_bbox_center();
+	for (unsigned int axis_index = 0; axis_index < 3; ++axis_index)
+	{
+		if (_input_cuboid->get_bbox_size()[axis_index] <= 0)
+		{
+			local_coord[axis_index] = 0;
+		}
+		else
+		{
+			local_coord[axis_index] = dot(point, _input_cuboid->get_bbox_axis(axis_index));
+			local_coord[axis_index] *= (_target_cuboid->get_bbox_size()[axis_index]
+				/ _input_cuboid->get_bbox_size()[axis_index]);
+		}
+	}
+
+	MyMesh::Point target_point = _target_cuboid->get_bbox_center();
+	for (unsigned int axis_index = 0; axis_index < 3; ++axis_index)
+		target_point += (local_coord[axis_index] * _target_cuboid->get_bbox_axis(axis_index));
+
+	return target_point;
+}
+
+MyMesh::Normal get_transformed_normal(const MyMesh::Normal _input_normal,
+	MeshCuboid *_input_cuboid, MeshCuboid *_target_cuboid)
+{
+	assert(_input_cuboid);
+	assert(_target_cuboid);
+
+	MyMesh::Point local_coord;
+	for (unsigned int axis_index = 0; axis_index < 3; ++axis_index)
+	{
+		if (_input_cuboid->get_bbox_size()[axis_index] <= 0)
+		{
+			local_coord[axis_index] = 0;
+		}
+		else
+		{
+			local_coord[axis_index] = dot(_input_normal, _input_cuboid->get_bbox_axis(axis_index));
+			local_coord[axis_index] *= (_target_cuboid->get_bbox_size()[axis_index]
+				/ _input_cuboid->get_bbox_size()[axis_index]);
+		}
+	}
+
+	MyMesh::Normal target_normal = MyMesh::Normal(0.0);
+	for (unsigned int axis_index = 0; axis_index < 3; ++axis_index)
+		target_normal += (local_coord[axis_index] * _target_cuboid->get_bbox_axis(axis_index));
+
+	target_normal.normalize();
+	return target_normal;
+}
+
 void MeshViewerCore::reconstruct(
 	const char *_mesh_filepath,
 	const GLdouble *_snapshot_modelview_matrix,
@@ -58,11 +116,26 @@ void MeshViewerCore::reconstruct(
 	MeshCuboidEvaluator evaluator(&ground_truth_cuboid_structure);
 
 	setDrawMode(COLORED_POINT_SAMPLES);
+	//
+
+
+	//QFileInfo file_info(_mesh_filepath);
+	//std::string mesh_name(file_info.baseName().toLocal8Bit());
+	//std::string dense_sample_filepath = FLAGS_data_root_path + FLAGS_dense_sample_path
+	//	+ std::string("/") + mesh_name + std::string(".pts");
+
+	ret = cuboid_structure_.load_dense_sample_points(dense_sample_filepath.c_str());
+	assert(ret);
+
+	set_modelview_matrix(_occlusion_modelview_matrix, false);
+	remove_occluded_points();
+	set_modelview_matrix(_snapshot_modelview_matrix);
+
 	MeshCuboidStructure cuboid_structure_copy(cuboid_structure_);
 
 
 	// 1. Reconstruction using symmetry.
-	reconstruct_symmetry_prior(_mesh_filepath, _snapshot_modelview_matrix, _occlusion_modelview_matrix);
+	cuboid_structure_.copy_sample_points_to_symmetric_position();
 
 	// NOTE:
 	// The label of reconstructed points are recorded as confidence values.
@@ -156,28 +229,13 @@ void MeshViewerCore::reconstruct(
 	setDrawMode(CUSTOM_VIEW);
 }
 
-void MeshViewerCore::reconstruct_symmetry_prior(const char *_mesh_filepath,
-	const GLdouble *_snapshot_modelview_matrix,
-	const GLdouble *_occlusion_modelview_matrix)
-{
-	QFileInfo file_info(_mesh_filepath);
-	std::string mesh_name(file_info.baseName().toLocal8Bit());
-	std::string dense_sample_filepath = FLAGS_data_root_path + FLAGS_dense_sample_path
-		+ std::string("/") + mesh_name + std::string(".pts");
-
-	bool ret = cuboid_structure_.load_dense_sample_points(dense_sample_filepath.c_str());
-	assert(ret);
-	set_modelview_matrix(_occlusion_modelview_matrix, false);
-	remove_occluded_points();
-	set_modelview_matrix(_snapshot_modelview_matrix);
-
-	cuboid_structure_.copy_sample_points_to_symmetric_position();
-}
-
 void MeshViewerCore::reconstruct_database_prior(
 	const char *_mesh_filepath,
 	const std::vector<LabelIndex> *_reconstructed_label_indices)
 {
+	const Real part_assembly_voxel_size = FLAGS_param_part_assembly_voxel_size *
+		cuboid_structure_.mesh_->get_object_diameter();
+
 	MyMesh example_mesh;
 	MeshCuboidStructure example_cuboid_structure(&example_mesh);
 
@@ -210,10 +268,10 @@ void MeshViewerCore::reconstruct_database_prior(
 	input_dir.setSorting(QDir::Name);
 
 
-	// (Dissimilarity, mesh_filepath)
+	// (Similarity, mesh_filepath)
 	std::vector< std::pair<Real, std::string> > label_matched_objects(num_labels);
 	for (LabelIndex label_index = 0; label_index < num_labels; ++label_index)
-		label_matched_objects[label_index].first = std::numeric_limits<Real>::max();
+		label_matched_objects[label_index].first = -1;
 
 
 	QFileInfoList dir_list = input_dir.entryInfoList();
@@ -231,40 +289,88 @@ void MeshViewerCore::reconstruct_database_prior(
 				continue;
 
 			//QFileInfo file_info(mesh_filepath.c_str());
-			std::string mesh_name(example_file_info.baseName().toLocal8Bit());
-			std::string cuboid_filepath = FLAGS_training_dir + std::string("/") + mesh_name + std::string(".arff");
+			std::string example_mesh_name(example_file_info.baseName().toLocal8Bit());
+			std::string cuboid_filepath = FLAGS_training_dir + std::string("/") + example_mesh_name + std::string(".arff");
+
+			//bool ret = load_object_info(example_mesh, example_cuboid_structure,
+			//	example_mesh_filepath.c_str(), LoadMesh, cuboid_filepath.c_str());
 
 			bool ret = load_object_info(example_mesh, example_cuboid_structure,
-				example_mesh_filepath.c_str(), LoadMesh, cuboid_filepath.c_str());
+				example_mesh_filepath.c_str(), LoadDenseSamplePoints, cuboid_filepath.c_str(), false);
 			if (!ret) continue;
 
 			assert(example_cuboid_structure.num_labels() == num_labels);
 			for (LabelIndex label_index = 0; label_index < num_labels; ++label_index)
 			{
 				assert(cuboid_structure_.label_cuboids_[label_index].size() <= 1);
-				MeshCuboid *cuboid = NULL;
+				MeshCuboid *input_cuboid = NULL;
 				if (!cuboid_structure_.label_cuboids_[label_index].empty())
-					cuboid = cuboid_structure_.label_cuboids_[label_index].front();
+					input_cuboid = cuboid_structure_.label_cuboids_[label_index].front();
 
 				assert(example_cuboid_structure.label_cuboids_[label_index].size() <= 1);
 				MeshCuboid *example_cuboid = NULL;
 				if (!example_cuboid_structure.label_cuboids_[label_index].empty())
 					example_cuboid = example_cuboid_structure.label_cuboids_[label_index].front();
 
-				if (cuboid && example_cuboid)
+				if (input_cuboid && example_cuboid)
 				{
 					// Measure similarity.
-					MyMesh::Normal cuboid_size = cuboid->get_bbox_size();
-					MyMesh::Normal example_cuboid_size = example_cuboid->get_bbox_size();
-					MyMesh::Normal diff_size = (cuboid_size - example_cuboid_size);
+					std::vector<MyMesh::Point> input_cuboid_sample_points;
+					input_cuboid->get_sample_points(input_cuboid_sample_points);
+					unsigned int num_cuboid_sample_points = input_cuboid_sample_points.size();
 
-					Real dissimilarity = 0.0;
-					for (unsigned int i = 0; i < 3; ++i)
-						dissimilarity += std::abs(diff_size[i]);
+					std::vector<MyMesh::Point> example_cuboid_sample_points;
+					example_cuboid->get_sample_points(example_cuboid_sample_points);
+					unsigned int num_example_cuboid_sample_points = example_cuboid_sample_points.size();
 
-					if (dissimilarity < label_matched_objects[label_index].first)
+					if (input_cuboid_sample_points.empty() || example_cuboid_sample_points.empty())
+						continue;
+
+					// Fit example cuboid to the input cuboid.
+					for (unsigned int point_index = 0; point_index < num_example_cuboid_sample_points; ++point_index)
 					{
-						label_matched_objects[label_index].first = dissimilarity;
+						MyMesh::Point point = example_cuboid_sample_points[point_index];
+						MyMesh::Point transformed_point = get_transformed_point(point, example_cuboid, input_cuboid);
+						example_cuboid_sample_points[point_index] = transformed_point;
+					}
+
+					MyMesh::Point local_coord_bbox_min = input_cuboid_sample_points.front();
+					MyMesh::Point local_coord_bbox_max = input_cuboid_sample_points.front();
+					for (unsigned int point_index = 0; point_index < num_cuboid_sample_points; ++point_index)
+					{
+						for (unsigned int axis_index = 0; axis_index < 3; ++axis_index)
+						{
+							local_coord_bbox_min[axis_index] = std::min(local_coord_bbox_min[axis_index],
+								input_cuboid_sample_points[point_index][axis_index]);
+							local_coord_bbox_max[axis_index] = std::max(local_coord_bbox_max[axis_index],
+								input_cuboid_sample_points[point_index][axis_index]);
+						}
+					}
+
+					MeshCuboidVoxelGrid local_coord_voxels(local_coord_bbox_min, local_coord_bbox_max,
+						part_assembly_voxel_size);
+
+					Eigen::VectorXd input_voxel_occupancies;
+					local_coord_voxels.get_voxel_occupancies(input_cuboid_sample_points, input_voxel_occupancies);
+					assert(input_voxel_occupancies.rows() == local_coord_voxels.n_voxels());
+
+					Eigen::VectorXd example_cuboid_voxel_occupancies;
+					local_coord_voxels.get_voxel_occupancies(example_cuboid_sample_points, example_cuboid_voxel_occupancies);
+					assert(example_cuboid_voxel_occupancies.rows() == local_coord_voxels.n_voxels());
+
+					int num_input_occupied_voxels = (input_voxel_occupancies.array() >= 1).count();
+					int num_example_occupied_voxels = (example_cuboid_voxel_occupancies.array() >= 1).count();
+					if (num_input_occupied_voxels == 0 || num_example_occupied_voxels == 0)
+						continue;
+
+					Real score = input_voxel_occupancies.dot(example_cuboid_voxel_occupancies);
+					Real similarity = (1 - 0.7) * (score / num_example_occupied_voxels)
+						+ (0.7) * (score / num_input_occupied_voxels);
+					assert(similarity >= 0);
+
+					if (similarity > label_matched_objects[label_index].first)
+					{
+						label_matched_objects[label_index].first = similarity;
 						label_matched_objects[label_index].second = example_mesh_filepath;
 					}
 				}
@@ -286,10 +392,10 @@ void MeshViewerCore::reconstruct_database_prior(
 			LabelIndex label_index_2 = (*kt).second;
 
 			// If both symmetric cuboids exist.
-			if (label_matched_objects[label_index_1].first < std::numeric_limits<Real>::max()
-				&& label_matched_objects[label_index_2].first < std::numeric_limits<Real>::max())
+			if (label_matched_objects[label_index_1].first >= 0
+				&& label_matched_objects[label_index_2].first >= 0)
 			{
-				if (label_matched_objects[label_index_1].first <= label_matched_objects[label_index_2].first)
+				if (label_matched_objects[label_index_1].first >= label_matched_objects[label_index_2].first)
 					label_matched_objects[label_index_2] = label_matched_objects[label_index_1];
 				else
 					label_matched_objects[label_index_1] = label_matched_objects[label_index_2];
@@ -322,7 +428,7 @@ void MeshViewerCore::reconstruct_database_prior(
 			if (!exist) continue;
 		}
 
-		if (label_matched_objects[label_index].first == std::numeric_limits<Real>::max())
+		if (label_matched_objects[label_index].first < 0)
 			continue;
 
 		std::string mesh_filepath = label_matched_objects[label_index].second;
@@ -331,7 +437,7 @@ void MeshViewerCore::reconstruct_database_prior(
 		std::string cuboid_filepath = FLAGS_training_dir + std::string("/") + mesh_name + std::string(".arff");
 
 		bool ret = load_object_info(example_mesh, example_cuboid_structure,
-			mesh_filepath.c_str(), LoadGroundTruthData, cuboid_filepath.c_str());
+			mesh_filepath.c_str(), LoadDenseSamplePoints, cuboid_filepath.c_str());
 		assert(ret);
 
 		assert(cuboid_structure_.label_cuboids_[label_index].size() <= 1);
@@ -362,36 +468,11 @@ void MeshViewerCore::reconstruct_database_prior(
 			MyMesh::Point point = sample_point->point_;
 			MyMesh::Normal normal = sample_point->normal_;
 
-			//
-			MyMesh::Point relative_point;
-			MyMesh::Normal relative_normal;
-			point = point - example_cuboid->get_bbox_center();
+			MyMesh::Point transformed_point = get_transformed_point(point, example_cuboid, cuboid);
+			MyMesh::Normal transformed_normal = get_transformed_normal(normal, example_cuboid, cuboid);
 
-			for (unsigned int axis_index = 0; axis_index < 3; ++axis_index)
-			{
-				assert(example_cuboid->get_bbox_size()[axis_index] > 0);
-				relative_point[axis_index] = dot(point, example_cuboid->get_bbox_axis(axis_index));
-				relative_point[axis_index] *=
-					(cuboid->get_bbox_size()[axis_index] / example_cuboid->get_bbox_size()[axis_index]);
-
-				relative_normal[axis_index] = dot(normal, example_cuboid->get_bbox_axis(axis_index));
-				relative_normal[axis_index] *=
-					(cuboid->get_bbox_size()[axis_index] / example_cuboid->get_bbox_size()[axis_index]);
-			}
-
-			point = cuboid->get_bbox_center();
-			normal = MyMesh::Normal(0.0);
-
-			for (unsigned int axis_index = 0; axis_index < 3; ++axis_index)
-			{
-				point += (relative_point[axis_index] * cuboid->get_bbox_axis(axis_index));
-				normal += (relative_normal[axis_index] * cuboid->get_bbox_axis(axis_index));
-			}
-
-			normal.normalize();
-			//
-
-			MeshSamplePoint *new_sample_point = cuboid_structure_.add_sample_point(point, normal);
+			MeshSamplePoint *new_sample_point = cuboid_structure_.add_sample_point(
+				transformed_point, transformed_normal);
 
 			// Copy label confidence values.
 			new_sample_point->label_index_confidence_ = sample_point->label_index_confidence_;

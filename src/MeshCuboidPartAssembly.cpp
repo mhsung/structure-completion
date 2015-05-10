@@ -204,9 +204,12 @@ void MeshViewerCore::run_part_assembly_match_parts(const std::string _mesh_filep
 	const MeshCuboidTrainer &_trainer, std::vector<std::string> &_label_matched_objects)
 {
 	// Parameters.
-	const Real part_assembly_window_size = 0.1 * cuboid_structure_.mesh_->get_object_diameter();
-	const Real part_assembly_voxel_size = 0.005 * cuboid_structure_.mesh_->get_object_diameter();
-	const Real part_assembly_voxel_variance = 0.01 * cuboid_structure_.mesh_->get_object_diameter();
+	const Real part_assembly_window_size = FLAGS_param_part_assembly_window_size *
+		cuboid_structure_.mesh_->get_object_diameter();
+	const Real part_assembly_voxel_size = FLAGS_param_part_assembly_voxel_size *
+		cuboid_structure_.mesh_->get_object_diameter();
+	const Real part_assembly_voxel_variance = FLAGS_param_part_assembly_voxel_variance *
+		cuboid_structure_.mesh_->get_object_diameter();
 	const Real distance_param = 2 * part_assembly_voxel_variance * part_assembly_voxel_variance;
 	assert(distance_param > 0);
 
@@ -312,8 +315,8 @@ void MeshViewerCore::run_part_assembly_match_parts(const std::string _mesh_filep
 				else if (cuboid->num_sample_points() == 0) continue;
 
 				// Create cuboid KD-tree.
-				std::vector<MyMesh::Point> cuboid_sample_points;
-				cuboid->get_sample_points(cuboid_sample_points);
+				std::vector<MyMesh::Point> example_sample_points;
+				cuboid->get_sample_points(example_sample_points);
 
 				MyMesh::Point local_coord_bbox_min = cuboid->get_bbox_center() - 0.5 * MyMesh::Point(part_assembly_window_size);
 				MyMesh::Point local_coord_bbox_max = cuboid->get_bbox_center() + 0.5 * MyMesh::Point(part_assembly_window_size);
@@ -328,18 +331,20 @@ void MeshViewerCore::run_part_assembly_match_parts(const std::string _mesh_filep
 				for (unsigned int i = 0; i < num_voxels; ++i)
 					input_distance_map[i] = std::exp(-input_distance_map[i] * input_distance_map[i] / distance_param);
 
-				Eigen::VectorXd cuboid_voxel_occupancies;
-				local_coord_voxels.get_voxel_occupancies(cuboid_sample_points, cuboid_voxel_occupancies);
-				assert(cuboid_voxel_occupancies.rows() == num_voxels);
-				int num_occupied_voxels = (cuboid_voxel_occupancies.array() > 0).count();
+				Eigen::VectorXd example_voxel_occupancies;
+				local_coord_voxels.get_voxel_occupancies(example_sample_points, example_voxel_occupancies);
+				assert(example_voxel_occupancies.rows() == num_voxels);
 
-				if (num_occupied_voxels == 0)
+				int num_input_occupied_voxels = (input_distance_map.array() > 0.95).count();
+				int num_example_occupied_voxels = (example_voxel_occupancies.array() >= 1).count();
+				if (num_input_occupied_voxels == 0 || num_example_occupied_voxels == 0)
 					continue;
 
 				// Equation (1) ~ (3).
-				Real score = input_distance_map.dot(cuboid_voxel_occupancies);
+				Real score = input_distance_map.dot(example_voxel_occupancies);
 				assert(score >= 0);
-				score = (1 - 0.7) * (score / num_voxels) + (0.7) * (score / num_occupied_voxels);
+				score = (1 - 0.7) * (score / num_example_occupied_voxels)
+					+ (0.7) * (score / num_input_occupied_voxels);
 
 				if (score > label_matched_object_scores[label_index].first)
 				{
@@ -461,7 +466,7 @@ void MeshViewerCore::run_part_assembly_reconstruction(const std::string _mesh_fi
 		std::string cuboid_filepath = FLAGS_training_dir + std::string("/") + mesh_name + std::string(".arff");
 
 		bool ret = load_object_info(example_mesh, example_cuboid_structure,
-			mesh_filepath.c_str(), LoadGroundTruthData, cuboid_filepath.c_str());
+			mesh_filepath.c_str(), LoadDenseSamplePoints, cuboid_filepath.c_str());
 		assert(ret);
 
 		Eigen::MatrixXd transformed_example_points;
