@@ -43,6 +43,7 @@ class MeshCuboidSymmetryGroup
 {
 public:
 	MeshCuboidSymmetryGroup(const MeshCuboidSymmetryGroupInfo &_info);
+	MeshCuboidSymmetryGroup(const MeshCuboidSymmetryGroup &_other);
 	~MeshCuboidSymmetryGroup();
 
 	struct WeightedPointPair

@@ -36,6 +36,13 @@ MeshCuboidSymmetryGroup::MeshCuboidSymmetryGroup(const MeshCuboidSymmetryGroupIn
 
 }
 
+MeshCuboidSymmetryGroup::MeshCuboidSymmetryGroup(const MeshCuboidSymmetryGroup &_other)
+	:info_(_other.info_)
+	, num_symmetry_orders_(_other.num_symmetry_orders_)
+{
+
+}
+
 MeshCuboidSymmetryGroup::~MeshCuboidSymmetryGroup()
 {
 
@@ -257,7 +264,7 @@ MeshCuboidReflectionSymmetryGroup::MeshCuboidReflectionSymmetryGroup(
 
 MeshCuboidReflectionSymmetryGroup::MeshCuboidReflectionSymmetryGroup(
 	const MeshCuboidReflectionSymmetryGroup &_other)
-	: MeshCuboidSymmetryGroup(_other.info_)
+	: MeshCuboidSymmetryGroup(_other)
 	, n_(_other.n_)
 	, t_(_other.t_)
 {
@@ -555,7 +562,7 @@ MeshCuboidRotationSymmetryGroup::MeshCuboidRotationSymmetryGroup(
 
 MeshCuboidRotationSymmetryGroup::MeshCuboidRotationSymmetryGroup(
 	const MeshCuboidRotationSymmetryGroup &_other)
-	: MeshCuboidSymmetryGroup(_other.info_)
+	: MeshCuboidSymmetryGroup(_other)
 	, n_(_other.n_)
 	, t_(_other.t_)
 {
