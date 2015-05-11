@@ -727,7 +727,8 @@ void MeshCuboidRotationSymmetryGroup::compute_rotation_plane(
 bool MeshCuboidRotationSymmetryGroup::compute_rotation_angle(
 	const std::vector<MeshCuboid *> &_cuboids)
 {
-	const Real squared_neighbor_distance = FLAGS_param_sparse_neighbor_distance;
+	const Real squared_neighbor_distance = FLAGS_param_sparse_neighbor_distance
+		* FLAGS_param_sparse_neighbor_distance;
 	const unsigned int num_cuboids = _cuboids.size();
 
 	//
