@@ -436,6 +436,10 @@ void MeshViewerCore::reconstruct_database_prior(
 		std::string mesh_name(file_info.baseName().toLocal8Bit());
 		std::string cuboid_filepath = FLAGS_training_dir + std::string("/") + mesh_name + std::string(".arff");
 
+		std::cout << "--------" << std::endl;
+		std::cout << "Label (" << label_index << "):" << std::endl;
+		std::cout << "Mesh name: " << mesh_name << std::endl;
+
 		bool ret = load_object_info(example_mesh, example_cuboid_structure,
 			mesh_filepath.c_str(), LoadDenseSamplePoints, cuboid_filepath.c_str());
 		assert(ret);
@@ -454,10 +458,6 @@ void MeshViewerCore::reconstruct_database_prior(
 		assert(example_cuboid);
 
 		const int num_points = example_cuboid->num_sample_points();
-
-		std::cout << "--------" << std::endl;
-		std::cout << "Label (" << label_index << "):" << std::endl;
-		std::cout << "Mesh name: " << mesh_name << std::endl;
 		std::cout << "# of sample points: " << num_points << std::endl;
 		std::cout << "Copying... ";
 

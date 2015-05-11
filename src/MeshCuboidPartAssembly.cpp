@@ -37,7 +37,7 @@ void get_bounding_cylinder(const MeshCuboidStructure &_cuboid_structure,
 }
 
 void get_transformed_sample_points(const MeshCuboidStructure &_cuboid_structure,
-	const Real _scale_xy_size, const Real _scale_z_size, const Real _angle, Eigen::MatrixXd &_transformed_sample_points)
+	const Real _xy_size, const Real _z_size, const Real _angle, Eigen::MatrixXd &_transformed_sample_points)
 {
 	Eigen::MatrixXd sample_points;
 	Eigen::VectorXd bbox_center;
@@ -48,17 +48,18 @@ void get_transformed_sample_points(const MeshCuboidStructure &_cuboid_structure,
 	for (SamplePointIndex sample_point_index = 0; sample_point_index < _transformed_sample_points.cols();
 		++sample_point_index)
 	{
-		_transformed_sample_points.col(sample_point_index)[0] *= (_scale_xy_size / xy_size);
-		_transformed_sample_points.col(sample_point_index)[1] *= (_scale_xy_size / xy_size);
-		_transformed_sample_points.col(sample_point_index)[2] *= (_scale_z_size / z_size);
+		_transformed_sample_points.col(sample_point_index)[0] *= (_xy_size / xy_size);
+		_transformed_sample_points.col(sample_point_index)[1] *= (_xy_size / xy_size);
+		_transformed_sample_points.col(sample_point_index)[2] *= (_z_size / z_size);
 	}
-	_transformed_sample_points = _transformed_sample_points.colwise() + bbox_center;
 
 	if (_angle != 0)
 	{
 		Eigen::AngleAxisd axis_rotation(_angle, Eigen::Vector3d::UnitZ());
 		_transformed_sample_points = axis_rotation.toRotationMatrix() * _transformed_sample_points;
 	}
+
+	_transformed_sample_points = _transformed_sample_points.colwise() + bbox_center;
 }
 
 void MeshViewerCore::run_part_assembly_align_database(const std::string _mesh_filepath,
@@ -192,9 +193,9 @@ void MeshViewerCore::run_part_assembly_render_alignment(const std::string _mesh_
 		new_sample_point->error_ = 1.0;
 	}
 
-	//setDrawMode(COLORED_POINT_SAMPLES);
-	//updateGL();
-	//snapshot(_output_filename);
+	setDrawMode(COLORED_POINT_SAMPLES);
+	updateGL();
+	snapshot(_output_filename);
 
 	setDrawMode(CUSTOM_VIEW);
 }
@@ -281,12 +282,15 @@ void MeshViewerCore::run_part_assembly_match_parts(const std::string _mesh_filep
 			if (example_mesh_filepath.compare(_mesh_filepath) == 0)
 				continue;
 
-			std::string other_mesh_name(example_file_info.baseName().toLocal8Bit());
+			std::string example_mesh_name(example_file_info.baseName().toLocal8Bit());
+			std::string example_cuboid_filepath = FLAGS_training_dir + std::string("/")
+				+ example_mesh_name + std::string(".arff");
 
 			bool ret = load_object_info(example_mesh, example_cuboid_structure,
-				example_mesh_filepath.c_str(), LoadGroundTruthData, NULL, false);
+				example_mesh_filepath.c_str(), LoadDenseSamplePoints, example_cuboid_filepath.c_str(), false);
 			if (!ret) continue;
 
+			std::cout << "mesh: " << example_mesh_name << std::endl;
 
 			Eigen::MatrixXd transformed_example_points;
 			get_transformed_sample_points(example_cuboid_structure, _xy_size, _z_size, _angle, transformed_example_points);
@@ -300,29 +304,35 @@ void MeshViewerCore::run_part_assembly_match_parts(const std::string _mesh_filep
 					sample_point->point_[i] = transformed_example_points.col(sample_point_index)[i];
 			}
 
-
 			for (LabelIndex label_index = 0; label_index < num_labels; ++label_index)
 			{
-				MeshCuboid *cuboid = NULL;
+				MeshCuboid *example_cuboid = NULL;
 
 				// NOTE:
 				// The current implementation assumes that there is only one part for each label.
 				assert(example_cuboid_structure.label_cuboids_[label_index].size() <= 1);
 				if (!example_cuboid_structure.label_cuboids_[label_index].empty())
-					cuboid = example_cuboid_structure.label_cuboids_[label_index].front();
+					example_cuboid = example_cuboid_structure.label_cuboids_[label_index].front();
 
-				if (!cuboid) continue;
-				else if (cuboid->num_sample_points() == 0) continue;
+				if (!example_cuboid) continue;
+				else if (example_cuboid->num_sample_points() == 0) continue;
 
 				// Create cuboid KD-tree.
 				std::vector<MyMesh::Point> example_sample_points;
-				cuboid->get_sample_points(example_sample_points);
+				example_cuboid->get_sample_points(example_sample_points);
 
-				MyMesh::Point local_coord_bbox_min = cuboid->get_bbox_center() - 0.5 * MyMesh::Point(part_assembly_window_size);
-				MyMesh::Point local_coord_bbox_max = cuboid->get_bbox_center() + 0.5 * MyMesh::Point(part_assembly_window_size);
+				Real max_bbox_size = 0;
+				for (unsigned int axis_index = 0; axis_index < 3; ++axis_index)
+					max_bbox_size = std::max(max_bbox_size, example_cuboid->get_bbox_size()[axis_index]);
+				assert(max_bbox_size > 0);
+
+				MyMesh::Point local_coord_bbox_min = example_cuboid->get_bbox_center() - MyMesh::Point(max_bbox_size);
+				MyMesh::Point local_coord_bbox_max = example_cuboid->get_bbox_center() + MyMesh::Point(max_bbox_size);
+				
 				MeshCuboidVoxelGrid local_coord_voxels(local_coord_bbox_min, local_coord_bbox_max,
 					part_assembly_voxel_size);
 				int num_voxels = local_coord_voxels.n_voxels();
+
 
 				// Compute distance maps.
 				Eigen::VectorXd input_distance_map;
@@ -343,8 +353,12 @@ void MeshViewerCore::run_part_assembly_match_parts(const std::string _mesh_filep
 				// Equation (1) ~ (3).
 				Real score = input_distance_map.dot(example_voxel_occupancies);
 				assert(score >= 0);
-				score = (1 - 0.7) * (score / num_example_occupied_voxels)
-					+ (0.7) * (score / num_input_occupied_voxels);
+				//score = (1 - 0.7) * (score / num_example_occupied_voxels)
+				//	+ (0.7) * (score / num_input_occupied_voxels);
+				score /= local_coord_voxels.n_voxels();
+
+				// DEBUG.
+				printf("[%s] (%d): %lf\n", example_mesh_name.c_str(), label_index, score);
 
 				if (score > label_matched_object_scores[label_index].first)
 				{
@@ -465,6 +479,10 @@ void MeshViewerCore::run_part_assembly_reconstruction(const std::string _mesh_fi
 		std::string mesh_name(file_info.baseName().toLocal8Bit());
 		std::string cuboid_filepath = FLAGS_training_dir + std::string("/") + mesh_name + std::string(".arff");
 
+		std::cout << "--------" << std::endl;
+		std::cout << "Label (" << label_index << "):" << std::endl;
+		std::cout << "Mesh name: " << mesh_name << std::endl;
+		
 		bool ret = load_object_info(example_mesh, example_cuboid_structure,
 			mesh_filepath.c_str(), LoadDenseSamplePoints, cuboid_filepath.c_str());
 		assert(ret);
@@ -489,10 +507,6 @@ void MeshViewerCore::run_part_assembly_reconstruction(const std::string _mesh_fi
 		assert(example_cuboid);
 
 		const int num_points = example_cuboid->num_sample_points();
-
-		std::cout << "--------" << std::endl;
-		std::cout << "Label (" << label_index << "):" << std::endl;
-		std::cout << "Mesh name: " << mesh_name << std::endl;
 		std::cout << "# of sample points: " << num_points << std::endl;
 		std::cout << "Copying... ";
 
@@ -623,6 +637,11 @@ void MeshViewerCore::run_part_assembly()
 	Real xy_size, z_size, angle;
 	run_part_assembly_align_database(mesh_filepath, xy_size, z_size, angle);
 
+	std::cout << "Match parts... " << std::endl;
+	std::vector<std::string> label_matched_objects;
+	run_part_assembly_match_parts(mesh_filepath, xy_size, z_size, angle,
+		trainer, label_matched_objects);
+
 
 	ret = load_object_info(mesh_, cuboid_structure_, mesh_filepath.c_str(), LoadDenseSamplePoints);
 	if (!ret) return;
@@ -641,10 +660,6 @@ void MeshViewerCore::run_part_assembly()
 	output_filename_sstr.clear(); output_filename_sstr.str("");
 	output_filename_sstr << mesh_output_path << filename_prefix << std::string("assembly");
 	run_part_assembly_render_alignment(mesh_filepath, xy_size, z_size, angle, output_filename_sstr.str());
-
-	std::vector<std::string> label_matched_objects;
-	run_part_assembly_match_parts(mesh_filepath, xy_size, z_size, angle,
-		trainer, label_matched_objects);
 
 
 	std::cout << "Assemble parts... " << std::endl;

@@ -27,7 +27,7 @@ DEFINE_double(param_dummy_potential, 1.0E4, "");
 DEFINE_double(param_opt_single_energy_term_weight, 1.0E4, "");
 DEFINE_double(param_opt_symmetry_energy_term_weight, 1.0E6, "");
 DEFINE_double(param_part_assembly_window_size, 0.1, "");
-DEFINE_double(param_part_assembly_voxel_size, 0.005, "");
+DEFINE_double(param_part_assembly_voxel_size, 0.01, "");
 DEFINE_double(param_part_assembly_voxel_variance, 0.01, "");
 
 //DEFINE_double(param_sim_abs_attr_tol, 0.2, "");
