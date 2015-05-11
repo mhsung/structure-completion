@@ -349,8 +349,8 @@ NLPFunction *MeshCuboidNonLinearSolver::create_rotation_symmetry_group_energy_fu
 		++symmetry_group_index)
 	{
 		// Minimize \| t \|_2^2.
-		NLPVectorExpression t_variable = create_rotation_symmetry_group_variable_t(symmetry_group_index);
-		expression += NLPVectorExpression::dot_product(t_variable, t_variable);
+		//NLPVectorExpression t_variable = create_rotation_symmetry_group_variable_t(symmetry_group_index);
+		//expression += NLPVectorExpression::dot_product(t_variable, t_variable);
 
 		create_rotation_symmetry_group_energy_function(symmetry_group_index,
 			cuboid_ann_points, cuboid_ann_kd_tree, expression);
