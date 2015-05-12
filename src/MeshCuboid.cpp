@@ -1619,7 +1619,7 @@ void MeshCuboid::create_sub_cuboids(const Real _object_diameter,
 			q[0] = curr_pos[0]; q[1] = curr_pos[1]; q[2] = curr_pos[2];
 
 			int num_searched_neighbors = _kd_tree->annkFRSearch(q,
-				squared_neighbor_distance, num_neighbors, nn_idx, dd);
+				squared_neighbor_distance, num_neighbors, nn_idx);
 
 			for (int i = 0; i < std::min(num_neighbors, num_searched_neighbors); i++)
 			{

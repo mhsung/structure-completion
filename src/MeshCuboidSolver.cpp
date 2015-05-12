@@ -563,7 +563,7 @@ void segment_sample_points(
 				continue;
 
 			//
-			double distance = (squared_neighbor_distance - dd[i]);
+			double distance = (std::sqrt(squared_neighbor_distance) - std::sqrt(dd[0]));
 			assert(distance >= 0);
 			//
 
