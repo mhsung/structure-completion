@@ -75,8 +75,11 @@ public:
 
 	std::vector<MeshCuboid *> get_all_cuboids()const;
 
-	// Get sample point labels from the label confidence values.
-	std::vector<LabelIndex> get_sample_point_label_indices();
+	// Get sample point labels from the confidence values.
+	void get_sample_point_label_indices_from_confidences(std::vector<LabelIndex> &_sample_point_label_indices);
+
+	// Get sample point labels from mesh labels.
+	void get_sample_point_label_indices_from_mesh(std::vector<LabelIndex> &_sample_point_label_indices);
 
 	void set_sample_point_label_confidence_using_cuboids();
 

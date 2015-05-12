@@ -1658,10 +1658,10 @@ void MeshCuboidStructure::find_the_largest_label_cuboids()
 	}
 }
 
-std::vector<LabelIndex> MeshCuboidStructure::get_sample_point_label_indices()
+void MeshCuboidStructure::get_sample_point_label_indices_from_confidences(
+	std::vector<LabelIndex> &_sample_point_label_indices)
 {
-	// Get sample point labels from the label confidence values.
-	std::vector<LabelIndex> sample_point_label_indices(num_sample_points());
+	_sample_point_label_indices.resize(num_sample_points(), num_labels());
 
 	for (SamplePointIndex sample_point_index = 0; sample_point_index < num_sample_points(); ++sample_point_index)
 	{
@@ -1686,10 +1686,39 @@ std::vector<LabelIndex> MeshCuboidStructure::get_sample_point_label_indices()
 		// NOTE:
 		// If the maximum confidence is zero, the number of labels is assigned as the label index,
 		// which means that the sample point is not included in any cuboid.
-		sample_point_label_indices[sample_point_index] = max_confidence_label_index;
+		_sample_point_label_indices[sample_point_index] = max_confidence_label_index;
 	}
+}
 
-	return sample_point_label_indices;
+void MeshCuboidStructure::get_sample_point_label_indices_from_mesh(
+	std::vector<LabelIndex> &_sample_point_label_indices)
+{
+	_sample_point_label_indices.resize(num_sample_points(), num_labels());
+
+	for (SamplePointIndex sample_point_index = 0; sample_point_index < num_sample_points(); ++sample_point_index)
+	{
+		MeshSamplePoint* sample_point = sample_points_[sample_point_index];
+		assert(sample_point);
+
+		FaceIndex fid = sample_point->corr_fid_;
+		assert(mesh_);
+		assert(fid < mesh_->n_faces());
+
+		MyMesh::FaceHandle fh = mesh_->face_handle(fid);
+		Label label = mesh_->property(mesh_->face_label_, fh);
+		LabelIndex label_index;
+		bool ret = exist_label(label, &label_index);
+
+		if (!ret)
+		{
+			// Undefined.
+			_sample_point_label_indices[sample_point_index] = num_labels();
+		}
+		else
+		{
+			_sample_point_label_indices[sample_point_index] = label_index;
+		}
+	}
 }
 
 void MeshCuboidStructure::set_sample_point_label_confidence_using_cuboids()

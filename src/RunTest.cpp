@@ -247,7 +247,8 @@ bool MeshViewerCore::load_result_info(
 
 	if (_sample_label_filepath || _cuboid_filepath)
 	{
-		std::vector<LabelIndex> sample_point_label_indices = _cuboid_structure.get_sample_point_label_indices();
+		std::vector<LabelIndex> sample_point_label_indices;
+		_cuboid_structure.get_sample_point_label_indices_from_confidences(sample_point_label_indices);
 		assert(sample_point_label_indices.size() == _cuboid_structure.num_sample_points());
 
 		for (SamplePointIndex sample_point_index = 0; sample_point_index < _cuboid_structure.num_sample_points();

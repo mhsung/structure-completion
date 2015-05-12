@@ -74,9 +74,9 @@ void MeshViewerCore::run_part_assembly_align_database(const std::string _mesh_fi
 	ANNkd_tree* input_ann_kd_tree = ICP::create_kd_tree(input_points, input_ann_points);
 
 
-	const unsigned int num_angles = 180;
+	const unsigned int num_angles = 360;
 	Real angle_unit = 2 * M_PI / static_cast<Real>(num_angles);
-	std::vector<Real> angle_scores(180, 0);
+	std::vector<Real> angle_scores(num_angles, 0);
 
 
 	MyMesh example_mesh;
@@ -129,8 +129,8 @@ void MeshViewerCore::run_part_assembly_align_database(const std::string _mesh_fi
 				Eigen::VectorXd rotated_example_to_input_distances;
 				ICP::get_closest_points(input_ann_kd_tree, rotated_example_points, rotated_example_to_input_distances);
 
-				Real score = (input_to_rotated_example_distances.sum() + rotated_example_to_input_distances.sum())
-					/ (input_to_rotated_example_distances.rows() + rotated_example_to_input_distances.rows());
+				Real score = std::max(input_to_rotated_example_distances.maxCoeff(),
+					rotated_example_to_input_distances.maxCoeff());
 				angle_scores[angle_index] += score;
 
 				annDeallocPts(rotated_example_ann_points);
@@ -353,9 +353,8 @@ void MeshViewerCore::run_part_assembly_match_parts(const std::string _mesh_filep
 				// Equation (1) ~ (3).
 				Real score = input_distance_map.dot(example_voxel_occupancies);
 				assert(score >= 0);
-				//score = (1 - 0.7) * (score / num_example_occupied_voxels)
-				//	+ (0.7) * (score / num_input_occupied_voxels);
-				score /= local_coord_voxels.n_voxels();
+				score = (1 - 0.7) * (score / num_example_occupied_voxels)
+					+ (0.7) * (score / num_input_occupied_voxels);
 
 				// DEBUG.
 				printf("[%s] (%d): %lf\n", example_mesh_name.c_str(), label_index, score);
