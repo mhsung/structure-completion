@@ -1307,7 +1307,7 @@ void get_optimization_error(
 		_single_total_energy, _pair_total_energy);
 }
 
-void optimize_attributes_once(
+void optimize_attributes_quadratic_once(
 	const std::vector<MeshCuboid *>& _cuboids,
 	const MeshCuboidPredictor& _predictor,
 	const double _single_energy_term_weight)
@@ -1383,19 +1383,20 @@ void optimize_attributes_once(
 	}
 }
 
-void optimize_attributes_once_with_constraints(
+void optimize_attributes_once(
 	MeshCuboidStructure &_cuboid_structure,
 	const MeshCuboidPredictor& _predictor,
 	const double _single_energy_term_weight,
-	const double _symmetry_energy_term_weight)
+	const double _symmetry_energy_term_weight,
+	bool _use_nonlinear_constraints)
 {
 	const Real squared_neighbor_distance = FLAGS_param_sparse_neighbor_distance *
 		_cuboid_structure.mesh_->get_object_diameter();
 
 	std::vector<MeshCuboid *> all_cuboids = _cuboid_structure.get_all_cuboids();
-	std::vector<MeshCuboidReflectionSymmetryGroup *>& all_reflection_symmetry_groups
+	std::vector<MeshCuboidReflectionSymmetryGroup *> all_reflection_symmetry_groups
 		= _cuboid_structure.reflection_symmetry_groups_;
-	std::vector<MeshCuboidRotationSymmetryGroup *>& all_rotation_symmetry_groups
+	std::vector<MeshCuboidRotationSymmetryGroup *> all_rotation_symmetry_groups
 		= _cuboid_structure.rotation_symmetry_groups_;
 
 	const unsigned int num_attributes = MeshCuboidAttributes::k_num_attributes;
@@ -1419,6 +1420,12 @@ void optimize_attributes_once_with_constraints(
 	Eigen::VectorXd linear_term = pair_linear_term + _single_energy_term_weight * single_linear_term;
 	double constant_term = pair_constant_term + _single_energy_term_weight * single_constant_term;
 
+	if (!_use_nonlinear_constraints)
+	{
+		all_reflection_symmetry_groups.clear();
+		all_rotation_symmetry_groups.clear();
+	}
+
 	MeshCuboidNonLinearSolver non_linear_solver(
 		all_cuboids,
 		all_reflection_symmetry_groups,
@@ -1438,7 +1445,8 @@ void optimize_attributes(
 	const double _symmetry_energy_term_weight,
 	const unsigned int _max_num_iterations,
 	const std::string _log_filename,
-	GLViewerCore *_viewer)
+	GLViewerCore *_viewer,
+	bool _use_nonlinear_constraints)
 {
 	std::ofstream log_file(_log_filename, std::ofstream::out | std::ofstream::app);
 	assert(log_file);
@@ -1481,16 +1489,11 @@ void optimize_attributes(
 		sstr << "iteration [" << iteration << "]" << std::endl;
 		std::cout << sstr.str(); log_file << sstr.str();
 
-		if (FLAGS_param_optimize_with_non_linear_constraints)
-		{
-			optimize_attributes_once_with_constraints(
-				_cuboid_structure, _predictor,
-				_single_energy_term_weight, _symmetry_energy_term_weight);
-		}
-		else
-		{
-			optimize_attributes_once(all_cuboids, _predictor, _single_energy_term_weight);
-		}
+		//optimize_attributes_quadratic_once(all_cuboids, _predictor, _single_energy_term_weight);
+		optimize_attributes_once(
+			_cuboid_structure, _predictor,
+			_single_energy_term_weight, _symmetry_energy_term_weight,
+			_use_nonlinear_constraints);
 		
 		
 		if (_viewer) _viewer->updateGL();

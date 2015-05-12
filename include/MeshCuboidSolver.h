@@ -63,16 +63,17 @@ void get_optimization_error(
 	const MeshCuboidPredictor &_predictor,
 	double &_single_total_energy, double &_pair_total_energy);
 
-void optimize_attributes_once(
+void optimize_attributes_quadratic_once(
 	const std::vector<MeshCuboid *>& _cuboids,
 	const MeshCuboidPredictor &_predictor,
 	const double _single_energy_term_weight);
 
-void optimize_attributes_once_with_constraints(
+void optimize_attributes_once(
 	MeshCuboidStructure &_cuboid_structure,
 	const MeshCuboidPredictor &_predictor,
 	const double _single_energy_term_weight,
-	const double _symmetry_energy_term_weight);
+	const double _symmetry_energy_term_weight,
+	bool _use_nonlinear_constraints);
 
 void optimize_attributes(
 	MeshCuboidStructure &_cuboid_structure,
@@ -82,7 +83,8 @@ void optimize_attributes(
 	const double _symmetry_energy_term_weight,
 	const unsigned int _max_num_iterations,
 	const std::string _log_filename,
-	GLViewerCore *_viewer = NULL);
+	GLViewerCore *_viewer,
+	bool _use_nonlinear_constraints);
 
 void add_missing_cuboids_once(
 	const std::vector<MeshCuboid *>& _given_cuboids,

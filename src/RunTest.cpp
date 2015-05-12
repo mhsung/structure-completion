@@ -145,7 +145,7 @@ void MeshViewerCore::test_optimize()
 {
 	optimize_attributes(cuboid_structure_, test_occlusion_modelview_matrix_, *test_joint_normal_predictor_,
 		FLAGS_param_opt_single_energy_term_weight, FLAGS_param_opt_symmetry_energy_term_weight,
-		FLAGS_param_opt_max_iterations, "log.txt", this);
+		FLAGS_param_opt_max_iterations, "log.txt", this, false);
 }
 
 

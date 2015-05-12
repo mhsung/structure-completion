@@ -455,7 +455,8 @@ void MeshViewerCore::train()
 				MeshCuboidPredictor predictor(num_labels);
 				optimize_attributes(cuboid_structure_, NULL, predictor,
 					FLAGS_param_opt_single_energy_term_weight, FLAGS_param_opt_symmetry_energy_term_weight,
-					1, output_filename_sstr.str(), this);
+					1, output_filename_sstr.str(), this,
+					FLAGS_param_optimize_with_non_linear_constraints);
 
 				updateGL();
 				output_filename_sstr.clear(); output_filename_sstr.str("");
@@ -919,7 +920,14 @@ void MeshViewerCore::predict()
 
 		optimize_attributes(cuboid_structure_, occlusion_modelview_matrix, joint_normal_predictor,
 			FLAGS_param_opt_single_energy_term_weight, FLAGS_param_opt_symmetry_energy_term_weight,
-			FLAGS_param_opt_max_iterations, log_filename_sstr.str(), this);
+			FLAGS_param_opt_max_iterations, log_filename_sstr.str(), this, false);
+
+		if (FLAGS_param_optimize_with_non_linear_constraints)
+		{
+			optimize_attributes(cuboid_structure_, occlusion_modelview_matrix, joint_normal_predictor,
+				FLAGS_param_opt_single_energy_term_weight, FLAGS_param_opt_symmetry_energy_term_weight,
+				FLAGS_param_opt_max_iterations, log_filename_sstr.str(), this, true);
+		}
 
 		updateGL();
 		snapshot_filename_sstr.clear(); snapshot_filename_sstr.str("");

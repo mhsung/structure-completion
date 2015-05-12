@@ -349,8 +349,8 @@ NLPFunction *MeshCuboidNonLinearSolver::create_rotation_symmetry_group_energy_fu
 		++symmetry_group_index)
 	{
 		// Minimize \| t \|_2^2.
-		//NLPVectorExpression t_variable = create_rotation_symmetry_group_variable_t(symmetry_group_index);
-		//expression += NLPVectorExpression::dot_product(t_variable, t_variable);
+		NLPVectorExpression t_variable = create_rotation_symmetry_group_variable_t(symmetry_group_index);
+		expression += NLPVectorExpression::dot_product(t_variable, t_variable);
 
 		create_rotation_symmetry_group_energy_function(symmetry_group_index,
 			cuboid_ann_points, cuboid_ann_kd_tree, expression);
@@ -880,6 +880,15 @@ void MeshCuboidNonLinearSolver::optimize(
 	const double _cuboid_constant_term,
 	Eigen::VectorXd* _init_values_vec)
 {
+	// Update rotation angle.
+	for (unsigned int symmetry_group_index = 0; symmetry_group_index < num_rotation_symmetry_groups_;
+		++symmetry_group_index)
+	{
+		MeshCuboidRotationSymmetryGroup* symmetry_group = rotation_symmetry_groups_[symmetry_group_index];
+		assert(symmetry_group);
+		symmetry_group->compute_rotation_angle(cuboids_);
+	}
+
 	std::vector<NLPFunction *> functions;
 	create_energy_functions(_cuboid_quadratic_term, _cuboid_linear_term, _cuboid_constant_term, functions);
 	NLPFormulation formulation(functions);
