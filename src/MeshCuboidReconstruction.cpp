@@ -347,6 +347,10 @@ void MeshViewerCore::reconstruct_database_prior(
 						}
 					}
 
+					// Ignore if the input cuboid is too small.
+					if ((local_coord_bbox_min - local_coord_bbox_max).norm() < part_assembly_voxel_size)
+						continue;
+
 					MeshCuboidVoxelGrid local_coord_voxels(local_coord_bbox_min, local_coord_bbox_max,
 						part_assembly_voxel_size);
 
@@ -381,19 +385,19 @@ void MeshViewerCore::reconstruct_database_prior(
 
 	// NOTE:
 	// Select the same 3D model for symmetric parts.
-	for (std::vector< MeshCuboidSymmetryGroupInfo >::iterator jt = example_cuboid_structure.symmetry_group_info_.begin();
-		jt != example_cuboid_structure.symmetry_group_info_.end(); ++jt)
+	for (std::vector< MeshCuboidSymmetryGroupInfo >::iterator it = example_cuboid_structure.symmetry_group_info_.begin();
+		it != example_cuboid_structure.symmetry_group_info_.end(); ++it)
 	{
-		MeshCuboidSymmetryGroupInfo &symmetry_group = (*jt);
-		for (std::vector< std::pair<LabelIndex, LabelIndex> >::iterator kt = symmetry_group.pair_label_indices_.begin();
-			kt != symmetry_group.pair_label_indices_.end(); ++kt)
+		MeshCuboidSymmetryGroupInfo &symmetry_group = (*it);
+		for (std::vector< std::pair<LabelIndex, LabelIndex> >::iterator jt = symmetry_group.pair_label_indices_.begin();
+			jt != symmetry_group.pair_label_indices_.end(); ++jt)
 		{
-			LabelIndex label_index_1 = (*kt).first;
-			LabelIndex label_index_2 = (*kt).second;
+			LabelIndex label_index_1 = (*jt).first;
+			LabelIndex label_index_2 = (*jt).second;
 
-			// If both symmetric cuboids exist.
+			// If either one of symmetric cuboids exists.
 			if (label_matched_objects[label_index_1].first >= 0
-				&& label_matched_objects[label_index_2].first >= 0)
+				|| label_matched_objects[label_index_2].first >= 0)
 			{
 				if (label_matched_objects[label_index_1].first >= label_matched_objects[label_index_2].first)
 					label_matched_objects[label_index_2] = label_matched_objects[label_index_1];

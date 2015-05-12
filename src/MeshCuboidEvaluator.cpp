@@ -277,11 +277,6 @@ void MeshCuboidEvaluator::evaluate_point_to_point_distances(
 	}
 
 
-	Real distance_error = (ground_truth_to_test_distances.squaredNorm() / num_ground_truth_sample_points)
-		+ (test_to_ground_truth_distances.squaredNorm() / num_test_sample_points);
-	assert(distance_error >= 0);
-
-
 	Eigen::VectorXd accuracy(FLAGS_param_eval_num_neighbor_range_samples);
 	Eigen::VectorXd completeness(FLAGS_param_eval_num_neighbor_range_samples);
 

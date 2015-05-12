@@ -819,7 +819,9 @@ void compute_labels_and_axes_configuration_potentials(
 			{
 				assert(cuboid_index_1 != cuboid_index_2);
 
+#ifdef WIN32
 #pragma omp parallel for
+#endif
 				for (int case_index_2 = 0; case_index_2 < num_cases; ++case_index_2)
 				{
 					if (_add_dummy_label && case_index_2 >= (num_cases - 1))
@@ -1845,9 +1847,6 @@ bool add_missing_cuboids(
 		}
 	}
 
-	delete[] is_given_label_indices;
-
-
 	// If some missing labels are not added, these labels are ignored.
 	for (std::list<LabelIndex>::const_iterator it = _missing_label_indices.begin();
 		it != _missing_label_indices.end(); ++it)
@@ -1891,6 +1890,8 @@ bool add_missing_cuboids(
 	}
 
 	_ignored_label_indices.insert(new_ignored_label_indices.begin(), new_ignored_label_indices.end());
+
+	delete[] is_given_label_indices;
 
 	return !(added_label_indices.empty());
 }
