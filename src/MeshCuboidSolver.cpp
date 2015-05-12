@@ -819,7 +819,9 @@ void compute_labels_and_axes_configuration_potentials(
 			{
 				assert(cuboid_index_1 != cuboid_index_2);
 
+#ifdef WIN32
 #pragma omp parallel for
+#endif
 				for (int case_index_2 = 0; case_index_2 < num_cases; ++case_index_2)
 				{
 					if (_add_dummy_label && case_index_2 >= (num_cases - 1))
