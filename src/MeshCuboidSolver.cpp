@@ -489,11 +489,11 @@ void segment_sample_points(
 
 			assert(cuboid_ann_kd_tree[cuboid_index]);
 			cuboid_ann_kd_tree[cuboid_index]->annkSearch(q, 1, nn_idx, dd);
-			double distance = dd[0];
-			assert(distance >= 0);
+			double squared_distance = dd[0];
+			assert(squared_distance >= 0);
 
 			double label_probability = sample_point->label_index_confidence_[label_index];
-			double energy = distance * distance - lambda * std::log(label_probability);
+			double energy = squared_distance - lambda * std::log(label_probability);
 
 			//if (cuboid->is_group_cuboid())
 			//	energy = FLAGS_param_max_potential;

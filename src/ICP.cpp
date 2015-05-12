@@ -99,7 +99,7 @@ namespace ICP {
 
 			_data_ann_kd_tree->annkSearch(q, 1, nn_idx, dd);
 			assert(point_index < _distances.rows());
-			_distances[point_index] = dd[0];
+			_distances[point_index] = std::sqrt(dd[0]);
 		}
 
 		// Deallocate ANN.
