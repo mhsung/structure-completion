@@ -1845,9 +1845,6 @@ bool add_missing_cuboids(
 		}
 	}
 
-	delete[] is_given_label_indices;
-
-
 	// If some missing labels are not added, these labels are ignored.
 	for (std::list<LabelIndex>::const_iterator it = _missing_label_indices.begin();
 		it != _missing_label_indices.end(); ++it)
@@ -1891,6 +1888,8 @@ bool add_missing_cuboids(
 	}
 
 	_ignored_label_indices.insert(new_ignored_label_indices.begin(), new_ignored_label_indices.end());
+
+	delete[] is_given_label_indices;
 
 	return !(added_label_indices.empty());
 }
