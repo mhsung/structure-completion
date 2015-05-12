@@ -12,6 +12,7 @@ import math
 import numpy as np
 import os.path
 import shutil
+import sys
 from collections import namedtuple
 from PIL import Image
 from enum import Enum
@@ -21,19 +22,19 @@ from enum import Enum
 threshold = 0.001
 thumbname_width = 150
 
+input_path_postfix = '/output/'
+output_path_root = '/home/mhsung/app/cuboid-prediction/output/'
 
-#
+
+##
 dataset_name = 'Assembly Chairs'
 symmetry_part_names = ['seat', 'back', 'legs', 'wheels', 'leg_column', 'armrests']
-input_path = '/home/mhsung/app/cuboid-prediction/experiments/exp9_assembly_chairs/output'
-output_path = '/home/mhsung/Dropbox/Public/web/exp9_assembly_chairs'
 
 #dataset_name = 'Assembly Airplanes'
 #symmetry_part_names = ['body', 'wings', 'tail_wings', 'fuselages', 'body']
-#input_path = '/home/mhsung/app/cuboid-prediction/experiments/exp1_assembly_airplanes/output'
-#output_path = '/home/mhsung/Dropbox/Public/web/exp1_assembly_airplanes'
+##
 
-#
+
 class AttrType(Enum):
     text = 1
     image = 2
@@ -315,6 +316,18 @@ def write_html_table(instances, title, filename):
 
 
 def main():
+    ## Parse arguments
+    if len(sys.argv) < 2:
+        print("Usage: " + sys.argv[0] + " experiment_path")
+        exit()
+    else:
+        data_path = sys.argv[1]
+        data_dirname = os.path.basename(os.path.normpath(data_path))
+        input_path = data_path + input_path_postfix
+        output_path = output_path_root + os.path.basename(data_dirname)
+        print(input_path)
+        print(output_path)
+
     if not os.path.isdir(output_path):
         os.makedirs(output_path)
 

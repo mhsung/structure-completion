@@ -47,6 +47,8 @@ binDir = "../../build/OSMesaViewer/build/Build/bin/"
 
 
 ## Batch jobs
+cwd = os.getcwd()
+
 os.chdir(expDir);
 jobIDs = [];
 removeFiles = [];
@@ -80,3 +82,12 @@ for mName in mListTest:
 		print("====================\n");
 
 fas.WaitForJobsInArray(jobIDs);
+
+
+os.chdir(cwd);
+
+print('Generating HTML table...');
+os.system('./generate_html_table.py ' + expDir);
+
+print('Copying to web server...');
+os.system('../output/rsync_corn.sh');
