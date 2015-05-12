@@ -19,7 +19,7 @@ from enum import Enum
 
 
 # Parameters
-threshold = 0.001
+threshold = 0.032
 thumbname_width = 150
 
 input_path_postfix = '/output/'
@@ -90,6 +90,30 @@ def create_thumbnails(image_filepath, basewidth):
     img.save(thumbname_filename)
 
 
+def find_best_candidate(dirname, prefix):
+    candidate_index = 0
+
+    max_accuracy_value = 0
+    best_candidate_index = 0
+
+    while True:
+        csv_filename_postfix = '_' + str(candidate_index) + '_symmetry'
+        csv_filename = dirname + '/' + prefix + csv_filename_postfix + '.csv'
+        if not os.path.exists(csv_filename):
+            break
+
+        all_values = get_csv_value(csv_filename, threshold)
+        accuracy_value = all_values[0]
+
+        if accuracy_value > max_accuracy_value:
+            max_accuracy_value = accuracy_value
+            best_candidate_index = candidate_index
+
+        candidate_index += 1
+
+    return best_candidate_index
+
+
 def load_instances(input_filepath, output_filepath, symemtry_part_index):
     dirnames = glob.glob(input_filepath + '/*')
 
@@ -104,16 +128,19 @@ def load_instances(input_filepath, output_filepath, symemtry_part_index):
 
         is_loaded = True
 
+        candidate_index = find_best_candidate(dirname, prefix)
+        print('Candidate index: ' + str(candidate_index))
+
         relative_image_filepath = []
         image_filenames = []
         image_filenames.append(prefix + '_view.png')
-        image_filenames.append(prefix + '_0.png')
-        image_filenames.append(prefix + '_0_symmetry_accuracy.png')
-        image_filenames.append(prefix + '_0_symmetry_completeness.png')
-        image_filenames.append(prefix + '_0_database_accuracy.png')
-        image_filenames.append(prefix + '_0_database_completeness.png')
-        image_filenames.append(prefix + '_0_fusion_accuracy.png')
-        image_filenames.append(prefix + '_0_fusion_completeness.png')
+        image_filenames.append(prefix + '_' + str(candidate_index) + '.png')
+        image_filenames.append(prefix + '_' + str(candidate_index) + '_symmetry_accuracy.png')
+        image_filenames.append(prefix + '_' + str(candidate_index) + '_symmetry_completeness.png')
+        image_filenames.append(prefix + '_' + str(candidate_index) + '_database_accuracy.png')
+        image_filenames.append(prefix + '_' + str(candidate_index) + '_database_completeness.png')
+        image_filenames.append(prefix + '_' + str(candidate_index) + '_fusion_accuracy.png')
+        image_filenames.append(prefix + '_' + str(candidate_index) + '_fusion_completeness.png')
 
         for image_filename in image_filenames:
             if not os.path.exists(dirname + '/' + image_filename):
@@ -137,14 +164,14 @@ def load_instances(input_filepath, output_filepath, symemtry_part_index):
         accuracy_values = []
         completeness_values = []
         csv_filename_postfixes = []
-        csv_filename_postfixes.append('_0_symmetry')
-        csv_filename_postfixes.append('_0_database')
-        csv_filename_postfixes.append('_0_fusion')
+        csv_filename_postfixes.append('_' + str(candidate_index) + '_symmetry')
+        csv_filename_postfixes.append('_' + str(candidate_index) + '_database')
+        csv_filename_postfixes.append('_' + str(candidate_index) + '_fusion')
 
         for csv_filename_postfix in csv_filename_postfixes:
             csv_filename = dirname + '/' + prefix + csv_filename_postfix + '.csv'
             if symemtry_part_index >= 0:
-            # Real per-part files.
+                # Read per-part files.
                 csv_filename = dirname + '/' + prefix + csv_filename_postfix\
                                + '_' + str(symemtry_part_index) + '.csv'
 
