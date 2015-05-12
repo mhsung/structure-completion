@@ -200,6 +200,85 @@ void MeshViewerCore::run_part_assembly_render_alignment(const std::string _mesh_
 	setDrawMode(CUSTOM_VIEW);
 }
 
+void get_consistent_matching_parts(
+	const MeshCuboidStructure &_cuboid_structure,
+	const MeshCuboidTrainer &_trainer,
+	std::vector< std::pair<Real, std::string> > &_label_matched_object_scores,
+	std::vector<std::string> &_label_matched_objects)
+{
+	unsigned int num_labels = _cuboid_structure.num_labels();
+	assert(_label_matched_object_scores.size() == num_labels);
+
+	_label_matched_objects.clear();
+	_label_matched_objects.resize(num_labels, "");
+
+
+	// Remove conflicted labels.
+	std::vector< std::list<LabelIndex> > conflicted_labels;
+	_trainer.get_conflicted_labels(conflicted_labels);
+	assert(conflicted_labels.size() == num_labels);
+
+	bool *is_label_index_visited = new bool[num_labels];
+	memset(is_label_index_visited, false, num_labels * sizeof(bool));
+
+	while (true)
+	{
+		Real max_score = 0;
+		LabelIndex max_score_label_index = 0;
+
+		for (LabelIndex label_index = 0; label_index < num_labels; ++label_index)
+		{
+			Real score = _label_matched_object_scores[label_index].first;
+			if (!is_label_index_visited[label_index] && score > max_score)
+			{
+				max_score = _label_matched_object_scores[label_index].first;
+				max_score_label_index = label_index;
+			}
+		}
+
+		if (max_score == 0)
+			break;
+
+		std::string other_mesh_filepath = _label_matched_object_scores[max_score_label_index].second;
+		_label_matched_objects[max_score_label_index] = other_mesh_filepath;
+		is_label_index_visited[max_score_label_index] = true;
+
+		for (std::list<LabelIndex>::iterator it = conflicted_labels[max_score_label_index].begin();
+			it != conflicted_labels[max_score_label_index].end(); ++it)
+		{
+			assert(*it < num_labels);
+			is_label_index_visited[*it] = true;
+		}
+	}
+
+	delete[] is_label_index_visited;
+
+
+	// NOTE:
+	// Select the same 3D model for symmetric parts.
+	for (std::vector< MeshCuboidSymmetryGroupInfo >::const_iterator it = _cuboid_structure.symmetry_group_info_.begin();
+		it != _cuboid_structure.symmetry_group_info_.end(); ++it)
+	{
+		const MeshCuboidSymmetryGroupInfo &symmetry_group = (*it);
+		for (std::vector< std::pair<LabelIndex, LabelIndex> >::const_iterator jt = symmetry_group.pair_label_indices_.begin();
+			jt != symmetry_group.pair_label_indices_.end(); ++jt)
+		{
+			LabelIndex label_index_1 = (*jt).first;
+			LabelIndex label_index_2 = (*jt).second;
+
+			// If either one of symmetric cuboids exists.
+			if (_label_matched_objects[label_index_1] != ""
+				|| _label_matched_objects[label_index_2] != "")
+			{
+				if (_label_matched_object_scores[label_index_1].first >= _label_matched_object_scores[label_index_2].first)
+					_label_matched_objects[label_index_2] = _label_matched_objects[label_index_1];
+				else
+					_label_matched_objects[label_index_1] = _label_matched_objects[label_index_2];
+			}
+		}
+	}
+}
+
 void MeshViewerCore::run_part_assembly_match_parts(const std::string _mesh_filepath,
 	const Real _xy_size, const Real _z_size, const Real _angle,
 	const MeshCuboidTrainer &_trainer, std::vector<std::string> &_label_matched_objects)
@@ -371,76 +450,8 @@ void MeshViewerCore::run_part_assembly_match_parts(const std::string _mesh_filep
 	annDeallocPts(input_ann_points);
 	delete input_ann_kd_tree;
 
-
-	_label_matched_objects.clear();
-	_label_matched_objects.resize(num_labels, "");
-
-	// Remove conflicted labels.
-	std::vector< std::list<LabelIndex> > conflicted_labels;
-	_trainer.get_conflicted_labels(conflicted_labels);
-	assert(conflicted_labels.size() == num_labels);
-
-	bool *is_label_index_visited = new bool[num_labels];
-	memset(is_label_index_visited, false, num_labels * sizeof(bool));
-
-	while (true)
-	{
-		Real max_score = 0;
-		LabelIndex max_score_label_index = 0;
-
-		for (LabelIndex label_index = 0; label_index < num_labels; ++label_index)
-		{
-			Real score = label_matched_object_scores[label_index].first;
-			if (!is_label_index_visited[label_index] && score > max_score)
-			{
-				max_score = label_matched_object_scores[label_index].first;
-				max_score_label_index = label_index;
-			}
-		}
-
-		if (max_score == 0)
-			break;
-
-		std::string other_mesh_filepath = label_matched_object_scores[max_score_label_index].second;
-		_label_matched_objects[max_score_label_index] = other_mesh_filepath;
-		is_label_index_visited[max_score_label_index] = true;
-
-		for (std::list<LabelIndex>::iterator it = conflicted_labels[max_score_label_index].begin();
-			it != conflicted_labels[max_score_label_index].end(); ++it)
-		{
-			assert(*it < num_labels);
-			is_label_index_visited[*it] = true;
-		}
-	}
-
-	delete[] is_label_index_visited;
-
-
-	// Add symmetry parts.
-	for (LabelIndex label_index = 0; label_index < num_labels; ++label_index)
-	{
-		if (_label_matched_objects[label_index] == "")
-			continue;
-
-		for (std::vector< MeshCuboidSymmetryGroupInfo >::iterator jt = cuboid_structure_.symmetry_group_info_.begin();
-			jt != cuboid_structure_.symmetry_group_info_.end(); ++jt)
-		{
-			MeshCuboidSymmetryGroupInfo &symmetry_group = (*jt);
-			for (std::vector< std::pair<LabelIndex, LabelIndex> >::iterator kt = symmetry_group.pair_label_indices_.begin();
-				kt != symmetry_group.pair_label_indices_.end(); ++kt)
-			{
-				LabelIndex symmetric_label_index = 0;
-				if (label_index == (*kt).first)
-					symmetric_label_index = (*kt).second;
-				else if (label_index == (*kt).second)
-					symmetric_label_index = (*kt).first;
-				else continue;
-
-				if (_label_matched_objects[symmetric_label_index] == "")
-					_label_matched_objects[symmetric_label_index] == _label_matched_objects[label_index];
-			}
-		}
-	}
+	get_consistent_matching_parts(cuboid_structure_, _trainer,
+		label_matched_object_scores, _label_matched_objects);
 }
 
 void MeshViewerCore::run_part_assembly_reconstruction(const std::string _mesh_filepath,
