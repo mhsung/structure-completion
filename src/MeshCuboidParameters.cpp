@@ -20,7 +20,7 @@ DEFINE_double(param_min_cuboid_bbox_diag_length, 0.3, "");
 DEFINE_double(param_sparse_neighbor_distance, 0.05, "");
 DEFINE_double(param_cuboid_split_neighbor_distance, 0.2, "");
 DEFINE_double(param_occlusion_test_neighbor_distance, 0.01, "");
-DEFINE_double(param_eval_max_neighbor_distance, 0.005, "");
+DEFINE_double(param_eval_max_neighbor_distance, 0.1, "");
 DEFINE_double(param_min_cuboid_overall_visibility, 0.8, "");
 DEFINE_double(param_max_potential, 1.0E8, "");
 DEFINE_double(param_dummy_potential, 1.0E4, "");
