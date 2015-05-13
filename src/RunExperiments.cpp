@@ -394,6 +394,10 @@ void MeshViewerCore::compute_ground_truth_cuboids()
 
 	unsigned int num_labels = cuboid_structure_.num_labels();
 
+	std::stringstream output_filename_sstr;
+	QDir output_dir;
+	output_dir.mkpath(FLAGS_training_dir.c_str());
+
 	setDrawMode(CUSTOM_VIEW);
 	open_modelview_matrix_file(FLAGS_pose_filename.c_str());
 	
@@ -419,7 +423,7 @@ void MeshViewerCore::compute_ground_truth_cuboids()
 	open_modelview_matrix_file(FLAGS_pose_filename.c_str());
 	updateGL();
 
-	std::stringstream output_filename_sstr;
+	output_filename_sstr.clear(); output_filename_sstr.str("");
 	output_filename_sstr << FLAGS_training_dir << std::string("/") << mesh_name;
 	snapshot(output_filename_sstr.str().c_str());
 
