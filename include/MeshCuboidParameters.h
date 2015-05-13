@@ -41,6 +41,7 @@ DECLARE_double(param_part_assembly_voxel_variance);
 
 // -- Experiments -- //
 //
+DECLARE_bool(run_ground_truth_cuboids);
 DECLARE_bool(run_training);
 DECLARE_bool(run_prediction);
 DECLARE_bool(run_part_assembly);

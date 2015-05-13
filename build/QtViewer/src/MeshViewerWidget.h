@@ -242,8 +242,8 @@ public slots:
 	void run_quit()	{ qApp->quit(); };
 
 
+	void run_compute_ground_truth_cuboids() { mesh_viewer_core_.compute_ground_truth_cuboids(); }
 	void run_train() { mesh_viewer_core_.train(); }
-	void run_train_file_files() { mesh_viewer_core_.train_file_files(); }
 	void run_batch_predict() { mesh_viewer_core_.batch_predict(); }
 	void run_predict() { mesh_viewer_core_.predict(); }
 	void run_batch_render_cuboids() { mesh_viewer_core_.batch_render_cuboids(); }

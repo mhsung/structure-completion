@@ -227,12 +227,12 @@ void create_menu(QMainWindow &w)
 	/* Experiment Menu			*/
 	/* ------------------------	*/
 
-	runAct = new QAction(w.tr("Train"), &w);
-	QObject::connect(runAct, SIGNAL(triggered()), w.centralWidget(), SLOT(run_train()));
+	runAct = new QAction(w.tr("Compute Cuboids"), &w);
+	QObject::connect(runAct, SIGNAL(triggered()), w.centralWidget(), SLOT(run_compute_ground_truth_cuboids()));
 	w.menuBar()->addAction(runAct);
 
-	runAct = new QAction(w.tr("Train (From files)"), &w);
-	QObject::connect(runAct, SIGNAL(triggered()), w.centralWidget(), SLOT(run_train_file_files()));
+	runAct = new QAction(w.tr("Train"), &w);
+	QObject::connect(runAct, SIGNAL(triggered()), w.centralWidget(), SLOT(run_train()));
 	w.menuBar()->addAction(runAct);
 
 	runAct = new QAction(w.tr("Batch Predict"), &w);

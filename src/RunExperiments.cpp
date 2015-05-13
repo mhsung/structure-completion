@@ -27,7 +27,13 @@ void MeshViewerCore::parse_arguments()
 	std::cout << "mesh_label_path = " << FLAGS_data_root_path + FLAGS_mesh_label_path << std::endl;
 	std::cout << "output_dir = " << FLAGS_output_dir << std::endl;
 
-	if (FLAGS_run_training)
+	if (FLAGS_run_ground_truth_cuboids)
+	{
+		std::cout << "mesh_filename = " << FLAGS_mesh_filename << std::endl;
+		compute_ground_truth_cuboids();
+		exit(EXIT_FAILURE);
+	}
+	else if (FLAGS_run_training)
 	{
 		train();
 		exit(EXIT_FAILURE);
@@ -366,6 +372,82 @@ void MeshViewerCore::set_random_view_direction(bool _set_modelview_matrix)
 	updateGL();
 }
 
+void MeshViewerCore::compute_ground_truth_cuboids()
+{
+	bool ret = true;
+	ret = ret & cuboid_structure_.load_labels((FLAGS_data_root_path +
+		FLAGS_label_info_path + FLAGS_label_info_filename).c_str());
+	ret = ret & cuboid_structure_.load_label_symmetries((FLAGS_data_root_path +
+		FLAGS_label_info_path + FLAGS_label_symmetry_info_filename).c_str());
+
+	// Load symmetry groups.
+	ret = ret & cuboid_structure_.load_symmetry_groups((FLAGS_data_root_path +
+		FLAGS_label_info_path + FLAGS_symmetry_group_info_filename).c_str());
+
+	if (!ret)
+	{
+		do {
+			std::cout << "Error: Cannot open label information files.";
+			std::cout << '\n' << "Press the Enter key to continue.";
+		} while (std::cin.get() != '\n');
+	}
+
+	unsigned int num_labels = cuboid_structure_.num_labels();
+
+	setDrawMode(CUSTOM_VIEW);
+	open_modelview_matrix_file(FLAGS_pose_filename.c_str());
+	
+	std::string mesh_filepath = FLAGS_data_root_path + FLAGS_mesh_path + std::string("/") + FLAGS_mesh_filename;
+	QFileInfo mesh_file(mesh_filepath.c_str());
+	std::string mesh_name = std::string(mesh_file.baseName().toLocal8Bit());
+
+	if (!mesh_file.exists())
+	{
+		std::cerr << "Error: The mesh file does not exist (" << mesh_filepath << ")." << std::endl;
+		return;
+	}
+	else if (!open_mesh(mesh_filepath.c_str()))
+	{
+		std::cerr << "Error: The mesh file cannot be opened (" << mesh_filepath << ")." << std::endl;
+		return;
+	}
+
+	ret = load_object_info(mesh_, cuboid_structure_, mesh_filepath.c_str(), LoadGroundTruthData);
+	if (!ret) return;
+
+	mesh_.clear_colors();
+	open_modelview_matrix_file(FLAGS_pose_filename.c_str());
+	updateGL();
+
+	std::stringstream output_filename_sstr;
+	output_filename_sstr << FLAGS_training_dir << std::string("/") << mesh_name;
+	snapshot(output_filename_sstr.str().c_str());
+
+	if (FLAGS_param_optimize_training_cuboids)
+	{
+		cuboid_structure_.compute_symmetry_groups();
+
+		output_filename_sstr.clear(); output_filename_sstr.str("");
+		output_filename_sstr << FLAGS_training_dir << std::string("/") << mesh_name << std::string("_log.txt");
+
+		// Iterate only once.
+		MeshCuboidPredictor predictor(num_labels);
+		optimize_attributes(cuboid_structure_, NULL, predictor,
+			FLAGS_param_opt_single_energy_term_weight, FLAGS_param_opt_symmetry_energy_term_weight,
+			1, output_filename_sstr.str(), this,
+			FLAGS_param_optimize_with_non_linear_constraints);
+
+		updateGL();
+		output_filename_sstr.clear(); output_filename_sstr.str("");
+		output_filename_sstr << FLAGS_training_dir << std::string("/") << mesh_name << std::string("_optimized");
+		snapshot(output_filename_sstr.str().c_str());
+	}
+
+	output_filename_sstr.clear(); output_filename_sstr.str("");
+	output_filename_sstr << FLAGS_training_dir << std::string("/") << mesh_name << std::string(".arff");
+	cuboid_structure_.save_cuboids(output_filename_sstr.str());
+}
+
 void MeshViewerCore::train()
 {
 	bool ret = true;
@@ -432,6 +514,16 @@ void MeshViewerCore::train()
 			std::string mesh_filepath = std::string(file_info.filePath().toLocal8Bit());
 			std::string mesh_name = std::string(file_info.baseName().toLocal8Bit());
 
+			output_filename_sstr.clear(); output_filename_sstr.str("");
+			output_filename_sstr << FLAGS_training_dir << std::string("/") << mesh_name << std::string(".arff");
+
+			bool ret = load_object_info(mesh_, cuboid_structure_, mesh_filepath.c_str(), LoadMesh,
+				output_filename_sstr.str().c_str(), false);
+			if (!ret) continue;
+
+			// NOTE:
+			// Compute ground truth cuboids first.
+			/*
 			bool ret = load_object_info(mesh_, cuboid_structure_, mesh_filepath.c_str(), LoadGroundTruthData);
 			if (!ret) continue;
 
@@ -467,7 +559,7 @@ void MeshViewerCore::train()
 			output_filename_sstr.clear(); output_filename_sstr.str("");
 			output_filename_sstr << FLAGS_training_dir << std::string("/") << mesh_name << std::string(".arff");
 			cuboid_structure_.save_cuboids(output_filename_sstr.str());
-
+			*/
 
 			assert(cuboid_structure_.num_labels() == num_labels);
 			for (LabelIndex label_index_1 = 0; label_index_1 < num_labels; ++label_index_1)
@@ -605,6 +697,7 @@ void MeshViewerCore::train()
 	std::cout << " -- Batch Completed. -- " << std::endl;
 }
 
+/*
 void MeshViewerCore::train_file_files()
 {
 	unsigned int num_cuboids = 0;
@@ -664,6 +757,7 @@ void MeshViewerCore::train_file_files()
 	//}
 	////
 }
+*/
 
 void MeshViewerCore::batch_predict()
 {
