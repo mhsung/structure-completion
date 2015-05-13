@@ -525,6 +525,8 @@ void MeshViewerCore::train()
 				output_filename_sstr.str().c_str(), false);
 			if (!ret) continue;
 
+			mesh_name_list_file << mesh_name << std::endl;
+
 			// NOTE:
 			// Compute ground truth cuboids first.
 			/*
