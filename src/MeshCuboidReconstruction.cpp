@@ -348,8 +348,18 @@ void MeshViewerCore::reconstruct_database_prior(
 					}
 
 					// Ignore if the input cuboid is too small.
-					if ((local_coord_bbox_min - local_coord_bbox_max).norm() < part_assembly_voxel_size)
-						continue;
+					bool is_too_small_cuboid = false;
+					for (unsigned int axis_index = 0; axis_index < 3; ++axis_index)
+					{
+						if ((local_coord_bbox_min[axis_index] - local_coord_bbox_max[axis_index]) < part_assembly_voxel_size)
+						{
+							is_too_small_cuboid = true;
+							break;
+						}
+					}
+
+					if (is_too_small_cuboid) continue;
+
 
 					MeshCuboidVoxelGrid local_coord_voxels(local_coord_bbox_min, local_coord_bbox_max,
 						part_assembly_voxel_size);
