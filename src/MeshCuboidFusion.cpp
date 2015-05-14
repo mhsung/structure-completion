@@ -17,7 +17,13 @@ MeshCuboidVoxelGrid::MeshCuboidVoxelGrid(MyMesh::Point _min, MyMesh::Point _max,
 	{
 		assert(diff[i] > 0);
 		n_voxels_[i] = static_cast<int>(std::round(diff[i] / _unit_size));
-		n_voxels_[i] = std::max(n_voxels_[i], 2);
+		if (n_voxels_[i] < 2)
+		{
+			n_voxels_[i] = 2;
+			Real center = 0.5 * (min_[i] + max_[i]);
+			min_[i] = center - _unit_size;
+			max_[i] = center + _unit_size;
+		}
 	}
 }
 

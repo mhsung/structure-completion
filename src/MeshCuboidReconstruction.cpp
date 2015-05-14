@@ -236,6 +236,10 @@ void MeshViewerCore::reconstruct_database_prior(
 	const Real part_assembly_voxel_size = FLAGS_param_part_assembly_voxel_size *
 		cuboid_structure_.mesh_->get_object_diameter();
 
+
+	QFileInfo mesh_file_info(_mesh_filepath);
+	std::string mesh_name(mesh_file_info.baseName().toLocal8Bit());
+
 	MyMesh example_mesh;
 	MeshCuboidStructure example_cuboid_structure(&example_mesh);
 
@@ -283,14 +287,12 @@ void MeshViewerCore::reconstruct_database_prior(
 			|| example_file_info.suffix().compare("off") == 0))
 		{
 			std::string example_mesh_filepath = std::string(example_file_info.filePath().toLocal8Bit());
-
-			// Skip if the mesh is the same with the input mesh.
-			if (example_mesh_filepath.compare(_mesh_filepath) == 0)
-				continue;
-
-			//QFileInfo file_info(mesh_filepath.c_str());
 			std::string example_mesh_name(example_file_info.baseName().toLocal8Bit());
 			std::string cuboid_filepath = FLAGS_training_dir + std::string("/") + example_mesh_name + std::string(".arff");
+
+			// Skip if the mesh is the same with the input mesh.
+			if (example_mesh_name.compare(mesh_name) == 0)
+				continue;
 
 			//bool ret = load_object_info(example_mesh, example_cuboid_structure,
 			//	example_mesh_filepath.c_str(), LoadMesh, cuboid_filepath.c_str());

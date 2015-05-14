@@ -65,6 +65,9 @@ void get_transformed_sample_points(const MeshCuboidStructure &_cuboid_structure,
 void MeshViewerCore::run_part_assembly_align_database(const std::string _mesh_filepath,
 	Real &_xy_size, Real &_z_size, Real &_angle)
 {
+	QFileInfo mesh_file_info(_mesh_filepath.c_str());
+	std::string mesh_name(mesh_file_info.baseName().toLocal8Bit());
+
 	Eigen::MatrixXd input_points;
 	Eigen::VectorXd input_bbox_center;
 	get_bounding_cylinder(cuboid_structure_, input_points, input_bbox_center,
@@ -99,12 +102,11 @@ void MeshViewerCore::run_part_assembly_align_database(const std::string _mesh_fi
 			|| example_file_info.suffix().compare("off") == 0))
 		{
 			std::string example_mesh_filepath = std::string(example_file_info.filePath().toLocal8Bit());
+			std::string example_mesh_name(example_file_info.baseName().toLocal8Bit());
 
 			// Skip if the mesh is the same with the input mesh.
-			if (example_mesh_filepath.compare(_mesh_filepath) == 0)
+			if (example_mesh_name.compare(mesh_name) == 0)
 				continue;
-
-			std::string other_mesh_name(example_file_info.baseName().toLocal8Bit());
 
 			bool ret = load_object_info(example_mesh, example_cuboid_structure,
 				example_mesh_filepath.c_str(), LoadSamplePoints, NULL, false);
@@ -294,6 +296,9 @@ void MeshViewerCore::run_part_assembly_match_parts(const std::string _mesh_filep
 	assert(distance_param > 0);
 
 
+	QFileInfo mesh_file_info(_mesh_filepath.c_str());
+	std::string mesh_name(mesh_file_info.baseName().toLocal8Bit());
+
 	// Create input point KD tree.
 	unsigned int num_labels = cuboid_structure_.num_labels();
 
@@ -356,14 +361,13 @@ void MeshViewerCore::run_part_assembly_match_parts(const std::string _mesh_filep
 			|| example_file_info.suffix().compare("off") == 0))
 		{
 			std::string example_mesh_filepath = std::string(example_file_info.filePath().toLocal8Bit());
-
-			// Skip if the mesh is the same with the input mesh.
-			if (example_mesh_filepath.compare(_mesh_filepath) == 0)
-				continue;
-
 			std::string example_mesh_name(example_file_info.baseName().toLocal8Bit());
 			std::string example_cuboid_filepath = FLAGS_training_dir + std::string("/")
 				+ example_mesh_name + std::string(".arff");
+
+			// Skip if the mesh is the same with the input mesh.
+			if (example_mesh_name.compare(mesh_name) == 0)
+				continue;
 
 			bool ret = load_object_info(example_mesh, example_cuboid_structure,
 				example_mesh_filepath.c_str(), LoadDenseSamplePoints, example_cuboid_filepath.c_str(), false);
