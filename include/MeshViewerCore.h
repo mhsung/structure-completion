@@ -55,8 +55,8 @@ public:
 
 	// Experiment functions.
 	void parse_arguments();
+	void compute_ground_truth_cuboids();
 	void train();
-	void train_file_files();
 	void batch_predict();
 	void predict();
 	void run_part_assembly();

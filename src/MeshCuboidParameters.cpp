@@ -38,6 +38,7 @@ DEFINE_double(param_part_assembly_voxel_variance, 0.01, "");
 
 // -- Experiments -- //
 //
+DEFINE_bool(run_ground_truth_cuboids, false, "");
 DEFINE_bool(run_training, false, "");
 DEFINE_bool(run_prediction, false, "");
 DEFINE_bool(run_part_assembly, false, "");
