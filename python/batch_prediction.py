@@ -89,5 +89,5 @@ os.chdir(cwd);
 print('Generating HTML table...');
 os.system('./generate_html_table.py ' + expDir);
 
-print('Copying to web server...');
-os.system('../output/rsync_corn.sh');
+#print('Copying to web server...');
+#os.system('../output/rsync_corn.sh');

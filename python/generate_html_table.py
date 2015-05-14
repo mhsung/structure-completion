@@ -19,7 +19,7 @@ from enum import Enum
 
 
 # Parameters
-threshold = 0.032
+threshold = 0.02
 thumbname_width = 150
 
 input_path_postfix = '/output/'
@@ -27,11 +27,13 @@ output_path_root = '/home/mhsung/app/cuboid-prediction/output/'
 
 
 ##
-dataset_name = 'Assembly Chairs'
-symmetry_part_names = ['seat', 'back', 'legs', 'wheels', 'leg_column', 'armrests']
+dataset_name = ''
+symmetry_part_names = ''
 
-#dataset_name = 'Assembly Airplanes'
-#symmetry_part_names = ['body', 'wings', 'tail_wings', 'fuselages', 'body']
+dataset_name_set = ['assembly_chairs', 'assembly_airplanes', 'assembly_bicycles']
+symmetry_part_names_set = [['seat', 'back', 'legs', 'wheels', 'leg_column', 'armrests'],
+        ['body', 'wings', 'tail_wings', 'fuselages', 'body'],
+        ['wheel', 'handle', 'paddle', 'front_column', 'rear_body', 'front_body', 'seat', 'chain']]
 ##
 
 
@@ -40,7 +42,7 @@ class AttrType(Enum):
     image = 2
     number = 3
 
-attr_names = ['Name', 'Input_Image', 'Structure_Reconstruction_Image',
+attr_names = ['Name', 'View_Image',  'Input_Image', 'Structure_Reconstruction_Image',
               'Symmetry_Accuracy_Image', 'Symmetry_Completeness_Image',
               'Database_Accuracy_Image', 'Database_Completeness_Image',
               'Fusion_Accuracy_Image', 'Fusion_Completeness_Image',
@@ -48,7 +50,7 @@ attr_names = ['Name', 'Input_Image', 'Structure_Reconstruction_Image',
               'Database_Accuracy', 'Database_Completeness',
               'Fusion_Accuracy', 'Fusion_Completeness']
 
-attr_types = [AttrType.text, AttrType.image, AttrType.image,
+attr_types = [AttrType.text, AttrType.image,  AttrType.image, AttrType.image,
               AttrType.image, AttrType.image,
               AttrType.image, AttrType.image,
               AttrType.image, AttrType.image,
@@ -134,6 +136,7 @@ def load_instances(input_filepath, output_filepath, symemtry_part_index):
         relative_image_filepath = []
         image_filenames = []
         image_filenames.append(prefix + '_view.png')
+        image_filenames.append(prefix + '_input.png')
         image_filenames.append(prefix + '_' + str(candidate_index) + '.png')
         image_filenames.append(prefix + '_' + str(candidate_index) + '_symmetry_accuracy.png')
         image_filenames.append(prefix + '_' + str(candidate_index) + '_symmetry_completeness.png')
@@ -184,10 +187,11 @@ def load_instances(input_filepath, output_filepath, symemtry_part_index):
                 accuracy_values.append(all_values[0])
                 completeness_values.append(all_values[1])
 
-        instance = OutputInstance(prefix, relative_image_filepath[0], relative_image_filepath[1],
-                                  relative_image_filepath[2], relative_image_filepath[3],
-                                  relative_image_filepath[4], relative_image_filepath[5],
-                                  relative_image_filepath[6], relative_image_filepath[7],
+        instance = OutputInstance(prefix, relative_image_filepath[0],
+                                  relative_image_filepath[1], relative_image_filepath[2],
+                                  relative_image_filepath[3], relative_image_filepath[4],
+                                  relative_image_filepath[5], relative_image_filepath[6],
+                                  relative_image_filepath[7], relative_image_filepath[8],
                                   accuracy_values[0], completeness_values[0],
                                   accuracy_values[1], completeness_values[1],
                                   accuracy_values[2], completeness_values[2])
@@ -354,6 +358,18 @@ def main():
         output_path = output_path_root + os.path.basename(data_dirname)
         print(input_path)
         print(output_path)
+        
+        for i in range(len(dataset_name_set)):
+            if dataset_name_set[i] in data_dirname:
+                dataset_name = dataset_name_set[i]
+                symmetry_part_names = symmetry_part_names_set[i]
+                break
+
+        print(dataset_name)
+        print(symmetry_part_names)
+        if dataset_name == '':
+            print('Error: No dataset name exist.')
+            exit()
 
     if not os.path.isdir(output_path):
         os.makedirs(output_path)
