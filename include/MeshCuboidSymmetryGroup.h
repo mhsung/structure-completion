@@ -42,6 +42,7 @@ struct MeshCuboidSymmetryGroupInfo
 class MeshCuboidSymmetryGroup
 {
 public:
+	MeshCuboidSymmetryGroup();
 	MeshCuboidSymmetryGroup(const MeshCuboidSymmetryGroupInfo &_info);
 	MeshCuboidSymmetryGroup(const MeshCuboidSymmetryGroup &_other);
 	~MeshCuboidSymmetryGroup();
@@ -102,6 +103,7 @@ public:
 		const std::vector<MeshCuboid *>& _cuboids);
 	virtual ~MeshCuboidReflectionSymmetryGroup();
 
+	MeshCuboidReflectionSymmetryGroup(const MyMesh::Normal _n, const double _t);
 	MeshCuboidReflectionSymmetryGroup(const MeshCuboidSymmetryGroupInfo &_info);
 	MeshCuboidReflectionSymmetryGroup(const MeshCuboidReflectionSymmetryGroup &_other);
 

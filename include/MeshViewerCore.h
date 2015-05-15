@@ -60,6 +60,7 @@ public:
 	void batch_predict();
 	void predict();
 	void run_part_assembly();
+	void run_symmetry_detection();
 	void batch_render_point_clusters();
 	void batch_render_cuboids();
 	void batch_render_points();

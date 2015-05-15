@@ -7,6 +7,7 @@
 #include "MeshCuboidTrainer.h"
 #include "MeshCuboidSolver.h"
 #include "simplerandom.h"
+#include "SymmetryDetection.h"
 //#include "QGLOcculsionTestWidget.h"
 
 #include <sstream>
@@ -49,6 +50,12 @@ void MeshViewerCore::parse_arguments()
 		std::cout << "mesh_filename = " << FLAGS_mesh_filename << std::endl;
 		run_part_assembly();
 		exit(EXIT_FAILURE);
+	}
+	else if (FLAGS_run_symmetry_detection)
+	{
+		std::cout << "mesh_filename = " << FLAGS_mesh_filename << std::endl;
+		run_symmetry_detection();
+		//exit(EXIT_FAILURE);
 	}
 }
 
@@ -1114,6 +1121,87 @@ void MeshViewerCore::predict()
 	//for (LabelIndex label_index_1 = 0; label_index_1 < cond_normal_relations.size(); ++label_index_1)
 	//	for (LabelIndex label_index_2 = 0; label_index_2 < cond_normal_relations[label_index_1].size(); ++label_index_2)
 	//		delete cond_normal_relations[label_index_1][label_index_2];
+}
+
+void MeshViewerCore::run_symmetry_detection()
+{
+	std::string mesh_filepath = FLAGS_data_root_path + FLAGS_mesh_path + std::string("/") + FLAGS_mesh_filename;
+	QFileInfo mesh_file(mesh_filepath.c_str());
+	std::string mesh_name = std::string(mesh_file.baseName().toLocal8Bit());
+
+	if (!mesh_file.exists())
+	{
+		std::cerr << "Error: The mesh file does not exist (" << mesh_filepath << ")." << std::endl;
+		return;
+	}
+	else if (!open_mesh(mesh_filepath.c_str()))
+	{
+		std::cerr << "Error: The mesh file cannot be opened (" << mesh_filepath << ")." << std::endl;
+		return;
+	}
+
+	std::stringstream output_filename_sstr;
+
+	std::string mesh_output_path = FLAGS_symmetry_detection_dir + std::string("/") + mesh_name;
+	QDir output_dir;
+	output_dir.mkpath(FLAGS_symmetry_detection_dir.c_str());
+	output_dir.mkpath(mesh_output_path.c_str());
+
+	setDrawMode(CUSTOM_VIEW);
+	open_modelview_matrix_file(FLAGS_pose_filename.c_str());
+
+	bool ret = load_object_info(mesh_, cuboid_structure_, mesh_filepath.c_str(), LoadSamplePoints);
+	if (!ret) return;
+
+	mesh_.clear_colors();
+	open_modelview_matrix_file(FLAGS_pose_filename.c_str());
+	updateGL();
+
+	const unsigned int num_input_points = cuboid_structure_.sample_points_.size();
+	assert(num_input_points > 0);
+	Eigen::MatrixXd sample_points = Eigen::MatrixXd(3, num_input_points);
+
+	for (SamplePointIndex sample_point_index = 0; sample_point_index < num_input_points;
+		++sample_point_index)
+	{
+		const MeshSamplePoint *sample_point = cuboid_structure_.sample_points_[sample_point_index];
+		assert(sample_point);
+		for (int i = 0; i < 3; ++i)
+			sample_points.col(sample_point_index)[i] = sample_point->point_[i];
+	}
+
+	std::list<SymmetryDetection::ReflectionPlane> reflection_planes;
+	SymmetryDetection::detect_reflectional_symmetry(sample_points,
+		FLAGS_param_sparse_neighbor_distance, 0.7, reflection_planes);
+
+	//
+	for (std::vector< MeshCuboidReflectionSymmetryGroup* >::iterator it
+		= cuboid_structure_.reflection_symmetry_groups_.begin();
+		it != cuboid_structure_.reflection_symmetry_groups_.end(); ++it)
+		delete (*it);
+	cuboid_structure_.reflection_symmetry_groups_.clear();
+	//
+
+	for (std::list<SymmetryDetection::ReflectionPlane>::iterator it = reflection_planes.begin();
+		it != reflection_planes.end(); ++it)
+	{
+		MyMesh::Normal normal;
+		MyMesh::Point point;
+		for (int i = 0; i < 3; ++i)
+		{
+			normal[i] = (*it).normal_[i];
+			point[i] = (*it).point_[i];
+		}
+
+		MeshCuboidReflectionSymmetryGroup *symmetry_group = new MeshCuboidReflectionSymmetryGroup(
+			normal, dot(normal, point));
+		cuboid_structure_.reflection_symmetry_groups_.push_back(symmetry_group);
+	}
+
+	updateGL();
+	output_filename_sstr.clear(); output_filename_sstr.str("");
+	output_filename_sstr << mesh_output_path << std::string("/") << mesh_name;
+	snapshot(output_filename_sstr.str().c_str());
 }
 
 void MeshViewerCore::batch_render_point_clusters()

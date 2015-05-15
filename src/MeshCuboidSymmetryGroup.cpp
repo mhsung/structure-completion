@@ -29,6 +29,11 @@ MeshCuboidSymmetryGroupInfo::MeshCuboidSymmetryGroupInfo(const MeshCuboidSymmetr
 	pair_label_indices_ = _other.pair_label_indices_;
 }
 
+MeshCuboidSymmetryGroup::MeshCuboidSymmetryGroup()
+{
+
+}
+
 MeshCuboidSymmetryGroup::MeshCuboidSymmetryGroup(const MeshCuboidSymmetryGroupInfo &_info)
 	: info_(_info)
 	, num_symmetry_orders_(2)
@@ -250,6 +255,14 @@ MeshCuboidReflectionSymmetryGroup* MeshCuboidReflectionSymmetryGroup::constructo
 		group = NULL;
 	}
 	return group;
+}
+
+MeshCuboidReflectionSymmetryGroup::MeshCuboidReflectionSymmetryGroup(
+	const MyMesh::Normal _n, const double _t)
+	: n_(_n)
+	, t_(_t)
+{
+
 }
 
 MeshCuboidReflectionSymmetryGroup::MeshCuboidReflectionSymmetryGroup(

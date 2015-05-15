@@ -45,6 +45,7 @@ DECLARE_bool(run_ground_truth_cuboids);
 DECLARE_bool(run_training);
 DECLARE_bool(run_prediction);
 DECLARE_bool(run_part_assembly);
+DECLARE_bool(run_symmetry_detection);
 DECLARE_string(mesh_filename);
 
 DECLARE_string(data_root_path);
@@ -57,6 +58,7 @@ DECLARE_string(sample_label_path);
 DECLARE_string(output_dir);
 DECLARE_string(training_dir);
 DECLARE_string(part_assembly_dir);
+DECLARE_string(symmetry_detection_dir);
 
 DECLARE_string(label_info_filename);
 DECLARE_string(label_symmetry_info_filename);
