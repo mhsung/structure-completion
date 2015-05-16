@@ -1,5 +1,7 @@
 #include "MeshViewerCore.h"
 
+#include "MeshCuboidParameters.h"
+
 #include <QColor>
 #include "glut_geometry.h"
 
@@ -155,7 +157,22 @@ void MeshViewerCore::open_sample_point_file(const char* _filename)
 void MeshViewerCore::open_sample_point_label_file(const char* _filename)
 {
 	assert(_filename);
-	bool ret = cuboid_structure_.load_sample_point_labels(_filename);
+	bool ret = true;
+	
+	ret = ret & cuboid_structure_.load_labels((FLAGS_data_root_path +
+		FLAGS_label_info_path + FLAGS_label_info_filename).c_str());
+	ret = ret & cuboid_structure_.load_label_symmetries((FLAGS_data_root_path +
+		FLAGS_label_info_path + FLAGS_label_symmetry_info_filename).c_str());
+
+	if (!ret)
+	{
+		do {
+			std::cout << "Error: Cannot open label information files.";
+			std::cout << '\n' << "Press the Enter key to continue.";
+		} while (std::cin.get() != '\n');
+	}
+
+	ret = cuboid_structure_.load_sample_point_labels(_filename);
 	assert(ret);
 	updateGL();
 }
@@ -585,20 +602,20 @@ void MeshViewerCore::draw_scene(const std::string& _draw_mode)
 {
 	MeshViewerCoreT<MyMesh>::draw_scene(_draw_mode);
 
-	if (_draw_mode == CUSTOM_VIEW || _draw_mode == COLORED_POINT_SAMPLES)
+	if (_draw_mode == CUSTOM_VIEW || _draw_mode == COLORED_POINT_SAMPLES || _draw_mode == COLORED_RENDERING)
 	{
 		glDisable(GL_LIGHTING);
 		glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
 		draw_openmesh(_draw_mode);
 		glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
 	}
-	else if (_draw_mode == COLORED_RENDERING)
-	{
-		glEnable(GL_LIGHTING);
-		glShadeModel(GL_SMOOTH);
-		draw_openmesh(_draw_mode);
-		setDefaultMaterial();
-	}
+	//else if (_draw_mode == COLORED_RENDERING)
+	//{
+	//	glEnable(GL_LIGHTING);
+	//	glShadeModel(GL_SMOOTH);
+	//	draw_openmesh(_draw_mode);
+	//	setDefaultMaterial();
+	//}
 	else if (_draw_mode == FACE_INDEX_RENDERING)
 	{
 		glDisable(GL_LIGHTING);
@@ -968,6 +985,64 @@ void MeshViewerCore::draw_openmesh(const std::string& _drawmode)
 	}
 	else if (_drawmode == COLORED_RENDERING) // -------------------------------------------
 	{
+		// "cuboid_structure_.query_label_index_ == cuboid_structure_.label_cuboids_.size()" draws all parts.
+		bool draw_all_labels = (cuboid_structure_.query_label_index_ == cuboid_structure_.num_labels());
+
+		std::vector<LabelIndex> sample_point_label_indices;
+		cuboid_structure_.get_sample_point_label_indices_from_confidences(sample_point_label_indices);
+
+		// For each sample point.
+		for (SamplePointIndex sample_point_index = 0; sample_point_index < cuboid_structure_.num_sample_points();
+			++sample_point_index)
+		{
+			const MeshSamplePoint *sample_point = cuboid_structure_.sample_points_[sample_point_index];
+			assert(sample_point);
+
+			LabelIndex label_index = sample_point_label_indices[sample_point_index];
+			if (!draw_all_labels && label_index != cuboid_structure_.query_label_index_)
+			{
+				continue;
+			}
+
+			Label label = cuboid_structure_.get_label(label_index);
+			MyMesh::Color label_color = MyMesh::get_label_color(label);
+			Real r = label_color[0] / 255.0;
+			Real g = label_color[1] / 255.0;
+			Real b = label_color[2] / 255.0;
+
+			const GLdouble *point = &(sample_point->point_[0]);
+
+			Real radius = 1.0;
+			//if (cuboid_structure_.query_label_index_ < cuboid_structure_.num_labels())
+			//{
+			//	assert(sample_point->label_index_confidence_.size() == cuboid_structure_.num_labels());
+			//	radius = sample_point->label_index_confidence_[cuboid_structure_.query_label_index_];
+			//}
+
+			if (radius > 0)
+			{
+				//if (cuboid_structure_.num_sample_points() > 10000)
+				//{
+				//	glPointSize(2);
+				//	glBegin(GL_POINTS);
+				//	glColor4f(r, g, b, 1.0f);
+				//	glVertex3dv(&point[0]);
+				//	glEnd();
+				//}
+				//else
+				{
+					radius = radius * (mesh_.get_object_diameter() * 0.005) * point_size_;
+					glPushMatrix();
+					glTranslatef(point[0], point[1], point[2]);
+					glColor4f(r, g, b, 1.0f);
+					glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
+					glutSolidSphere(radius, 20, 20);
+					glPopMatrix();
+				}
+			}
+		}
+
+		/*
 		Mesh::ConstFaceIter f_it(mesh_.faces_begin()), f_end(mesh_.faces_end());
 		Mesh::ConstFaceVertexIter fv_it;
 
@@ -1071,6 +1146,7 @@ void MeshViewerCore::draw_openmesh(const std::string& _drawmode)
 		//		}
 		//	}
 		//}
+		*/
 	}
 	else if (_drawmode == "Solid Smooth") // -------------------------------------------
 	{
