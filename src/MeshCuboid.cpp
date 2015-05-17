@@ -187,6 +187,8 @@ void MeshCuboid::set_axis_configuration(const unsigned int _axis_configuration_i
 		}
 		bbox_size_[axis_index] = new_bbox_size_vec(axis_index);
 	}
+
+	update_corner_points();
 }
 
 MeshCuboid::MeshCuboid(const LabelIndex _label_index)
