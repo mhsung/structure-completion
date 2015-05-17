@@ -186,7 +186,7 @@ private:
 	MyMesh::Normal view_direction_;
 
 	// TEST.
-	std::vector< std::vector<MeshCuboidJointNormalRelations *> > joint_normal_relations_;
+	std::vector< std::vector<MeshCuboidJointNormalRelations *> > test_joint_normal_relations_;
 	MeshCuboidJointNormalRelationPredictor *test_joint_normal_predictor_;
 	double test_occlusion_modelview_matrix_[16];
 	std::vector<MeshCuboid *> all_cuboids_;

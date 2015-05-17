@@ -32,9 +32,9 @@ MeshViewerCore::~MeshViewerCore()
 	//delete occlusion_test_widget_;
 
 	// TEST.
-	for (LabelIndex label_index_1 = 0; label_index_1 < joint_normal_relations_.size(); ++label_index_1)
-		for (LabelIndex label_index_2 = 0; label_index_2 < joint_normal_relations_[label_index_1].size(); ++label_index_2)
-			delete joint_normal_relations_[label_index_1][label_index_2];
+	for (LabelIndex label_index_1 = 0; label_index_1 < test_joint_normal_relations_.size(); ++label_index_1)
+		for (LabelIndex label_index_2 = 0; label_index_2 < test_joint_normal_relations_[label_index_1].size(); ++label_index_2)
+			delete test_joint_normal_relations_[label_index_1][label_index_2];
 
 	delete test_joint_normal_predictor_;
 	//

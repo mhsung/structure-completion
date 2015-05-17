@@ -1074,8 +1074,10 @@ void MeshViewerCore::predict()
 				// FIXME:
 				// Any missing cuboid may not be added.
 				// Then, you should escapt the loop.
+				//ret = add_missing_cuboids(new_cuboid_structure, occlusion_modelview_matrix,
+				//	missing_label_indices, joint_normal_predictor, ignored_label_indices);
 				ret = add_missing_cuboids(new_cuboid_structure, occlusion_modelview_matrix,
-					missing_label_indices, joint_normal_predictor, ignored_label_indices);
+					missing_label_indices, joint_normal_relations, ignored_label_indices);
 
 				if (!ret)
 				{

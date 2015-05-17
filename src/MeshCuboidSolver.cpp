@@ -1599,7 +1599,7 @@ void optimize_attributes(
 	log_file.close();
 }
 
-void add_missing_cuboids_once(
+void add_missing_cuboids_once_old(
 	const std::vector<MeshCuboid *>& _given_cuboids,
 	const std::list<LabelIndex> &_missing_label_indices,
 	const MeshCuboidPredictor &_predictor,
@@ -1697,17 +1697,17 @@ void add_missing_cuboids_once(
 	Eigen::MatrixXd quadratic_term_21 = quadratic_term.block(given_mat_size, 0, new_mat_size, given_mat_size);
 	Eigen::MatrixXd quadratic_term_22 = quadratic_term.block(given_mat_size, given_mat_size, new_mat_size, new_mat_size);
 
-	Eigen::VectorXd linear_tern_1 = linear_term.segment(0, given_mat_size);
-	Eigen::VectorXd linear_tern_2 = linear_term.segment(given_mat_size, new_mat_size);
+	Eigen::VectorXd linear_term_1 = linear_term.segment(0, given_mat_size);
+	Eigen::VectorXd linear_term_2 = linear_term.segment(given_mat_size, new_mat_size);
 
 	new_quadratic_term = quadratic_term_22;
 
 	new_linear_term += (0.5 * given_init_values.transpose() * quadratic_term_12).transpose();
 	new_linear_term += (0.5 * given_init_values.transpose() * quadratic_term_21.transpose()).transpose();
-	new_linear_term += linear_tern_2;
+	new_linear_term += linear_term_2;
 
 	new_constant_term += (given_init_values.transpose() * quadratic_term_11 * given_init_values);
-	new_constant_term += (2 * linear_tern_1.transpose() * given_init_values);
+	new_constant_term += (2 * linear_term_1.transpose() * given_init_values);
 	new_constant_term += constant_term;
 
 
@@ -1754,11 +1754,64 @@ void add_missing_cuboids_once(
 	}
 }
 
+void add_missing_cuboids_once(
+	const MeshCuboid *_given_cuboid,
+	const std::list<LabelIndex> &_missing_label_indices,
+	const std::vector< std::vector<MeshCuboidJointNormalRelations *> > &_joint_normal_relations,
+	std::vector<MeshCuboid *>& _new_cuboids)
+{
+	assert(_given_cuboid);
+	if (_missing_label_indices.empty())
+		return;
+
+	_new_cuboids.clear();
+
+	LabelIndex given_label_index = _given_cuboid->get_label_index();
+	MeshCuboidTransformation given_transformation;
+	given_transformation.compute_transformation(_given_cuboid);
+
+	Eigen::Matrix3d given_rotation;
+	Eigen::Vector3d given_translation;
+	given_transformation.get_inverse_transformation(given_rotation, given_translation);
+
+	for (std::list<LabelIndex>::const_iterator it = _missing_label_indices.begin();
+		it != _missing_label_indices.end(); ++it)
+	{
+		LabelIndex label_index = (*it);
+		assert(given_label_index < _joint_normal_relations.size());
+		assert(label_index < _joint_normal_relations[given_label_index].size());
+
+		MeshCuboidJointNormalRelations *joint_normal_relation = _joint_normal_relations[given_label_index][label_index];
+		assert(joint_normal_relation);
+		Eigen::VectorXd mean = joint_normal_relation->get_mean();
+
+		//std::array<MyMesh::Point, MeshCuboid::k_num_corners> cuboid_corners_11;
+		std::array<MyMesh::Point, MeshCuboid::k_num_corners> cuboid_corners_12;
+		for (unsigned int corner_index = 0; corner_index < MeshCuboid::k_num_corners; ++corner_index)
+		{
+			unsigned int offset_2 = (MeshCuboidFeatures::k_num_features - MeshCuboidFeatures::k_corner_index)
+				+ MeshCuboidFeatures::k_corner_index;
+
+			Eigen::Vector3d corner_vec = mean.segment(offset_2 + 3 * corner_index, 3);
+			corner_vec = (given_rotation * corner_vec) + given_translation;
+				
+			for (unsigned int i = 0; i < 3; ++i)
+				cuboid_corners_12[corner_index][i] = corner_vec[i];
+		}
+
+		MeshCuboid *missing_cuboid = new MeshCuboid(label_index);
+		missing_cuboid->set_bbox_corners(cuboid_corners_12);
+		missing_cuboid->update_axes_center_size_corner_points();
+		_new_cuboids.push_back(missing_cuboid);
+	}
+}
+
 bool add_missing_cuboids(
 	MeshCuboidStructure &_cuboid_structure,
 	const Real _modelview_matrix[16],
 	const std::list<LabelIndex> &_missing_label_indices,
-	const MeshCuboidPredictor &_predictor,
+	//const MeshCuboidPredictor &_predictor,
+	const std::vector< std::vector<MeshCuboidJointNormalRelations *> > &_joint_normal_relations,
 	std::set<LabelIndex> &_ignored_label_indices)
 {
 	if (_missing_label_indices.empty())
@@ -1804,11 +1857,13 @@ bool add_missing_cuboids(
 	std::set<LabelIndex> added_label_indices;
 	for (unsigned int cuboid_index = 0; cuboid_index < num_all_cuboids; ++cuboid_index)
 	{
-		std::vector<MeshCuboid *> given_cuboids;
-		given_cuboids.push_back(all_cuboids[cuboid_index]);
+		//std::vector<MeshCuboid *> given_cuboids;
+		//given_cuboids.push_back(all_cuboids[cuboid_index]);
 		std::vector<MeshCuboid *> new_cuboids;
 
-		add_missing_cuboids_once(given_cuboids, _missing_label_indices, _predictor, new_cuboids);
+		//add_missing_cuboids_once_old(given_cuboids, _missing_label_indices, _predictor, new_cuboids);
+		add_missing_cuboids_once(all_cuboids[cuboid_index], _missing_label_indices,
+			_joint_normal_relations, new_cuboids);
 
 		for (std::vector<MeshCuboid *>::iterator it = new_cuboids.begin();
 			it != new_cuboids.end(); ++it)

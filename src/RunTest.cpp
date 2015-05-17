@@ -19,15 +19,15 @@ void MeshViewerCore::test_initialize()
 	unsigned int num_all_cuboid_labels = 2;
 
 
-	for (LabelIndex label_index_1 = 0; label_index_1 < joint_normal_relations_.size(); ++label_index_1)
-		for (LabelIndex label_index_2 = 0; label_index_2 < joint_normal_relations_[label_index_1].size(); ++label_index_2)
-			delete joint_normal_relations_[label_index_1][label_index_2];
+	for (LabelIndex label_index_1 = 0; label_index_1 < test_joint_normal_relations_.size(); ++label_index_1)
+		for (LabelIndex label_index_2 = 0; label_index_2 < test_joint_normal_relations_[label_index_1].size(); ++label_index_2)
+			delete test_joint_normal_relations_[label_index_1][label_index_2];
 
-	joint_normal_relations_.clear();
-	joint_normal_relations_.resize(num_all_cuboid_labels);
+	test_joint_normal_relations_.clear();
+	test_joint_normal_relations_.resize(num_all_cuboid_labels);
 	for (LabelIndex label_index_1 = 0; label_index_1 < num_all_cuboid_labels; ++label_index_1)
 	{
-		joint_normal_relations_[label_index_1].resize(num_all_cuboid_labels, NULL);
+		test_joint_normal_relations_[label_index_1].resize(num_all_cuboid_labels, NULL);
 		for (LabelIndex label_index_2 = 0; label_index_2 < num_all_cuboid_labels; ++label_index_2)
 		{
 			if (label_index_1 == label_index_2)
@@ -41,8 +41,8 @@ void MeshViewerCore::test_initialize()
 			QFileInfo relation_file(relation_filename_sstr.str().c_str());
 			if (!relation_file.exists()) continue;
 
-			joint_normal_relations_[label_index_1][label_index_2] = new MeshCuboidJointNormalRelations();
-			bool ret = joint_normal_relations_[label_index_1][label_index_2]->load_joint_normal_dat(
+			test_joint_normal_relations_[label_index_1][label_index_2] = new MeshCuboidJointNormalRelations();
+			bool ret = test_joint_normal_relations_[label_index_1][label_index_2]->load_joint_normal_dat(
 				relation_filename_sstr.str().c_str());
 			if (!ret)
 			{
@@ -54,7 +54,7 @@ void MeshViewerCore::test_initialize()
 	}
 
 	delete test_joint_normal_predictor_;
-	test_joint_normal_predictor_ = new MeshCuboidJointNormalRelationPredictor(joint_normal_relations_);
+	test_joint_normal_predictor_ = new MeshCuboidJointNormalRelationPredictor(test_joint_normal_relations_);
 
 	all_cuboids_.clear();
 	for (std::vector< std::vector<MeshCuboid *> >::iterator it = cuboid_structure_.label_cuboids_.begin();
