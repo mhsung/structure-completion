@@ -75,6 +75,8 @@ public:
 	void test_scale(const Real _scale_x, const Real _scale_y);
 	void test_rotate(const Real _angle);
 	void test_optimize();
+
+	void test_figure_1();
 	//
 
 

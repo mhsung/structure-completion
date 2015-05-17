@@ -55,7 +55,7 @@ void MeshViewerCore::parse_arguments()
 	{
 		std::cout << "mesh_filename = " << FLAGS_mesh_filename << std::endl;
 		run_symmetry_detection();
-		//exit(EXIT_FAILURE);
+		exit(EXIT_FAILURE);
 	}
 }
 
@@ -1433,6 +1433,174 @@ void MeshViewerCore::batch_render_points()
 	}
 
 	draw_cuboid_axes_ = true;
+}
+
+
+void MeshViewerCore::test_figure_1()
+{
+	// Load basic information.
+	bool ret = true;
+
+	ret = ret & cuboid_structure_.load_labels((FLAGS_data_root_path +
+		FLAGS_label_info_path + FLAGS_label_info_filename).c_str());
+	ret = ret & cuboid_structure_.load_label_symmetries((FLAGS_data_root_path +
+		FLAGS_label_info_path + FLAGS_label_symmetry_info_filename).c_str());
+
+	// Load symmetry groups.
+	ret = ret & cuboid_structure_.load_symmetry_groups((FLAGS_data_root_path +
+		FLAGS_label_info_path + FLAGS_symmetry_group_info_filename).c_str());
+
+	if (!ret)
+	{
+		do {
+			std::cout << "Error: Cannot open label information files.";
+			std::cout << '\n' << "Press the Enter key to continue.";
+		} while (std::cin.get() != '\n');
+	}
+
+	ret = true;
+	MeshCuboidTrainer trainer;
+	ret = ret & trainer.load_object_list(FLAGS_training_dir + std::string("/") + FLAGS_object_list_filename);
+	ret = ret & trainer.load_features(FLAGS_training_dir + std::string("/") + FLAGS_feature_filename_prefix);
+	ret = ret & trainer.load_transformations(FLAGS_training_dir + std::string("/") + FLAGS_transformation_filename_prefix);
+
+	if (!ret)
+	{
+		do {
+			std::cout << "Error: Cannot open training files.";
+			std::cout << '\n' << "Press the Enter key to continue.";
+		} while (std::cin.get() != '\n');
+	}
+
+
+	// Check file paths.
+	setDrawMode(CUSTOM_VIEW);
+
+
+	// Initialize basic information.
+	unsigned int num_labels = cuboid_structure_.num_labels();
+	cuboid_structure_.clear_cuboids();
+	cuboid_structure_.clear_sample_points();
+
+	std::list<std::string> ignored_object_list;
+	std::vector< std::vector<MeshCuboidJointNormalRelations *> > joint_normal_relations;
+	//MeshCuboidTrainer::load_joint_normal_relations(num_labels, "joint_normal_", joint_normal_relations);
+	trainer.get_joint_normal_relations(joint_normal_relations, &ignored_object_list);
+	MeshCuboidJointNormalRelationPredictor joint_normal_predictor(joint_normal_relations);
+
+
+	// Set label indices.
+	LabelIndex label_index_1 = 0;
+	LabelIndex label_index_2 = 1;
+
+	assert(label_index_1 < num_labels);
+	assert(label_index_2 < num_labels);
+	assert(cuboid_structure_.label_cuboids_.size() == num_labels);
+
+	MeshCuboidJointNormalRelations *joint_normal_relation = joint_normal_relations[label_index_1][label_index_2];
+	assert(joint_normal_relation);
+	Eigen::VectorXd mean = joint_normal_relation->get_mean();
+
+	std::array<MyMesh::Point, MeshCuboid::k_num_corners> cuboid_corners_11;
+	std::array<MyMesh::Point, MeshCuboid::k_num_corners> cuboid_corners_12;
+	for (unsigned int corner_index = 0; corner_index < MeshCuboid::k_num_corners; ++corner_index)
+	{
+		for (unsigned int i = 0; i < 3; ++i)
+		{
+			unsigned int offset_1 = 0;
+			unsigned int offset_2 = (MeshCuboidFeatures::k_num_features - MeshCuboidFeatures::k_corner_index)
+				+ MeshCuboidFeatures::k_corner_index;
+			cuboid_corners_11[corner_index][i] = mean[offset_1 + 3 * corner_index + i];
+			cuboid_corners_12[corner_index][i] = mean[offset_2 + 3 * corner_index + i];
+		}
+	}
+
+	MeshCuboid *cuboid_1 = new MeshCuboid(label_index_1);
+	cuboid_1->set_bbox_corners(cuboid_corners_11);
+	cuboid_1->update_axes_center_size_corner_points();
+	cuboid_structure_.label_cuboids_[label_index_1].push_back(cuboid_1);
+
+	MeshCuboid *cuboid_2 = new MeshCuboid(label_index_2);
+	cuboid_2->set_bbox_corners(cuboid_corners_12);
+	cuboid_2->update_axes_center_size_corner_points();
+	cuboid_structure_.label_cuboids_[label_index_2].push_back(cuboid_2);
+
+	MeshCuboidTransformation transformation_1;
+	MeshCuboidTransformation transformation_2;
+	transformation_1.compute_transformation(cuboid_1);
+	transformation_2.compute_transformation(cuboid_2);
+
+
+	const double variance = 200;
+	const double random_scale = 0.4;
+	const unsigned int num_random_cuboids = 20;
+	Eigen::VectorXd pairwise_cuboid_feature;
+	double error = 0.0;
+
+	
+	joint_normal_relation->get_pairwise_cuboid_features(cuboid_1, cuboid_2,
+		&transformation_1, &transformation_2, pairwise_cuboid_feature);
+	Eigen::VectorXd diff = pairwise_cuboid_feature - mean;
+
+
+	// Ignore height attributes.
+	Eigen::VectorXd mask = Eigen::VectorXd::Ones(diff.rows());
+	unsigned int start_index = 0;
+	
+	start_index += 3 * (MeshCuboid::k_num_corners);
+	mask.segment(start_index, (MeshCuboid::k_num_corners + 1)).setZero();
+
+	start_index += ((MeshCuboid::k_num_corners + 1) + 3 * (MeshCuboid::k_num_corners + 1));
+	mask.segment(start_index, (MeshCuboid::k_num_corners + 1)).setZero();
+
+	start_index += ((MeshCuboid::k_num_corners + 1) + 3 * (MeshCuboid::k_num_corners));
+	mask.segment(start_index, (MeshCuboid::k_num_corners + 1)).setZero();
+
+	start_index += ((MeshCuboid::k_num_corners + 1) + 3 * (MeshCuboid::k_num_corners + 1));
+	mask.segment(start_index, (MeshCuboid::k_num_corners + 1)).setZero();
+
+	diff = diff.cwiseProduct(mask);
+	error = diff.transpose() * joint_normal_relation->get_inv_cov() * diff;
+	error = std::exp(-error / variance);
+	std::cout << ">>> error = " << error << std::endl;
+	//cuboid_1->error = 1.0;
+	//cuboid_2->error = error;
+
+
+	static SimpleRandomCong_t rng_cong;
+	simplerandom_cong_seed(&rng_cong, FLAGS_random_view_seed);
+
+	for (unsigned int k = 0; k < num_random_cuboids; ++k)
+	{
+		std::array<MyMesh::Point, MeshCuboid::k_num_corners> temp_cuboid_corners_12;
+		for (unsigned int corner_index = 0; corner_index < MeshCuboid::k_num_corners; ++corner_index)
+		{
+			for (unsigned int i = 0; i < 3; ++i)
+			{
+				double offset = static_cast<double>(simplerandom_cong_next(&rng_cong))
+					/ std::numeric_limits<uint32_t>::max();
+				offset = offset * random_scale - (0.5 * random_scale);
+				temp_cuboid_corners_12[corner_index][i] = cuboid_corners_12[corner_index][i] + offset;
+			}
+		}
+
+		MeshCuboid *temp_cuboid_2 = new MeshCuboid(label_index_2);
+		temp_cuboid_2->set_bbox_corners(temp_cuboid_corners_12);
+		temp_cuboid_2->update_axes_center_size_corner_points();
+		cuboid_structure_.label_cuboids_[label_index_2].push_back(temp_cuboid_2);
+
+		MeshCuboidTransformation temp_transformation_2;
+		temp_transformation_2.compute_transformation(temp_cuboid_2);
+
+		joint_normal_relation->get_pairwise_cuboid_features(cuboid_1, temp_cuboid_2,
+			&transformation_1, &temp_transformation_2, pairwise_cuboid_feature);
+		Eigen::VectorXd diff = pairwise_cuboid_feature - mean;
+		diff = diff.cwiseProduct(mask);
+		error = diff.transpose() * joint_normal_relation->get_inv_cov() * diff;
+		error = std::exp(-error / variance);
+		//temp_cuboid_2->error = error;
+		std::cout << ">>> error = " << error << std::endl;
+	}
 }
 
 /*
