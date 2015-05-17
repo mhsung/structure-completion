@@ -1347,7 +1347,6 @@ void MeshCuboid::compute_oriented_bbox()
 
 	rotate(rotation_mat, true);
 
-	/*
 	// Rotate by each axis and find the minimum size of bounding box.
 	for (unsigned int axis_index = 0; axis_index < 3; ++axis_index)
 	{
@@ -1380,7 +1379,6 @@ void MeshCuboid::compute_oriented_bbox()
 		Eigen::AngleAxisd axis_rotation(min_angle, axis_vec);
 		rotate(axis_rotation.toRotationMatrix(), true);
 	}
-	*/
 
 	//// ICP-style iterative optimization.
 	//double prev_error = std::numeric_limits<double>::max();
