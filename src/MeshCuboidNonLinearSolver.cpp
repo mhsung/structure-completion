@@ -1050,8 +1050,9 @@ void MeshCuboidNonLinearSolver::update_cuboids(const std::vector< Number >& _val
 			minus_axis_direction = (minus_axis_direction / 4.0 - new_bbox_center).normalized();
 			plus_axis_direction = (plus_axis_direction / 4.0 - new_bbox_center).normalized();
 
-			if (dot(new_bbox_axes[axis_index], minus_axis_direction)
-				> dot(new_bbox_axes[axis_index], plus_axis_direction))
+			//if (dot(new_bbox_axes[axis_index], minus_axis_direction)
+			//	> dot(new_bbox_axes[axis_index], plus_axis_direction))
+			if (dot(new_bbox_axes[axis_index], cuboid->get_bbox_axis(axis_index)) < 0)
 			{
 				// Flip.
 				new_bbox_axes[axis_index] = -new_bbox_axes[axis_index];
