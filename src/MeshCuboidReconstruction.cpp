@@ -325,63 +325,82 @@ void MeshViewerCore::reconstruct_database_prior(
 					example_cuboid->get_sample_points(example_cuboid_sample_points);
 					unsigned int num_example_cuboid_sample_points = example_cuboid_sample_points.size();
 
-					if (input_cuboid_sample_points.empty() || example_cuboid_sample_points.empty())
-						continue;
 
-					// Fit example cuboid to the input cuboid.
-					for (unsigned int point_index = 0; point_index < num_example_cuboid_sample_points; ++point_index)
+					Real similarity = 0.0;
+
+					if (input_cuboid_sample_points.empty())
 					{
-						MyMesh::Point point = example_cuboid_sample_points[point_index];
-						MyMesh::Point transformed_point = get_transformed_point(point, example_cuboid, input_cuboid);
-						example_cuboid_sample_points[point_index] = transformed_point;
+						// If the input cuboid has no sample point, measure similairty using cuboid size.
+						MyMesh::Normal input_cuboid_size = input_cuboid->get_bbox_size();
+						MyMesh::Normal example_cuboid_size = example_cuboid->get_bbox_size();
+						MyMesh::Normal diff_size = (input_cuboid_size - example_cuboid_size);
+
+						similarity = 1.0;
+						for (unsigned int i = 0; i < 3; ++i)
+							similarity *= std::exp(-diff_size[i] * diff_size[i] / (0.1));
 					}
-
-					MyMesh::Point local_coord_bbox_min = input_cuboid_sample_points.front();
-					MyMesh::Point local_coord_bbox_max = input_cuboid_sample_points.front();
-					for (unsigned int point_index = 0; point_index < num_cuboid_sample_points; ++point_index)
+					else
 					{
+						if ( example_cuboid_sample_points.empty())
+							continue;
+
+						// Fit example cuboid to the input cuboid.
+						for (unsigned int point_index = 0; point_index < num_example_cuboid_sample_points; ++point_index)
+						{
+							MyMesh::Point point = example_cuboid_sample_points[point_index];
+							MyMesh::Point transformed_point = get_transformed_point(point, example_cuboid, input_cuboid);
+							example_cuboid_sample_points[point_index] = transformed_point;
+						}
+
+						MyMesh::Point local_coord_bbox_min = input_cuboid_sample_points.front();
+						MyMesh::Point local_coord_bbox_max = input_cuboid_sample_points.front();
+						for (unsigned int point_index = 0; point_index < num_cuboid_sample_points; ++point_index)
+						{
+							for (unsigned int axis_index = 0; axis_index < 3; ++axis_index)
+							{
+								local_coord_bbox_min[axis_index] = std::min(local_coord_bbox_min[axis_index],
+									input_cuboid_sample_points[point_index][axis_index]);
+								local_coord_bbox_max[axis_index] = std::max(local_coord_bbox_max[axis_index],
+									input_cuboid_sample_points[point_index][axis_index]);
+							}
+						}
+
+						// Ignore if the input cuboid is too small.
+						bool is_too_small_cuboid = false;
 						for (unsigned int axis_index = 0; axis_index < 3; ++axis_index)
 						{
-							local_coord_bbox_min[axis_index] = std::min(local_coord_bbox_min[axis_index],
-								input_cuboid_sample_points[point_index][axis_index]);
-							local_coord_bbox_max[axis_index] = std::max(local_coord_bbox_max[axis_index],
-								input_cuboid_sample_points[point_index][axis_index]);
+							if ((local_coord_bbox_max[axis_index] - local_coord_bbox_min[axis_index]) <= 0)
+							{
+								is_too_small_cuboid = true;
+								break;
+							}
 						}
+
+						if (is_too_small_cuboid) continue;
+
+
+						MeshCuboidVoxelGrid local_coord_voxels(local_coord_bbox_min, local_coord_bbox_max,
+							part_assembly_voxel_size);
+
+						Eigen::VectorXd input_voxel_occupancies;
+						local_coord_voxels.get_voxel_occupancies(input_cuboid_sample_points, input_voxel_occupancies);
+						assert(input_voxel_occupancies.rows() == local_coord_voxels.n_voxels());
+
+						Eigen::VectorXd example_cuboid_voxel_occupancies;
+						local_coord_voxels.get_voxel_occupancies(example_cuboid_sample_points, example_cuboid_voxel_occupancies);
+						assert(example_cuboid_voxel_occupancies.rows() == local_coord_voxels.n_voxels());
+
+						int num_input_occupied_voxels = (input_voxel_occupancies.array() >= 1).count();
+						int num_example_occupied_voxels = (example_cuboid_voxel_occupancies.array() >= 1).count();
+						if (num_input_occupied_voxels == 0 || num_example_occupied_voxels == 0)
+							continue;
+
+						Real score = input_voxel_occupancies.dot(example_cuboid_voxel_occupancies);
+						similarity = (1 - 0.7) * (score / num_example_occupied_voxels)
+							+ (0.7) * (score / num_input_occupied_voxels);
 					}
 
-					// Ignore if the input cuboid is too small.
-					bool is_too_small_cuboid = false;
-					for (unsigned int axis_index = 0; axis_index < 3; ++axis_index)
-					{
-						if ((local_coord_bbox_max[axis_index] - local_coord_bbox_min[axis_index]) <= 0)
-						{
-							is_too_small_cuboid = true;
-							break;
-						}
-					}
 
-					if (is_too_small_cuboid) continue;
-
-
-					MeshCuboidVoxelGrid local_coord_voxels(local_coord_bbox_min, local_coord_bbox_max,
-						part_assembly_voxel_size);
-
-					Eigen::VectorXd input_voxel_occupancies;
-					local_coord_voxels.get_voxel_occupancies(input_cuboid_sample_points, input_voxel_occupancies);
-					assert(input_voxel_occupancies.rows() == local_coord_voxels.n_voxels());
-
-					Eigen::VectorXd example_cuboid_voxel_occupancies;
-					local_coord_voxels.get_voxel_occupancies(example_cuboid_sample_points, example_cuboid_voxel_occupancies);
-					assert(example_cuboid_voxel_occupancies.rows() == local_coord_voxels.n_voxels());
-
-					int num_input_occupied_voxels = (input_voxel_occupancies.array() >= 1).count();
-					int num_example_occupied_voxels = (example_cuboid_voxel_occupancies.array() >= 1).count();
-					if (num_input_occupied_voxels == 0 || num_example_occupied_voxels == 0)
-						continue;
-
-					Real score = input_voxel_occupancies.dot(example_cuboid_voxel_occupancies);
-					Real similarity = (1 - 0.7) * (score / num_example_occupied_voxels)
-						+ (0.7) * (score / num_input_occupied_voxels);
 					assert(similarity >= 0);
 
 					if (similarity > label_matched_objects[label_index].first)
