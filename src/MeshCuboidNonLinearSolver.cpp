@@ -775,6 +775,40 @@ void MeshCuboidNonLinearSolver::add_rotation_symmetry_group_constraints(
 	_formulation.add_constraint(expression, 1, 1);
 }
 
+void MeshCuboidNonLinearSolver::fix_cuboid(
+	const unsigned int _cuboid_index,
+	NLPFormulation &_formulation)
+{
+	const MeshCuboid* cuboid = cuboids_[_cuboid_index];
+	assert(cuboid);
+
+	const unsigned int dimension = 3;
+
+	for (unsigned int corner_index = 0; corner_index < dimension; ++corner_index)
+	{
+		NLPVectorExpression axis_variable = create_cuboid_axis_variable(_cuboid_index, corner_index);
+		MyMesh::Normal axis = cuboid->get_bbox_axis(corner_index);
+		Eigen::Vector3d axis_vec;
+		for (unsigned int i = 0; i < 3; ++i)
+			axis_vec[i] = axis[i];
+
+		axis_variable -= axis_vec;
+		_formulation.add_constraint(NLPVectorExpression::dot_product(axis_variable, axis_variable), 0, 0);
+	}
+
+	for (unsigned int corner_index = 0; corner_index < MeshCuboid::k_num_corners; ++corner_index)
+	{
+		NLPVectorExpression corner_variable = create_cuboid_corner_variable(_cuboid_index, corner_index);
+		MyMesh::Normal corner = cuboid->get_bbox_corner(corner_index);
+		Eigen::Vector3d corner_vec;
+		for (unsigned int i = 0; i < 3; ++i)
+			corner_vec[i] = corner[i];
+
+		corner_variable -= corner_vec;
+		_formulation.add_constraint(NLPVectorExpression::dot_product(corner_variable, corner_variable), 0, 0);
+	}
+}
+
 bool MeshCuboidNonLinearSolver::compute_initial_values(const Eigen::VectorXd &_input,
 	Eigen::VectorXd &_output)
 {
@@ -878,7 +912,8 @@ void MeshCuboidNonLinearSolver::optimize(
 	const Eigen::MatrixXd& _cuboid_quadratic_term,
 	const Eigen::VectorXd& _cuboid_linear_term,
 	const double _cuboid_constant_term,
-	Eigen::VectorXd* _init_values_vec)
+	Eigen::VectorXd* _init_values_vec,
+	const std::vector<unsigned int> *_fixed_cuboid_indices)
 {
 	// Update rotation angle.
 	for (unsigned int symmetry_group_index = 0; symmetry_group_index < num_rotation_symmetry_groups_;
@@ -893,6 +928,16 @@ void MeshCuboidNonLinearSolver::optimize(
 	create_energy_functions(_cuboid_quadratic_term, _cuboid_linear_term, _cuboid_constant_term, functions);
 	NLPFormulation formulation(functions);
 	add_constraints(formulation);
+
+	if (_fixed_cuboid_indices)
+	{
+		for (std::vector<unsigned int>::const_iterator it = (*_fixed_cuboid_indices).begin();
+			it != (*_fixed_cuboid_indices).end(); ++it)
+		{
+			assert((*it) < cuboids_.size());
+			fix_cuboid((*it), formulation);
+		}
+	}
 
 
 	if (_init_values_vec)

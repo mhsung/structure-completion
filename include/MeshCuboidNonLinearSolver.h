@@ -71,7 +71,8 @@ public:
 		const Eigen::MatrixXd& _cuboid_quadratic_term,
 		const Eigen::VectorXd& _cuboid_linear_term,
 		const double _cuboid_constant_term,
-		Eigen::VectorXd* _init_values_vec = NULL);
+		Eigen::VectorXd* _init_values_vec = NULL,
+		const std::vector<unsigned int> *_fixed_cuboid_indices = NULL);
 
 
 private:
@@ -152,6 +153,10 @@ private:
 
 	void add_rotation_symmetry_group_constraints(
 		const unsigned int _symmetry_group_index,
+		NLPFormulation &_formulation);
+
+	void fix_cuboid(
+		const unsigned int _cuboid_index,
 		NLPFormulation &_formulation);
 
 
