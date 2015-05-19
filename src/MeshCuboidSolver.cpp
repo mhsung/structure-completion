@@ -429,7 +429,6 @@ void segment_sample_points(
 		FLAGS_param_sparse_neighbor_distance *
 		_cuboid_structure.mesh_->get_object_diameter();
 	double lambda = -squared_neighbor_distance / std::log(null_cuboid_probability);
-	double min_probability = 1 / FLAGS_param_max_potential;
 
 	unsigned int num_sample_points = _cuboid_structure.num_sample_points();
 	const int num_neighbors = std::min(FLAGS_param_num_sample_point_neighbors,
@@ -492,15 +491,15 @@ void segment_sample_points(
 			int num_searched_neighbors = cuboid_ann_kd_tree[cuboid_index]->annkFRSearch(q,
 				squared_neighbor_distance, 1, nn_idx, dd);
 
-			double energy = FLAGS_param_max_potential;
+			double squared_distance = squared_neighbor_distance;
 			if (num_searched_neighbors > 0)
 			{
 				double squared_distance = dd[0];
 				assert(squared_distance >= 0);
-
-				double label_probability = sample_point->label_index_confidence_[label_index];
-				energy = squared_distance - lambda * std::log(label_probability);
 			}
+
+			double label_probability = sample_point->label_index_confidence_[label_index];
+			double energy = squared_distance - lambda * std::log(label_probability);
 
 			//if (cuboid->is_group_cuboid())
 			//	energy = FLAGS_param_max_potential;
@@ -509,7 +508,7 @@ void segment_sample_points(
 		}
 
 		// For null cuboid.
-		double energy = FLAGS_param_max_potential;
+		double energy = squared_neighbor_distance - lambda * std::log(null_cuboid_probability);
 		single_potentials(point_index, num_cuboids) = energy;
 	}
 
@@ -1891,7 +1890,7 @@ bool add_missing_cuboids(
 
 			bool is_occluded = (symmetric_label_index >= num_labels || !is_given_label_indices[symmetric_label_index])
 					&& (overall_visibility > FLAGS_param_min_cuboid_overall_visibility);
-
+			
 			if (is_occluded)
 			{
 				// The cuboid is placed in the visible area.
