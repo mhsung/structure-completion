@@ -613,6 +613,23 @@ void mark_cuboid_sample_points(
 	}
 }
 
+void copy_sample_points(const MeshCuboid *_from_cuboid,
+	MeshCuboidStructure &_to_cuboid_structure, MeshCuboid *_to_cuboid)
+{
+	assert(_from_cuboid);
+	assert(_to_cuboid);
+
+	for (unsigned int i = 0; i < _from_cuboid->num_sample_points(); ++i)
+	{
+		MeshSamplePoint *sample_point = _from_cuboid->get_sample_point(i);
+		assert(sample_point);
+
+		MeshSamplePoint *new_sample_point = _to_cuboid_structure.add_sample_point(
+			sample_point->point_, sample_point->normal_);
+		_to_cuboid->add_sample_point(new_sample_point);
+	}
+}
+
 void reconstruct_fusion(const char *_mesh_filepath,
 	const double *_snapshot_modelview_matrix,
 	const double *_occlusion_modelview_matrix,
@@ -663,7 +680,21 @@ void reconstruct_fusion(const char *_mesh_filepath,
 			bool ret = get_fusion_cuboids(label_index,
 				_symmetry_cuboid_structure, aligned_database_cuboid_structure, _output_cuboid_structure,
 				symmetry_cuboid, database_cuboid, output_cuboid);
-			if (!ret) continue;
+
+			if (!ret)
+			{
+				if (!symmetry_cuboid || symmetry_cuboid->num_sample_points() == 0)
+				{
+					if (database_cuboid)
+						copy_sample_points(database_cuboid, _output_cuboid_structure, output_cuboid);
+				}
+				else if (!database_cuboid || database_cuboid->num_sample_points() == 0)
+				{
+					if (symmetry_cuboid)
+						copy_sample_points(symmetry_cuboid, _output_cuboid_structure, output_cuboid);
+				}
+				continue;
+			}
 
 			is_label_index_visited[label_index] = true;
 			std::cout << "Single symmetry: (" << label_index << ")" << std::endl;
@@ -713,7 +744,28 @@ void reconstruct_fusion(const char *_mesh_filepath,
 				_symmetry_cuboid_structure, aligned_database_cuboid_structure, _output_cuboid_structure,
 				symmetry_cuboid_2, database_cuboid_2, output_cuboid_2);
 
-			if (!ret_1 || !ret_2) continue;
+			if (!ret_1 || !ret_2)
+			{
+				if (!symmetry_cuboid_1 || !symmetry_cuboid_2
+					|| symmetry_cuboid_1->num_sample_points() == 0 || symmetry_cuboid_2->num_sample_points() == 0)
+				{
+					if (database_cuboid_1 && database_cuboid_2)
+					{
+						copy_sample_points(database_cuboid_1, _output_cuboid_structure, output_cuboid_1);
+						copy_sample_points(database_cuboid_2, _output_cuboid_structure, output_cuboid_2);
+					}
+				}
+				else if (!database_cuboid_1 || !database_cuboid_2 ||
+					database_cuboid_1->num_sample_points() == 0 || database_cuboid_2->num_sample_points() == 0)
+				{
+					if (symmetry_cuboid_1 && symmetry_cuboid_2)
+					{
+						copy_sample_points(symmetry_cuboid_1, _output_cuboid_structure, output_cuboid_1);
+						copy_sample_points(symmetry_cuboid_2, _output_cuboid_structure, output_cuboid_2);
+					}
+				}
+				continue;
+			}
 
 			is_label_index_visited[label_index_1] = true;
 			is_label_index_visited[label_index_2] = true;
