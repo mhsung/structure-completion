@@ -487,16 +487,9 @@ void segment_sample_points(
 			unsigned int label_index = cuboid->get_label_index();
 
 			assert(cuboid_ann_kd_tree[cuboid_index]);
-			//cuboid_ann_kd_tree[cuboid_index]->annkSearch(q, 1, nn_idx, dd);
-			int num_searched_neighbors = cuboid_ann_kd_tree[cuboid_index]->annkFRSearch(q,
-				squared_neighbor_distance, 1, nn_idx, dd);
-
-			double squared_distance = squared_neighbor_distance;
-			if (num_searched_neighbors > 0)
-			{
-				double squared_distance = dd[0];
-				assert(squared_distance >= 0);
-			}
+			cuboid_ann_kd_tree[cuboid_index]->annkSearch(q, 1, nn_idx, dd);
+			double squared_distance = dd[0];
+			assert(squared_distance >= 0);
 
 			double label_probability = sample_point->label_index_confidence_[label_index];
 			double energy = squared_distance - lambda * std::log(label_probability);
