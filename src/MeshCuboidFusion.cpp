@@ -683,15 +683,18 @@ void reconstruct_fusion(const char *_mesh_filepath,
 
 			if (!ret)
 			{
-				if (!symmetry_cuboid || symmetry_cuboid->num_sample_points() == 0)
+				if (output_cuboid)
 				{
-					if (database_cuboid)
-						copy_sample_points(database_cuboid, _output_cuboid_structure, output_cuboid);
-				}
-				else if (!database_cuboid || database_cuboid->num_sample_points() == 0)
-				{
-					if (symmetry_cuboid)
-						copy_sample_points(symmetry_cuboid, _output_cuboid_structure, output_cuboid);
+					if (!symmetry_cuboid || symmetry_cuboid->num_sample_points() == 0)
+					{
+						if (database_cuboid)
+							copy_sample_points(database_cuboid, _output_cuboid_structure, output_cuboid);
+					}
+					else if (!database_cuboid || database_cuboid->num_sample_points() == 0)
+					{
+						if (symmetry_cuboid)
+							copy_sample_points(symmetry_cuboid, _output_cuboid_structure, output_cuboid);
+					}
 				}
 				continue;
 			}
@@ -746,22 +749,25 @@ void reconstruct_fusion(const char *_mesh_filepath,
 
 			if (!ret_1 || !ret_2)
 			{
-				if (!symmetry_cuboid_1 || !symmetry_cuboid_2
-					|| symmetry_cuboid_1->num_sample_points() == 0 || symmetry_cuboid_2->num_sample_points() == 0)
+				if (output_cuboid_1 && output_cuboid_2)
 				{
-					if (database_cuboid_1 && database_cuboid_2)
+					if (!symmetry_cuboid_1 || !symmetry_cuboid_2
+						|| symmetry_cuboid_1->num_sample_points() == 0 || symmetry_cuboid_2->num_sample_points() == 0)
 					{
-						copy_sample_points(database_cuboid_1, _output_cuboid_structure, output_cuboid_1);
-						copy_sample_points(database_cuboid_2, _output_cuboid_structure, output_cuboid_2);
+						if (database_cuboid_1 && database_cuboid_2)
+						{
+							copy_sample_points(database_cuboid_1, _output_cuboid_structure, output_cuboid_1);
+							copy_sample_points(database_cuboid_2, _output_cuboid_structure, output_cuboid_2);
+						}
 					}
-				}
-				else if (!database_cuboid_1 || !database_cuboid_2 ||
-					database_cuboid_1->num_sample_points() == 0 || database_cuboid_2->num_sample_points() == 0)
-				{
-					if (symmetry_cuboid_1 && symmetry_cuboid_2)
+					else if (!database_cuboid_1 || !database_cuboid_2 ||
+						database_cuboid_1->num_sample_points() == 0 || database_cuboid_2->num_sample_points() == 0)
 					{
-						copy_sample_points(symmetry_cuboid_1, _output_cuboid_structure, output_cuboid_1);
-						copy_sample_points(symmetry_cuboid_2, _output_cuboid_structure, output_cuboid_2);
+						if (symmetry_cuboid_1 && symmetry_cuboid_2)
+						{
+							copy_sample_points(symmetry_cuboid_1, _output_cuboid_structure, output_cuboid_1);
+							copy_sample_points(symmetry_cuboid_2, _output_cuboid_structure, output_cuboid_2);
+						}
 					}
 				}
 				continue;
