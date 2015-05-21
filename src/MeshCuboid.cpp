@@ -711,7 +711,6 @@ void MeshCuboid::remove_sample_points(const bool *is_sample_point_removed)
 		else
 			++it;
 	}
-	sample_points_.clear();
 }
 
 void MeshCuboid::clear_cuboid_surface_points()
