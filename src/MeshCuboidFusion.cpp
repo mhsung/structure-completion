@@ -576,7 +576,12 @@ bool get_fusion_cuboids(const LabelIndex _label_index,
 	if (_symmetry_cuboid_structure.label_cuboids_[_label_index].empty()
 		|| _database_cuboid_structure.label_cuboids_[_label_index].empty()
 		|| _output_cuboid_structure.label_cuboids_[_label_index].empty())
+	{
+		_symmetry_cuboid = NULL;
+		_database_cuboid = NULL;
+		_output_cuboid = NULL;
 		return false;
+	}
 
 	assert(_symmetry_cuboid_structure.label_cuboids_[_label_index].size() <= 1);
 	assert(_database_cuboid_structure.label_cuboids_[_label_index].size() <= 1);
@@ -674,7 +679,7 @@ void reconstruct_fusion(const char *_mesh_filepath,
 		{
 			LabelIndex label_index = (*jt);
 
-			MeshCuboid *symmetry_cuboid, *database_cuboid, *output_cuboid;
+			MeshCuboid *symmetry_cuboid = NULL, *database_cuboid = NULL, *output_cuboid = NULL;
 			bool ret = get_fusion_cuboids(label_index,
 				_symmetry_cuboid_structure, aligned_database_cuboid_structure, _output_cuboid_structure,
 				symmetry_cuboid, database_cuboid, output_cuboid);
@@ -729,12 +734,12 @@ void reconstruct_fusion(const char *_mesh_filepath,
 			LabelIndex label_index_1 = (*jt).first;
 			LabelIndex label_index_2 = (*jt).second;
 
-			MeshCuboid *symmetry_cuboid_1, *database_cuboid_1, *output_cuboid_1;
+			MeshCuboid *symmetry_cuboid_1 = NULL, *database_cuboid_1 = NULL, *output_cuboid_1 = NULL;
 			bool ret_1 = get_fusion_cuboids(label_index_1,
 				_symmetry_cuboid_structure, aligned_database_cuboid_structure, _output_cuboid_structure,
 				symmetry_cuboid_1, database_cuboid_1, output_cuboid_1);
 
-			MeshCuboid *symmetry_cuboid_2, *database_cuboid_2, *output_cuboid_2;
+			MeshCuboid *symmetry_cuboid_2 = NULL, *database_cuboid_2 = NULL, *output_cuboid_2 = NULL;
 			bool ret_2 = get_fusion_cuboids(label_index_2,
 				_symmetry_cuboid_structure, aligned_database_cuboid_structure, _output_cuboid_structure,
 				symmetry_cuboid_2, database_cuboid_2, output_cuboid_2);
