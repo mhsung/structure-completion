@@ -54,7 +54,7 @@ void MeshViewerCore::parse_arguments()
 	else if (FLAGS_run_symmetry_detection)
 	{
 		std::cout << "mesh_filename = " << FLAGS_mesh_filename << std::endl;
-		run_symmetry_detection();
+		run_symmetry_detection_msh2pln();
 		exit(EXIT_FAILURE);
 	}
 }
@@ -1204,6 +1204,224 @@ void MeshViewerCore::run_symmetry_detection()
 	output_filename_sstr.clear(); output_filename_sstr.str("");
 	output_filename_sstr << mesh_output_path << std::string("/") << mesh_name;
 	snapshot(output_filename_sstr.str().c_str());
+}
+
+
+void MeshViewerCore::run_symmetry_detection_msh2pln()
+{
+	setDrawMode(CUSTOM_VIEW);
+
+	std::string mesh_filepath = FLAGS_data_root_path + FLAGS_mesh_path + std::string("/") + FLAGS_mesh_filename;
+	QFileInfo mesh_file(mesh_filepath.c_str());
+	std::string mesh_name = std::string(mesh_file.baseName().toLocal8Bit());
+
+	if (!mesh_file.exists())
+	{
+		std::cerr << "Error: The mesh file does not exist (" << mesh_filepath << ")." << std::endl;
+		return;
+	}
+	else if (!open_mesh(mesh_filepath.c_str()))
+	{
+		std::cerr << "Error: The mesh file cannot be opened (" << mesh_filepath << ")." << std::endl;
+		return;
+	}
+
+	std::string filename_prefix = std::string("/") + mesh_name + std::string("_");
+	std::stringstream output_filename_sstr;
+
+	QDir output_dir;
+	std::string mesh_output_path = FLAGS_symmetry_detection_dir + std::string("/") + mesh_name;
+	output_dir.mkpath(FLAGS_output_dir.c_str());
+	output_dir.mkpath(mesh_output_path.c_str());
+
+
+	// Initialize basic information.
+	cuboid_structure_.clear_cuboids();
+	cuboid_structure_.clear_sample_points();
+
+
+	// Load files.
+	double snapshot_modelview_matrix[16];
+	double occlusion_modelview_matrix[16];
+
+	open_modelview_matrix_file(FLAGS_pose_filename.c_str());
+	memcpy(snapshot_modelview_matrix, modelview_matrix(), 16 * sizeof(double));
+
+	if (FLAGS_occlusion_pose_filename == "")
+		set_random_view_direction(true);
+	else
+	{
+		bool ret = open_modelview_matrix_file(FLAGS_occlusion_pose_filename.c_str());
+		assert(ret);
+	}
+	memcpy(occlusion_modelview_matrix, modelview_matrix(), 16 * sizeof(double));
+	//save_modelview_matrix_file((mesh_output_path + std::string("/occlusion_pose.txt")).c_str());
+
+
+	//
+	bool ret = load_object_info(mesh_, cuboid_structure_, mesh_filepath.c_str(), LoadDenseSamplePoints);
+	if (!ret) return;
+	set_modelview_matrix(occlusion_modelview_matrix, false);
+	remove_occluded_points();
+	updateGL();
+
+	set_modelview_matrix(snapshot_modelview_matrix);
+	updateGL();
+	//
+
+
+	//
+	unsigned int num_sample_points = cuboid_structure_.num_sample_points();
+	std::vector<MyMesh::Point> sample_points(num_sample_points);
+	Eigen::MatrixXd sample_points_mat(3, num_sample_points);
+
+	for (SamplePointIndex sample_point_index = 0; sample_point_index < num_sample_points; ++sample_point_index)
+	{
+		MeshSamplePoint *sample_point = cuboid_structure_.sample_points_[sample_point_index];
+		assert(sample_point);
+		sample_points[sample_point_index] = sample_point->point_;
+		for (unsigned int i = 0; i < 3; ++i)
+			sample_points_mat.col(sample_point_index)[i] = sample_point->point_[i];
+	}
+
+	ANNpointArray sample_ann_points;
+	ANNkd_tree *sample_ann_kd_tree = ICP::create_kd_tree(sample_points_mat, sample_ann_points);
+	//
+
+
+	const std::string msh2pln_output_filename = mesh_output_path + std::string("/") + mesh_name + std::string(".txt");
+
+	std::ifstream file(msh2pln_output_filename);
+	if (!file)
+	{
+		std::cerr << "Can't open file: \"" << msh2pln_output_filename << "\"" << std::endl;
+		return;
+	}
+
+	std::string buffer;
+	std::stringstream strstr;
+	std::string token;
+	
+	const Real squared_neighbor_distance = FLAGS_param_sparse_neighbor_distance *
+		FLAGS_param_sparse_neighbor_distance * mesh_.get_object_diameter();
+
+	unsigned int max_num_symmetric_point_pairs = 0;
+	assert(cuboid_structure_.reflection_symmetry_groups_.empty());
+
+
+	while (!file.eof())
+	{
+		std::getline(file, buffer);
+		if (buffer == "") continue;
+
+		strstr.str(std::string());
+		strstr.clear();
+		strstr.str(buffer);
+
+		do{ std::getline(strstr, token, ' '); } while (token == "" && !strstr.eof());
+		Real center_x = std::stof(token);
+
+		do{ std::getline(strstr, token, ' '); } while (token == "" && !strstr.eof());
+		Real center_y = std::stof(token);
+
+		do{ std::getline(strstr, token, ' '); } while (token == "" && !strstr.eof());
+		Real center_z = std::stof(token);
+
+
+		do{ std::getline(strstr, token, ' '); } while (token == "" && !strstr.eof());
+		Real normal_x = std::stof(token);
+
+		do{ std::getline(strstr, token, ' '); } while (token == "" && !strstr.eof());
+		Real normal_y = std::stof(token);
+
+		do{ std::getline(strstr, token, ' '); } while (token == "" && !strstr.eof());
+		Real normal_z = std::stof(token);
+
+		//printf("center = (%lf, %lf, %lf)\n", center_x, center_y, center_z);
+		//printf("normal = (%lf, %lf, %lf)\n", normal_x, normal_y, normal_z);
+
+		MyMesh::Point center(center_x, center_y, center_z);
+		MyMesh::Normal normal(normal_x, normal_y, normal_z);
+		MeshCuboidReflectionSymmetryGroup *new_symmetry_group = new MeshCuboidReflectionSymmetryGroup(
+			normal, dot(normal, center));
+		
+
+		std::list<MeshCuboidSymmetryGroup::WeightedPointPair> sample_point_pairs;
+		new_symmetry_group->get_symmetric_sample_point_pairs(
+			sample_points, sample_ann_points, sample_ann_kd_tree,
+			squared_neighbor_distance, sample_point_pairs);
+
+		if (sample_point_pairs.size() > max_num_symmetric_point_pairs)
+		{
+			max_num_symmetric_point_pairs = sample_point_pairs.size();
+			cuboid_structure_.reflection_symmetry_groups_.clear();
+			cuboid_structure_.reflection_symmetry_groups_.push_back(new_symmetry_group);
+		}
+	}
+
+	file.close();
+	annDeallocPts(sample_ann_points);
+	delete sample_ann_kd_tree;
+
+	
+	output_filename_sstr.clear(); output_filename_sstr.str("");
+	output_filename_sstr << mesh_output_path << filename_prefix << std::string("symm_detection");
+	updateGL();
+	snapshot(output_filename_sstr.str().c_str());
+
+
+	if (!cuboid_structure_.reflection_symmetry_groups_.empty())
+	{
+		MeshCuboidReflectionSymmetryGroup *symmetry_group = cuboid_structure_.reflection_symmetry_groups_.front();
+		assert(symmetry_group);
+
+		for (SamplePointIndex sample_point_index = 0; sample_point_index < num_sample_points; ++sample_point_index)
+		{
+			MeshSamplePoint *sample_point = cuboid_structure_.sample_points_[sample_point_index];
+			assert(sample_point);
+
+			MyMesh::Point symmetric_point = symmetry_group->get_symmetric_point(sample_point->point_);
+			MyMesh::Point symmetric_normal = symmetry_group->get_symmetric_normal(sample_point->normal_);
+			cuboid_structure_.add_sample_point(symmetric_point, symmetric_normal);
+		}
+	}
+
+	output_filename_sstr.clear(); output_filename_sstr.str("");
+	output_filename_sstr << mesh_output_path << filename_prefix << std::string("symm_detection_recon");
+	updateGL();
+	snapshot(output_filename_sstr.str().c_str());
+
+	
+	//
+	MyMesh ground_truth_mesh;
+	MeshCuboidStructure ground_truth_cuboid_structure(&ground_truth_mesh);
+
+	ret = load_object_info(ground_truth_mesh, ground_truth_cuboid_structure,
+		mesh_filepath.c_str(), LoadDenseSamplePoints);
+	assert(ret);
+	MeshCuboidEvaluator evaluator(&ground_truth_cuboid_structure);
+
+	setDrawMode(COLORED_POINT_SAMPLES);
+	//
+
+	evaluator.evaluate_point_to_point_distances(&cuboid_structure_, output_filename_sstr.str().c_str());
+	cuboid_structure_.save_sample_points_to_ply(output_filename_sstr.str().c_str());
+	cuboid_structure_.save_sample_points((output_filename_sstr.str() + std::string(".pts")).c_str());
+	MeshCuboidStructure symmetry_reconstruction(cuboid_structure_);
+
+	updateGL();
+	output_filename_sstr.clear(); output_filename_sstr.str("");
+	output_filename_sstr << mesh_output_path << filename_prefix << std::string("symm_detection_accuracy");
+	snapshot(output_filename_sstr.str().c_str());
+
+	cuboid_structure_ = ground_truth_cuboid_structure;
+	updateGL();
+	output_filename_sstr.clear(); output_filename_sstr.str("");
+	output_filename_sstr << mesh_output_path << filename_prefix << std::string("symm_detection_completeness");
+	snapshot(output_filename_sstr.str().c_str());
+
+
+	setDrawMode(CUSTOM_VIEW);
 }
 
 void MeshViewerCore::batch_render_point_clusters()

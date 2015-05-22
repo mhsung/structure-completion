@@ -61,6 +61,7 @@ public:
 	void predict();
 	void run_part_assembly();
 	void run_symmetry_detection();
+	void run_symmetry_detection_msh2pln();
 	void batch_render_point_clusters();
 	void batch_render_cuboids();
 	void batch_render_points();

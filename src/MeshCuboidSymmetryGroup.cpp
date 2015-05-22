@@ -30,6 +30,7 @@ MeshCuboidSymmetryGroupInfo::MeshCuboidSymmetryGroupInfo(const MeshCuboidSymmetr
 }
 
 MeshCuboidSymmetryGroup::MeshCuboidSymmetryGroup()
+	: num_symmetry_orders_(2)
 {
 
 }
@@ -186,10 +187,29 @@ void MeshCuboidSymmetryGroup::get_symmetric_sample_point_pairs(
 	const Real _squared_neighbor_distance,
 	std::list<WeightedPointPair> &_sample_point_pairs) const
 {
-	if (!_cuboid_1 || !_cuboid_ann_points_2 || !_cuboid_ann_kd_tree_2)
+	if (!_cuboid_1) return;
+	std::vector<MyMesh::Point> cuboid_1_sample_points;
+	_cuboid_1->get_sample_points(cuboid_1_sample_points);
+
+	get_symmetric_sample_point_pairs(
+		cuboid_1_sample_points,
+		_cuboid_ann_points_2,
+		_cuboid_ann_kd_tree_2,
+		_squared_neighbor_distance,
+		_sample_point_pairs);
+}
+
+void MeshCuboidSymmetryGroup::get_symmetric_sample_point_pairs(
+	const std::vector<MyMesh::Point> &_cuboid_1_sample_points,
+	const ANNpointArray &_cuboid_ann_points_2,
+	ANNkd_tree *_cuboid_ann_kd_tree_2,
+	const Real _squared_neighbor_distance,
+	std::list<WeightedPointPair> &_sample_point_pairs) const
+{
+	if (_cuboid_1_sample_points.size() == 0 || !_cuboid_ann_points_2 || !_cuboid_ann_kd_tree_2)
 		return;
 
-	const int num_points_1 = _cuboid_1->num_sample_points();
+	const int num_points_1 = _cuboid_1_sample_points.size();
 	const int num_points_2 = _cuboid_ann_kd_tree_2->nPoints();
 
 	//
@@ -200,7 +220,7 @@ void MeshCuboidSymmetryGroup::get_symmetric_sample_point_pairs(
 
 	for (int point_index_1 = 0; point_index_1 < num_points_1; ++point_index_1)
 	{
-		MyMesh::Point point_1 = _cuboid_1->get_sample_point(point_index_1)->point_;
+		MyMesh::Point point_1 = _cuboid_1_sample_points[point_index_1];
 
 		for (int symmetry_order = 1; symmetry_order < num_symmetry_orders_; ++symmetry_order)
 		{
@@ -259,7 +279,8 @@ MeshCuboidReflectionSymmetryGroup* MeshCuboidReflectionSymmetryGroup::constructo
 
 MeshCuboidReflectionSymmetryGroup::MeshCuboidReflectionSymmetryGroup(
 	const MyMesh::Normal _n, const double _t)
-	: n_(_n)
+	: MeshCuboidSymmetryGroup()
+	, n_(_n)
 	, t_(_t)
 {
 

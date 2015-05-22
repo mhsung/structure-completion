@@ -89,6 +89,13 @@ public:
 		const Real _squared_neighbor_distance,
 		std::list<WeightedPointPair> &_sample_point_pairs) const;
 
+	void get_symmetric_sample_point_pairs(
+		const std::vector<MyMesh::Point> &_cuboid_1_sample_points,
+		const ANNpointArray &_cuboid_ann_points_2,
+		ANNkd_tree *_cuboid_ann_kd_tree_2,
+		const Real _squared_neighbor_distance,
+		std::list<WeightedPointPair> &_sample_point_pairs) const;
+
 protected:
 	const MeshCuboidSymmetryGroupInfo info_;
 	unsigned int num_symmetry_orders_;
