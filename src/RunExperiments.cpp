@@ -1101,11 +1101,13 @@ void MeshViewerCore::predict()
 			snapshot_filename_sstr.clear(); snapshot_filename_sstr.str("");
 			snapshot_filename_sstr << mesh_output_path << filename_prefix << num_final_cuboid_structure_candidates;
 
+			draw_point_correspondences_ = false;
 			reconstruct(
 				mesh_filepath.c_str(),
 				snapshot_modelview_matrix,
 				occlusion_modelview_matrix,
 				snapshot_filename_sstr.str().c_str());
+			draw_point_correspondences_ = true;
 
 			ignored_label_indices.clear();
 			++num_final_cuboid_structure_candidates;

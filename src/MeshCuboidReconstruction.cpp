@@ -82,14 +82,26 @@ void MeshViewerCore::reconstruct(
 		+ std::string("/") + mesh_name + std::string(".pts");
 
 
+	output_filename_sstr.clear(); output_filename_sstr.str("");
+	output_filename_sstr << _output_file_prefix << std::string(".arff");
+	cuboid_structure_.save_cuboids(output_filename_sstr.str());
+
+	//
+	ret = cuboid_structure_.load_dense_sample_points(dense_sample_filepath.c_str());
+	assert(ret);
+
+	set_modelview_matrix(_occlusion_modelview_matrix, false);
+	remove_occluded_points();
+	set_modelview_matrix(_snapshot_modelview_matrix);
+
+	MeshCuboidStructure cuboid_structure_copy(cuboid_structure_);
+	//
+
+
 	updateGL();
 	output_filename_sstr.clear(); output_filename_sstr.str("");
 	output_filename_sstr << _output_file_prefix;
 	snapshot(output_filename_sstr.str().c_str());
-
-	output_filename_sstr.clear(); output_filename_sstr.str("");
-	output_filename_sstr << _output_file_prefix << std::string(".arff");
-	cuboid_structure_.save_cuboids(output_filename_sstr.str());
 
 
 	//
@@ -117,21 +129,6 @@ void MeshViewerCore::reconstruct(
 
 	setDrawMode(COLORED_POINT_SAMPLES);
 	//
-
-
-	//QFileInfo file_info(_mesh_filepath);
-	//std::string mesh_name(file_info.baseName().toLocal8Bit());
-	//std::string dense_sample_filepath = FLAGS_data_root_path + FLAGS_dense_sample_path
-	//	+ std::string("/") + mesh_name + std::string(".pts");
-
-	ret = cuboid_structure_.load_dense_sample_points(dense_sample_filepath.c_str());
-	assert(ret);
-
-	set_modelview_matrix(_occlusion_modelview_matrix, false);
-	remove_occluded_points();
-	set_modelview_matrix(_snapshot_modelview_matrix);
-
-	MeshCuboidStructure cuboid_structure_copy(cuboid_structure_);
 
 
 	// 1. Reconstruction using symmetry.

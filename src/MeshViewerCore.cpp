@@ -12,6 +12,7 @@ MeshViewerCore::MeshViewerCore(GLViewerBase &_widget)
 	, selection_mode_(PICK_SEED)
 	, cuboid_structure_(&mesh_)
 	, draw_cuboid_axes_(true)
+	, draw_point_correspondences_(true)
 	, view_point_(0.0)
 	, view_direction_(0.0)
 {
@@ -819,79 +820,82 @@ void MeshViewerCore::draw_openmesh(const std::string& _drawmode)
 					}
 				}
 
-				// Draw cuboid surface points (Red).
-				for (unsigned int point_index = 0; point_index < cuboid->num_cuboid_surface_points(); ++point_index)
+				if (draw_point_correspondences_)
 				{
-					const MeshCuboidSurfacePoint *cuboid_surface_point =
-						cuboid->get_cuboid_surface_point(point_index);
-					MyMesh::Point point = cuboid_surface_point->point_;
-					MyMesh::Normal normal = cuboid_surface_point->normal_;
-					Real visibility = cuboid_surface_point->visibility_;
-					Real radius = (visibility) * (mesh_.get_object_diameter() * 0.002) * point_size_;
+					// Draw cuboid surface points (Red).
+					for (unsigned int point_index = 0; point_index < cuboid->num_cuboid_surface_points(); ++point_index)
+					{
+						const MeshCuboidSurfacePoint *cuboid_surface_point =
+							cuboid->get_cuboid_surface_point(point_index);
+						MyMesh::Point point = cuboid_surface_point->point_;
+						MyMesh::Normal normal = cuboid_surface_point->normal_;
+						Real visibility = cuboid_surface_point->visibility_;
+						Real radius = (visibility) * (mesh_.get_object_diameter() * 0.002) * point_size_;
 
-					glPushMatrix();
-					glTranslatef(point[0], point[1], point[2]);
-					red_color();
+						glPushMatrix();
+						glTranslatef(point[0], point[1], point[2]);
+						red_color();
 
-					glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
-					glutSolidSphere(radius, 20, 20);
-					glPopMatrix();
+						glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
+						glutSolidSphere(radius, 20, 20);
+						glPopMatrix();
 
-					glBegin(GL_LINES);
-					red_color();
-					glLineWidth(4.0f);
-					glVertex(point);
-					glVertex(point + (2 * radius) * normal);
-					glEnd();
-				}
+						glBegin(GL_LINES);
+						red_color();
+						glLineWidth(4.0f);
+						glVertex(point);
+						glVertex(point + (2 * radius) * normal);
+						glEnd();
+					}
 
-				// Draw point correspondences (sample point -> cuboid surface point).
-				for (unsigned int sample_point_index = 0;
-					sample_point_index < cuboid->num_sample_points(); ++sample_point_index)
-				{
-					int cuboid_surface_point_index =
-						cuboid->get_sample_to_cuboid_surface_correspondences(sample_point_index);
+					// Draw point correspondences (sample point -> cuboid surface point).
+					for (unsigned int sample_point_index = 0;
+						sample_point_index < cuboid->num_sample_points(); ++sample_point_index)
+					{
+						int cuboid_surface_point_index =
+							cuboid->get_sample_to_cuboid_surface_correspondences(sample_point_index);
 
-					if (cuboid_surface_point_index < 0)
-						continue;
+						if (cuboid_surface_point_index < 0)
+							continue;
 
-					MyMesh::Point sample_point = cuboid->get_sample_point(sample_point_index)->point_;
-					MyMesh::Point cuboid_surface_point = cuboid->get_cuboid_surface_point(
-						cuboid_surface_point_index)->point_;
+						MyMesh::Point sample_point = cuboid->get_sample_point(sample_point_index)->point_;
+						MyMesh::Point cuboid_surface_point = cuboid->get_cuboid_surface_point(
+							cuboid_surface_point_index)->point_;
 
-					glBegin(GL_LINES);
-					black_color();
-					glLineWidth(1.0f);
-					glVertex(sample_point);
-					glVertex(cuboid_surface_point);
-					glEnd();
-				}
+						glBegin(GL_LINES);
+						black_color();
+						glLineWidth(1.0f);
+						glVertex(sample_point);
+						glVertex(cuboid_surface_point);
+						glEnd();
+					}
 
-				// Draw point correspondences (cuboid surface point -> sample point).
-				for (unsigned int cuboid_surface_point_index = 0;
-					cuboid_surface_point_index < cuboid->num_cuboid_surface_points();
-					++cuboid_surface_point_index)
-				{
-					Real visibility = cuboid->get_cuboid_surface_point(
-						cuboid_surface_point_index)->visibility_;
-					if (visibility < 1.0)
-						continue;
+					// Draw point correspondences (cuboid surface point -> sample point).
+					for (unsigned int cuboid_surface_point_index = 0;
+						cuboid_surface_point_index < cuboid->num_cuboid_surface_points();
+						++cuboid_surface_point_index)
+					{
+						Real visibility = cuboid->get_cuboid_surface_point(
+							cuboid_surface_point_index)->visibility_;
+						if (visibility < 1.0)
+							continue;
 
-					int sample_point_index =
-						cuboid->get_cuboid_surface_to_sample_correspondence(cuboid_surface_point_index);
-					if (sample_point_index < 0)
-						continue;
+						int sample_point_index =
+							cuboid->get_cuboid_surface_to_sample_correspondence(cuboid_surface_point_index);
+						if (sample_point_index < 0)
+							continue;
 
-					MyMesh::Point sample_point = cuboid->get_sample_point(sample_point_index)->point_;
-					MyMesh::Point cuboid_surface_point = cuboid->get_cuboid_surface_point(
-						cuboid_surface_point_index)->point_;
+						MyMesh::Point sample_point = cuboid->get_sample_point(sample_point_index)->point_;
+						MyMesh::Point cuboid_surface_point = cuboid->get_cuboid_surface_point(
+							cuboid_surface_point_index)->point_;
 
-					glBegin(GL_LINES);
-					red_color();
-					glLineWidth(1.0f);
-					glVertex(sample_point);
-					glVertex(cuboid_surface_point);
-					glEnd();
+						glBegin(GL_LINES);
+						red_color();
+						glLineWidth(1.0f);
+						glVertex(sample_point);
+						glVertex(cuboid_surface_point);
+						glEnd();
+					}
 				}
 
 				// Draw cuboid axes.

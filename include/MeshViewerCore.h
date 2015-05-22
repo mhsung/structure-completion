@@ -178,6 +178,7 @@ private:
 	MeshCuboidStructure cuboid_structure_;
 
 	bool draw_cuboid_axes_;
+	bool draw_point_correspondences_;
 
 	//QGLOcculsionTestWidget *occlusion_test_widget_;
 	//std::vector< std::pair<MyMesh::Point, Real> > occlusion_test_points_;
