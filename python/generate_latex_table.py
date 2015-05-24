@@ -19,7 +19,7 @@ from enum import Enum
 
 
 input_path_postfix = '/output/'
-output_path_root = '/home/mhsung/app/cuboid-prediction/output/'
+output_path_root = '/home/mhsung/app/cuboid-prediction/report/'
 output_dir_prefix = ''
 
 attr_names = ['Name', 'View_Image',
@@ -55,12 +55,14 @@ def load_instances(input_filepath, output_filepath, symemtry_part_index):
         prefix = os.path.basename(dirname)
         print prefix
 
+        abs_dirname = os.path.abspath(dirname)
+
         is_loaded = True
 
         candidate_index = librr.find_best_candidate(dirname, prefix)
         print('Candidate index: ' + str(candidate_index))
 
-        relative_image_filepath = []
+        absolute_image_filepath = []
         image_filenames = []
         image_filenames.append(prefix + '_view.png')
         image_filenames.append(prefix + '_input.png')
@@ -79,14 +81,16 @@ def load_instances(input_filepath, output_filepath, symemtry_part_index):
                 break
 
             if not os.path.exists(output_filepath + '/' + image_filename):
+                '''
                 # Copy the image.
                 shutil.copy(dirname + '/' + image_filename, output_filepath)
 
                 # Create a thumbnail.
                 librr.create_thumbnails(output_filepath + '/' + image_filename, librr.thumbname_width)
+                '''
 
             # Get relative file path.
-            relative_image_filepath.append('./' + image_filename)
+            absolute_image_filepath.append(abs_dirname + '/' + image_filename)
 
         if not is_loaded:
             continue
@@ -114,11 +118,11 @@ def load_instances(input_filepath, output_filepath, symemtry_part_index):
                 accuracy_values.append(all_values[0])
                 completeness_values.append(all_values[1])
 
-        instance = OutputInstance(prefix, relative_image_filepath[0],
-                                  relative_image_filepath[1], relative_image_filepath[2],
-                                  relative_image_filepath[3], relative_image_filepath[4],
-                                  relative_image_filepath[5], relative_image_filepath[6],
-                                  relative_image_filepath[7], relative_image_filepath[8],
+        instance = OutputInstance(prefix, absolute_image_filepath[0],
+                                  absolute_image_filepath[1], absolute_image_filepath[2],
+                                  absolute_image_filepath[3], absolute_image_filepath[4],
+                                  absolute_image_filepath[5], absolute_image_filepath[6],
+                                  absolute_image_filepath[7], absolute_image_filepath[8],
                                   accuracy_values[0], completeness_values[0],
                                   accuracy_values[1], completeness_values[1],
                                   accuracy_values[2], completeness_values[2])
@@ -133,14 +137,16 @@ def main():
             input_path_postfix, output_path_root, output_dir_prefix)
 
     instances = load_instances(input_path, output_path, -1)
-    html_filename = output_path + '/index.html'
-    librr.write_html_table(instances, attr_names, attr_types, dataset_name + ' (All)', html_filename)
+    html_filename = output_path + '/output.tex'
+    librr.write_latex_table(instances, attr_names, attr_types, dataset_name + ' (All)', html_filename)
 
     # For each part
+    '''
     for i in range(len(symmetry_part_names)):
         instances = load_instances(input_path, output_path, i)
         html_filename = output_path + '/' + symmetry_part_names[i] + '.html'
         librr.write_html_table(instances, attr_names, attr_types,
                 dataset_name + ' (' + symmetry_part_names[i].title() + ')', html_filename)
+    '''
 
 main()

@@ -18,7 +18,7 @@ import time
 execType = ""
 dataDir = ""
 expDir = ""
-disallowParallel = True
+disallowParallel = False
 disallowRandomView = False
 numProcessors = 4
 

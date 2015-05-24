@@ -22,7 +22,7 @@ def ScheduleJob(cmd, jobName, scriptFile):
 		f = open(scriptFile+".sh", 'w'); f.write(cmd); f.close();
 		os.system("chmod 777 "+scriptFile+".sh");
 		qsubParams = "-V ";
-		qsubParams += "-l mem=16000mb,cput=12:00:00 ";	# 12 hours
+		qsubParams += "-l mem=16000mb,cput=24:00:00 ";	# 12 hours
 		qsubParams += "-N "+jobName;
 		qsubParams += " -d "+os.getcwd()+" -o "+scriptFile+".log -e "+scriptFile+".err";
 		cmd = "qsub "+qsubParams+" "+scriptFile+".sh ";
