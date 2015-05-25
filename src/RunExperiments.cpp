@@ -1967,7 +1967,7 @@ void MeshViewerCore::run_occlusion_test()
 	}
 
 	occlusion_test_widget_->set_sample_points(sample_points);
-	occlusion_test_widget_->set_modelview_matrix(modelview_matrix_);
+	occlusion_test_widget_->set_modelview_matrix(modelview_matrix());
 
 	std::array<Eigen::Matrix<float, Eigen::Dynamic, Eigen::Dynamic, Eigen::RowMajor>, 4> occlusion_test_result;
 	occlusion_test_widget_->get_occlusion_test_result(

@@ -711,7 +711,7 @@ void MeshViewerCore::draw_openmesh(const std::string& _drawmode)
 			{
 				GLdouble *point = &(*it).first[0];
 				Real radius = (*it).second;
-				radius = radius * (mesh_.get_object_diameter() * 0.0075) * point_size_;
+				radius = radius * (mesh_.get_object_diameter() * 0.0025) * point_size_;
 				if (radius > 0)
 				{
 					glPushMatrix();
