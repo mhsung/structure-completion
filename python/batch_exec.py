@@ -2,7 +2,7 @@
 
 ##########
 #
-#  Batch prediction
+# Batch prediction
 #
 ##########
 
@@ -22,8 +22,10 @@ disallowParallel = False
 disallowRandomView = False
 numProcessors = 4
 
+
 def run_exec_cmd(args):
     return exec_cmd(*args)
+
 
 def exec_cmd(mName, cmd, logFile):
     print("Job [" + mName + "] Started.")
@@ -34,12 +36,12 @@ def exec_cmd(mName, cmd, logFile):
 
 ## Parse arguments
 if len(sys.argv) < 4:
-	print("Usage: " + sys.argv[0] + " exec_type dataset_path experiment_path [options]")
-	print("Options:")
-	print("   -n")
-	print("   -disallowParallel")
-	print("   -disallowRandomView")
-	exit()
+    print("Usage: " + sys.argv[0] + " exec_type dataset_path experiment_path [options]")
+    print("Options:")
+    print("   -n")
+    print("   -disallowParallel")
+    print("   -disallowRandomView")
+    exit()
 else:
     execType = sys.argv[1]
     dataDir = sys.argv[2]
@@ -47,7 +49,7 @@ else:
     i = 4
     while i < len(sys.argv):
         if (sys.argv[i] == "-n"):
-            numProcessors = int(sys.argv[i+1])
+            numProcessors = int(sys.argv[i + 1])
             i = i + 1
         elif (sys.argv[i] == "-disallowParallel"):
             disallowParallel = True
@@ -75,36 +77,45 @@ cmdList = []
 count = 0
 
 for mName in mListTest:
-	count = count + 1
-	cmd = binDir + "OSMesaViewer" + " "
-	cmd += "--flagfile=arguments.txt" + " "
-	cmd += "--mesh_filename=" + mName + " "
-	cmd += "--run_" + execType + " "
+    count = count + 1
+    cmd = binDir + "OSMesaViewer" + " "
+    cmd += "--flagfile=arguments.txt" + " "
+    cmd += "--mesh_filename=" + mName + " "
+    cmd += "--run_" + execType + " "
 
-	if not disallowRandomView:
-		cmd += "--occlusion_pose_filename=\"\" "
-		cmd += "--random_view_seed=" + str(count) + " "
+    mesh_name = os.path.splitext(mName)[0]
 
-	scriptFile = "script/" + execType + "/" + mName
+    temp_occlusion_pose_filepath = "output/" + mesh_name + "/occlusion_pose.txt"
+    if os.path.isfile(temp_occlusion_pose_filepath):
+        cmd += "--occlusion_pose_filename=\"" + temp_occlusion_pose_filepath + "\" "
+    else:
+        if not disallowRandomView:
+            cmd += "--occlusion_pose_filename=\"\" "
+            cmd += "--random_view_seed=" + str(count) + " "
+    continue
 
-	if not disallowParallel:
-		jobIDs += fas.ScheduleJob(cmd, mName, scriptFile)
-		removeFiles += fas.TmpFilesNames(scriptFile)
-	else:
-		if not os.path.isdir("script"):
-			os.mkdir("script")
-        if not os.path.isdir("script/" + execType):
-            os.mkdir("script/" + execType)
+    scriptFile = "script/" + execType + "/" + mName
 
-        logFile = scriptFile + ".out"
-        f = open(scriptFile+".sh", 'w'); f.write(cmd); f.close();
-        os.system("chmod 777 "+scriptFile+".sh");
-        cmdList.append((mName, cmd, logFile))
+    if not disallowParallel:
+        jobIDs += fas.ScheduleJob(cmd, mName, scriptFile)
+        removeFiles += fas.TmpFilesNames(scriptFile)
+    else:
+        if not os.path.isdir("script"):
+            os.mkdir("script")
+    if not os.path.isdir("script/" + execType):
+        os.mkdir("script/" + execType)
+
+    logFile = scriptFile + ".out"
+    f = open(scriptFile + ".sh", 'w');
+    f.write(cmd);
+    f.close();
+    os.system("chmod 777 " + scriptFile + ".sh");
+    cmdList.append((mName, cmd, logFile))
 
 if not disallowParallel:
     fas.WaitForJobsInArray(jobIDs)
 else:
-    pool = mp.Pool(processes = numProcessors)
+    pool = mp.Pool(processes=numProcessors)
     rs = pool.imap_unordered(run_exec_cmd, cmdList)
     pool.close()
     t = time.time()
