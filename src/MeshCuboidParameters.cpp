@@ -44,6 +44,7 @@ DEFINE_bool(run_prediction, false, "");
 DEFINE_bool(run_part_assembly, false, "");
 DEFINE_bool(run_symmetry_detection, false, "");
 DEFINE_bool(run_baseline, false, "");
+DEFINE_bool(run_assembly_render, false, "");
 DEFINE_string(mesh_filename, "", "");
 
 DEFINE_string(data_root_path, "D:/Data/shape2pose/", "");

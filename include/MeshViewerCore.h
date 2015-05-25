@@ -131,6 +131,8 @@ private:
 	void run_part_assembly_reconstruction(const std::string _mesh_filepath,
 		const Real _xy_size, const Real _z_size, const Real _angle,
 		const std::vector<std::string> &_label_matched_objects);
+
+	void render_part_assembly_cuboids();
 		
 
 	void set_view_direction();

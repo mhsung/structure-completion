@@ -63,6 +63,12 @@ void MeshViewerCore::parse_arguments()
 		run_baseline_stats();
 		exit(EXIT_FAILURE);
 	}
+	else if (FLAGS_run_assembly_render)
+	{
+		std::cout << "mesh_filename = " << FLAGS_mesh_filename << std::endl;
+		render_part_assembly_cuboids();
+		exit(EXIT_FAILURE);
+	}
 }
 
 bool MeshViewerCore::load_object_info(

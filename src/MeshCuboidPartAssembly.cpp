@@ -543,6 +543,64 @@ void MeshViewerCore::run_part_assembly_reconstruction(const std::string _mesh_fi
 	}
 }
 
+void MeshViewerCore::render_part_assembly_cuboids()
+{
+	// Load basic information.
+	bool ret = true;
+
+	ret = ret & cuboid_structure_.load_labels((FLAGS_data_root_path +
+		FLAGS_label_info_path + FLAGS_label_info_filename).c_str());
+	ret = ret & cuboid_structure_.load_label_symmetries((FLAGS_data_root_path +
+		FLAGS_label_info_path + FLAGS_label_symmetry_info_filename).c_str());
+
+	// Load symmetry groups.
+	ret = ret & cuboid_structure_.load_symmetry_groups((FLAGS_data_root_path +
+		FLAGS_label_info_path + FLAGS_symmetry_group_info_filename).c_str());
+
+	if (!ret)
+	{
+		do {
+			std::cout << "Error: Cannot open label information files.";
+			std::cout << '\n' << "Press the Enter key to continue.";
+		} while (std::cin.get() != '\n');
+	}
+
+	// Initialize basic information.
+	unsigned int num_labels = cuboid_structure_.num_labels();
+	cuboid_structure_.clear_cuboids();
+	cuboid_structure_.clear_sample_points();
+	setDrawMode(CUSTOM_VIEW);
+
+	std::string mesh_filepath = FLAGS_data_root_path + FLAGS_mesh_path + std::string("/") + FLAGS_mesh_filename;
+	QFileInfo mesh_file(mesh_filepath.c_str());
+	std::string mesh_name = std::string(mesh_file.baseName().toLocal8Bit());
+	std::string mesh_output_path = FLAGS_part_assembly_dir + std::string("/") + mesh_name;
+
+	std::string sample_filepath = mesh_output_path + std::string("/") + mesh_name + std::string("_assembly.pts");
+	std::string sample_label_filepath = mesh_output_path + std::string("/") + mesh_name + std::string("_assembly_label.arff");
+
+	ret = open_mesh(mesh_filepath.c_str());
+	assert(ret);
+
+	std::cout << " - Load sample points." << std::endl;
+	ret = cuboid_structure_.load_sample_points(sample_filepath.c_str(), false);
+	assert(ret);
+
+	std::cout << " - Load sample point labels." << std::endl;
+	ret = cuboid_structure_.load_sample_point_labels(sample_label_filepath.c_str());
+	assert(ret);
+
+	cuboid_structure_.compute_label_cuboids();
+
+	mesh_.clear_colors();
+	open_modelview_matrix_file(FLAGS_pose_filename.c_str());
+	updateGL();
+
+	std::stringstream output_filename_sstr;
+	output_filename_sstr << mesh_output_path + std::string("/") + mesh_name + std::string("_assembly_cuboid");
+	snapshot(output_filename_sstr.str().c_str());
+}
+
 void MeshViewerCore::run_part_assembly()
 {
 	// Load basic information.
