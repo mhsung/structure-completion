@@ -57,6 +57,12 @@ void MeshViewerCore::parse_arguments()
 		run_symmetry_detection_msh2pln();
 		exit(EXIT_FAILURE);
 	}
+	else if (FLAGS_run_baseline)
+	{
+		std::cout << "mesh_filename = " << FLAGS_mesh_filename << std::endl;
+		run_baseline_stats();
+		exit(EXIT_FAILURE);
+	}
 }
 
 bool MeshViewerCore::load_object_info(
@@ -1421,6 +1427,88 @@ void MeshViewerCore::run_symmetry_detection_msh2pln()
 	output_filename_sstr.clear(); output_filename_sstr.str("");
 	output_filename_sstr << mesh_output_path << filename_prefix << std::string("symm_detection_completeness");
 	snapshot(output_filename_sstr.str().c_str());
+
+
+	setDrawMode(CUSTOM_VIEW);
+}
+
+void MeshViewerCore::run_baseline_stats()
+{
+	setDrawMode(CUSTOM_VIEW);
+
+	std::string mesh_filepath = FLAGS_data_root_path + FLAGS_mesh_path + std::string("/") + FLAGS_mesh_filename;
+	QFileInfo mesh_file(mesh_filepath.c_str());
+	std::string mesh_name = std::string(mesh_file.baseName().toLocal8Bit());
+
+	if (!mesh_file.exists())
+	{
+		std::cerr << "Error: The mesh file does not exist (" << mesh_filepath << ")." << std::endl;
+		return;
+	}
+	else if (!open_mesh(mesh_filepath.c_str()))
+	{
+		std::cerr << "Error: The mesh file cannot be opened (" << mesh_filepath << ")." << std::endl;
+		return;
+	}
+
+	std::string filename_prefix = std::string("/") + mesh_name + std::string("_");
+	std::stringstream output_filename_sstr;
+
+	QDir output_dir;
+	std::string mesh_output_path = FLAGS_baseline_dir + std::string("/") + mesh_name;
+	output_dir.mkpath(FLAGS_output_dir.c_str());
+	output_dir.mkpath(mesh_output_path.c_str());
+
+
+	// Initialize basic information.
+	cuboid_structure_.clear_cuboids();
+	cuboid_structure_.clear_sample_points();
+
+
+	// Load files.
+	double snapshot_modelview_matrix[16];
+	double occlusion_modelview_matrix[16];
+
+	open_modelview_matrix_file(FLAGS_pose_filename.c_str());
+	memcpy(snapshot_modelview_matrix, modelview_matrix(), 16 * sizeof(double));
+
+	if (FLAGS_occlusion_pose_filename == "")
+		set_random_view_direction(true);
+	else
+	{
+		bool ret = open_modelview_matrix_file(FLAGS_occlusion_pose_filename.c_str());
+		assert(ret);
+	}
+	memcpy(occlusion_modelview_matrix, modelview_matrix(), 16 * sizeof(double));
+	//save_modelview_matrix_file((mesh_output_path + std::string("/occlusion_pose.txt")).c_str());
+
+
+	//
+	bool ret = load_object_info(mesh_, cuboid_structure_, mesh_filepath.c_str(), LoadDenseSamplePoints);
+	if (!ret) return;
+	set_modelview_matrix(occlusion_modelview_matrix, false);
+	remove_occluded_points();
+	updateGL();
+
+	set_modelview_matrix(snapshot_modelview_matrix);
+	updateGL();
+	//
+
+
+	output_filename_sstr.clear(); output_filename_sstr.str("");
+	output_filename_sstr << mesh_output_path << filename_prefix << std::string("baseline");
+	updateGL();
+	snapshot(output_filename_sstr.str().c_str());
+
+	//
+	MyMesh ground_truth_mesh;
+	MeshCuboidStructure ground_truth_cuboid_structure(&ground_truth_mesh);
+
+	ret = load_object_info(ground_truth_mesh, ground_truth_cuboid_structure,
+		mesh_filepath.c_str(), LoadDenseSamplePoints);
+	assert(ret);
+	MeshCuboidEvaluator evaluator(&ground_truth_cuboid_structure);
+	evaluator.evaluate_point_to_point_distances(&cuboid_structure_, output_filename_sstr.str().c_str());
 
 
 	setDrawMode(CUSTOM_VIEW);

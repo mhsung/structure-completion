@@ -43,6 +43,7 @@ DEFINE_bool(run_training, false, "");
 DEFINE_bool(run_prediction, false, "");
 DEFINE_bool(run_part_assembly, false, "");
 DEFINE_bool(run_symmetry_detection, false, "");
+DEFINE_bool(run_baseline, false, "");
 DEFINE_string(mesh_filename, "", "");
 
 DEFINE_string(data_root_path, "D:/Data/shape2pose/", "");
@@ -56,6 +57,7 @@ DEFINE_string(output_dir, "output", "");
 DEFINE_string(training_dir, "training", "");
 DEFINE_string(part_assembly_dir, "part_assembly", "");
 DEFINE_string(symmetry_detection_dir, "symmetry_detection", "");
+DEFINE_string(baseline_dir, "baseline_dir", "");
 
 DEFINE_string(label_info_filename, "regions.txt", "");
 DEFINE_string(label_symmetry_info_filename, "regions_symmetry.txt", "");
