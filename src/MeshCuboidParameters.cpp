@@ -57,7 +57,7 @@ DEFINE_string(output_dir, "output", "");
 DEFINE_string(training_dir, "training", "");
 DEFINE_string(part_assembly_dir, "part_assembly", "");
 DEFINE_string(symmetry_detection_dir, "symmetry_detection", "");
-DEFINE_string(baseline_dir, "baseline_dir", "");
+DEFINE_string(baseline_dir, "baseline", "");
 
 DEFINE_string(label_info_filename, "regions.txt", "");
 DEFINE_string(label_symmetry_info_filename, "regions_symmetry.txt", "");
