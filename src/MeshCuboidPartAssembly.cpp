@@ -592,6 +592,11 @@ void MeshViewerCore::render_part_assembly_cuboids()
 
 	cuboid_structure_.compute_label_cuboids();
 
+	std::string input_sample_filepath = FLAGS_output_dir + std::string("/") + mesh_name + std::string("/") + mesh_name + std::string("_input.pts");
+	cuboid_structure_.clear_sample_points();
+	ret = cuboid_structure_.load_sample_points(input_sample_filepath.c_str());
+	assert(ret);
+
 	mesh_.clear_colors();
 	open_modelview_matrix_file(FLAGS_pose_filename.c_str());
 	updateGL();
