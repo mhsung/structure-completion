@@ -1885,8 +1885,10 @@ void MeshViewerCore::test_figure_1()
 		//error = diff.transpose() * joint_normal_relation->get_inv_cov() * diff;
 		//error = std::exp(-error / variance);
 		//std::cout << ">>> error = " << error << std::endl;
-		mean_main_cuboid->error_ = 1.0;
-		mean_target_cuboid->error_ = 1.0;
+
+		// Add 'error_' member variable to 'MeshCuboid'.
+		//mean_main_cuboid->error_ = 1.0;
+		//mean_target_cuboid->error_ = 1.0;
 
 		temp_cuboid_structure.label_cuboids_[main_label_index].push_back(mean_main_cuboid);
 		temp_cuboid_structure.label_cuboids_[target_label_index].push_back(mean_target_cuboid);
@@ -1971,7 +1973,9 @@ void MeshViewerCore::test_figure_1()
 					diff = diff.cwiseProduct(mask);
 					error = diff.transpose() * joint_normal_relation->get_inv_cov() * diff;
 					error = std::exp(-error / variance);
-					normalized_target_cuboid->error_ = error;
+
+					// Add 'error_' member variable to 'MeshCuboid'.
+					//normalized_target_cuboid->error_ = error;
 					assert(error >= 0);
 					assert(error <= 1);
 					std::cout << ">>> error = " << error << std::endl;
