@@ -92,7 +92,6 @@ for mName in mListTest:
         if not disallowRandomView:
             cmd += "--occlusion_pose_filename=\"\" "
             cmd += "--random_view_seed=" + str(count) + " "
-    continue
 
     scriptFile = "script/" + execType + "/" + mName
 
