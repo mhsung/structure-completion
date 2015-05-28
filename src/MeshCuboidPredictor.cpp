@@ -235,7 +235,7 @@ Real MeshCuboidPredictor::get_pair_quadratic_form(
 	assert(_cuboid_1); assert(_cuboid_2);
 	assert(_label_index_1 < num_labels_);
 	assert(_label_index_2 < num_labels_);
-	assert(_label_index_1 != _label_index_2);
+	//assert(_label_index_1 != _label_index_2);
 
 	const unsigned int num_attributes = MeshCuboidAttributes::k_num_attributes;
 	const unsigned int num_features = MeshCuboidFeatures::k_num_features;
@@ -320,7 +320,7 @@ Real MeshCuboidJointNormalRelationPredictor::get_pair_potential(
 
 	// NOTE:
 	// Now considering only different label pairs.
-	assert(_label_index_1 != _label_index_2);
+	//assert(_label_index_1 != _label_index_2);
 
 	Real potential = FLAGS_param_max_potential;
 
@@ -367,7 +367,7 @@ Real MeshCuboidJointNormalRelationPredictor::get_pair_quadratic_form(
 
 	// NOTE:
 	// Now considering only different label pairs.
-	assert(_label_index_1 != _label_index_2);
+	//assert(_label_index_1 != _label_index_2);
 
 	const unsigned int num_attributes = MeshCuboidAttributes::k_num_attributes;
 	const unsigned int num_features = MeshCuboidFeatures::k_num_features;
@@ -586,7 +586,7 @@ Real MeshCuboidCondNormalRelationPredictor::get_pair_potential(
 
 	// NOTE:
 	// Now considering only different label pairs.
-	assert(_label_index_1 != _label_index_2);
+	//assert(_label_index_1 != _label_index_2);
 
 	Real potential = FLAGS_param_max_potential;
 
@@ -615,7 +615,7 @@ Real MeshCuboidCondNormalRelationPredictor::get_pair_quadratic_form(
 
 	// NOTE:
 	// Now considering only different label pairs.
-	assert(_label_index_1 != _label_index_2);
+	//assert(_label_index_1 != _label_index_2);
 
 	const unsigned int num_attributes = MeshCuboidAttributes::k_num_attributes;
 	const unsigned int num_features = MeshCuboidFeatures::k_num_features;
@@ -749,7 +749,7 @@ Real MeshCuboidPCARelationPredictor::get_pair_potential(
 
 	// NOTE:
 	// Now considering only different label pairs.
-	assert(_label_index_1 != _label_index_2);
+	//assert(_label_index_1 != _label_index_2);
 
 	Real potential = 0.0;
 
@@ -788,7 +788,7 @@ Real MeshCuboidPCARelationPredictor::get_pair_quadratic_form(
 
 	// NOTE:
 	// Now considering only different label pairs.
-	assert(_label_index_1 != _label_index_2);
+	//assert(_label_index_1 != _label_index_2);
 
 	const unsigned int num_attributes = MeshCuboidAttributes::k_num_attributes;
 	const unsigned int num_features = MeshCuboidFeatures::k_num_features;
@@ -953,7 +953,7 @@ Real MeshCuboidCCARelationPredictor::get_pair_potential(
 
 	// NOTE:
 	// Now considering only different label pairs.
-	assert(_label_index_1 != _label_index_2);
+	//assert(_label_index_1 != _label_index_2);
 
 	Real potential = 0.0;
 

@@ -158,7 +158,7 @@ void MeshCuboidTrainer::get_joint_normal_relations(
 	{
 		for (unsigned int label_index_2 = 0; label_index_2 < num_labels; ++label_index_2)
 		{
-			if (label_index_1 == label_index_2) continue;
+			//if (label_index_1 == label_index_2) continue;
 
 			// NOTE:
 			// 'object_list_' should contain all object names.
