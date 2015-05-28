@@ -48,7 +48,8 @@ DECLARE_bool(run_prediction);
 DECLARE_bool(run_part_assembly);
 DECLARE_bool(run_symmetry_detection);
 DECLARE_bool(run_baseline);
-DECLARE_bool(run_assembly_render);
+DECLARE_bool(run_render_assembly);
+DECLARE_bool(run_render_evaluation);
 DECLARE_string(mesh_filename);
 
 DECLARE_string(data_root_path);
