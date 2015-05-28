@@ -422,13 +422,13 @@ void segment_sample_points(
 	MeshCuboidStructure &_cuboid_structure)
 {
 	// Parameter.
-	const double null_cuboid_probability = 0.1;
+	FLAGS_param_null_cuboid_probability = 0.1;
 	
 	assert(_cuboid_structure.mesh_);
 	double squared_neighbor_distance = FLAGS_param_sparse_neighbor_distance *
 		FLAGS_param_sparse_neighbor_distance *
 		_cuboid_structure.mesh_->get_object_diameter();
-	double lambda = -squared_neighbor_distance / std::log(null_cuboid_probability);
+	double lambda = -squared_neighbor_distance / std::log(FLAGS_param_null_cuboid_probability);
 
 	unsigned int num_sample_points = _cuboid_structure.num_sample_points();
 	const int num_neighbors = std::min(FLAGS_param_num_sample_point_neighbors,
@@ -501,7 +501,7 @@ void segment_sample_points(
 		}
 
 		// For null cuboid.
-		double energy = squared_neighbor_distance - lambda * std::log(null_cuboid_probability);
+		double energy = squared_neighbor_distance - lambda * std::log(FLAGS_param_null_cuboid_probability);
 		single_potentials(point_index, num_cuboids) = energy;
 	}
 
