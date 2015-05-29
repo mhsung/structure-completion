@@ -1599,7 +1599,7 @@ void optimize_attributes(
 	log_file.close();
 }
 
-void add_missing_cuboids_once_old(
+void add_missing_cuboids_once(
 	const std::vector<MeshCuboid *>& _given_cuboids,
 	const std::list<LabelIndex> &_missing_label_indices,
 	const MeshCuboidPredictor &_predictor,
@@ -1754,12 +1754,15 @@ void add_missing_cuboids_once_old(
 	}
 }
 
-void add_missing_cuboids_once(
+void add_missing_cuboids_once_simple(
 	const MeshCuboid *_given_cuboid,
 	const std::list<LabelIndex> &_missing_label_indices,
 	const std::vector< std::vector<MeshCuboidJointNormalRelations *> > &_joint_normal_relations,
 	std::vector<MeshCuboid *>& _new_cuboids)
 {
+	// NOTE:
+	// This works better for scanned data.
+
 	assert(_given_cuboid);
 	if (_missing_label_indices.empty())
 		return;
@@ -1810,8 +1813,8 @@ bool add_missing_cuboids(
 	MeshCuboidStructure &_cuboid_structure,
 	const Real _modelview_matrix[16],
 	const std::list<LabelIndex> &_missing_label_indices,
-	//const MeshCuboidPredictor &_predictor,
-	const std::vector< std::vector<MeshCuboidJointNormalRelations *> > &_joint_normal_relations,
+	const MeshCuboidPredictor &_predictor,
+	//const std::vector< std::vector<MeshCuboidJointNormalRelations *> > &_joint_normal_relations,
 	std::set<LabelIndex> &_ignored_label_indices)
 {
 	if (_missing_label_indices.empty())
@@ -1857,13 +1860,13 @@ bool add_missing_cuboids(
 	std::set<LabelIndex> added_label_indices;
 	for (unsigned int cuboid_index = 0; cuboid_index < num_all_cuboids; ++cuboid_index)
 	{
-		//std::vector<MeshCuboid *> given_cuboids;
-		//given_cuboids.push_back(all_cuboids[cuboid_index]);
+		std::vector<MeshCuboid *> given_cuboids;
+		given_cuboids.push_back(all_cuboids[cuboid_index]);
 		std::vector<MeshCuboid *> new_cuboids;
 
-		//add_missing_cuboids_once_old(given_cuboids, _missing_label_indices, _predictor, new_cuboids);
-		add_missing_cuboids_once(all_cuboids[cuboid_index], _missing_label_indices,
-			_joint_normal_relations, new_cuboids);
+		add_missing_cuboids_once(given_cuboids, _missing_label_indices, _predictor, new_cuboids);
+		//add_missing_cuboids_once_simple(all_cuboids[cuboid_index], _missing_label_indices,
+		//	_joint_normal_relations, new_cuboids);
 
 		for (std::vector<MeshCuboid *>::iterator it = new_cuboids.begin();
 			it != new_cuboids.end(); ++it)
