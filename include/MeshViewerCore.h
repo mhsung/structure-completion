@@ -63,6 +63,7 @@ public:
 	void run_symmetry_detection();
 	void run_symmetry_detection_msh2pln();
 	void run_baseline_stats();
+	void run_render_evaluation();
 	void batch_render_point_clusters();
 	void batch_render_cuboids();
 	void batch_render_points();
@@ -113,8 +114,6 @@ private:
 		const GLdouble *_snapshot_modelview_matrix,
 		const GLdouble *_occlusion_modelview_matrix,
 		const char *_output_file_prefix);
-
-	void render_evaluation();
 
 	void reconstruct_database_prior(
 		const char *_mesh_filepath,

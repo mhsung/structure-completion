@@ -72,7 +72,7 @@ void MeshViewerCore::parse_arguments()
 	else if (FLAGS_run_render_evaluation)
 	{
 		std::cout << "mesh_filename = " << FLAGS_mesh_filename << std::endl;
-		render_evaluation();
+		run_render_evaluation();
 		exit(EXIT_FAILURE);
 	}
 }
