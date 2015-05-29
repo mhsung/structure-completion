@@ -23,6 +23,7 @@ DECLARE_double(param_min_cuboid_bbox_diag_length);
 DECLARE_double(param_sparse_neighbor_distance);
 DECLARE_double(param_cuboid_split_neighbor_distance);
 DECLARE_double(param_occlusion_test_neighbor_distance);
+DECLARE_double(param_eval_min_neighbor_distance);
 DECLARE_double(param_eval_max_neighbor_distance);
 DECLARE_double(param_min_cuboid_overall_visibility);
 DECLARE_double(param_max_potential);
