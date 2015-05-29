@@ -28,8 +28,8 @@ output_dir_prefix = ''
 def load_instances(input_filepath, output_filepath):
     dirnames = glob.glob(input_filepath + '/*')
 
-    all_accu_values = [[], [], [], []]
-    all_comp_values = [[], [], [], []]
+    all_accu_values = [[], [], [], [], []]
+    all_comp_values = [[], [], [], [], []]
     x_values = []
     count_instances = 0
 
@@ -71,11 +71,25 @@ def load_instances(input_filepath, output_filepath):
         csv_filename_postfixes.append(prefix + '_' + str(candidate_index) + '_database')
         csv_filename_postfixes.append(prefix + '_' + str(candidate_index) + '_fusion')
         csv_filename_postfixes.append('/../../part_assembly/' + prefix + '/' + prefix +'_assembly')
-        
+        csv_filename_postfixes.append('/../../symmetry_detection/' + prefix + '/' + prefix +'_symm_detection_recon')
+
+        file_exist = True
+        for i in range(len(csv_filename_postfixes)):
+            csv_filename_postfix = csv_filename_postfixes[i]
+            csv_filename = dirname + '/' + csv_filename_postfix + '.csv'
+            if not os.path.isfile(csv_filename):
+                file_exist = False
+                break
+
+        if not file_exist:
+            continue
 
         for i in range(len(csv_filename_postfixes)):
             csv_filename_postfix = csv_filename_postfixes[i]
             csv_filename = dirname + '/' + csv_filename_postfix + '.csv'
+            if not os.path.isfile(csv_filename):
+                continue
+
             (accu_values, comp_values, x_values) = librr.get_csv_all_value(csv_filename)
 
             if not all_accu_values[i]:
@@ -107,26 +121,30 @@ def main():
     (all_accu_values, all_comp_values, x_values) = load_instances(input_path, output_path)
 
     title = 'accu'
-    plt.plot(x_values, all_accu_values[0], label='Symmetry')
-    plt.plot(x_values, all_accu_values[1], label='Database')
-    plt.plot(x_values, all_accu_values[2], label='Fusion')
+    plt.plot(x_values, all_accu_values[0], label='Recon. Symmetry (Ours)')
+    plt.plot(x_values, all_accu_values[1], label='Recon. Database (Ours)')
+    plt.plot(x_values, all_accu_values[2], label='Recon. Fusion (Ours)')
     plt.plot(x_values, all_accu_values[3], label='Part Assembly')
+    plt.plot(x_values, all_accu_values[4], label='Symmetry Detection')
     plt.legend(loc=4)
     plt.xlim(0, max_x_value)
     plt.ylim(0, 1)
     plt.xlabel('Neighbor Distance')
+    print(output_path_root + '/' + data_dirname + "_" + title)
     plt.savefig(output_path_root + '/' + data_dirname + "_" + title)
     plt.clf()
     
     title = 'comp'
-    plt.plot(x_values, all_comp_values[0], label='Symmetry')
-    plt.plot(x_values, all_comp_values[1], label='Database')
-    plt.plot(x_values, all_comp_values[2], label='Fusion')
+    plt.plot(x_values, all_accu_values[0], label='Recon. Symmetry (Ours)')
+    plt.plot(x_values, all_accu_values[1], label='Recon. Database (Ours)')
+    plt.plot(x_values, all_accu_values[2], label='Recon. Fusion (Ours)')
     plt.plot(x_values, all_comp_values[3], label='Part Assembly')
+    plt.plot(x_values, all_accu_values[4], label='Symmetry Detection')
     plt.legend(loc=4)
     plt.xlim(0, max_x_value)
     plt.ylim(0, 1)
     plt.xlabel('Neighbor Distance')
+    print(output_path_root + '/' + data_dirname + "_" + title)
     plt.savefig(output_path_root + '/' + data_dirname + "_" + title)
 
 main()

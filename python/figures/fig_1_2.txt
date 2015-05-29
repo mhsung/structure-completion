@@ -1,4 +1,0 @@
-exp14_assembly_chairs,4051
-exp14_assembly_chairs,4684
-exp1_assembly_bicycles,09
-exp1_assembly_bicycles,58

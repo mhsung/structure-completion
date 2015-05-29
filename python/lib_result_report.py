@@ -31,12 +31,16 @@ dataset_name_set = [
         'assembly_chairs',
         'assembly_airplanes',
         'assembly_bicycles',
-        'coseg_chairs']
+        'coseg_chairs',
+        'assembly_desks',
+        'shapenet_tables']
 symmetry_part_names_set = [
         ['seat', 'back', 'legs', 'wheels', 'leg_column', 'armrests'],
         ['body', 'wings', 'tail_wings', 'fuselages', 'body'],
         ['wheel', 'handle', 'paddle', 'front_column', 'rear_body', 'front_body', 'seat', 'chain'],
-        ['seat', 'back', 'legs', 'wheels', 'leg_column', 'armrests']]
+        ['seat', 'back', 'legs', 'wheels', 'leg_column'],
+        ['plane', 'legs'],
+        ['top', 'legs']]
 ##
 
 class AttrType(Enum):
@@ -75,6 +79,8 @@ def get_csv_all_value(input_filepath):
             x_values = map(float, data.next())
             accu_values = map(float, data.next())
             comp_values = map(float, data.next())
+    else:
+        print('Warning: File does not exist (' + input_filepath + ')')
 
     return (accu_values, comp_values, x_values)
 
@@ -261,11 +267,101 @@ def write_html_table(instances, attr_names, attr_types, title, filename):
 
 def write_latex_header(file):
     file.write('\\documentclass[]{article}\n')
+    file.write('\\usepackage{booktabs}\n')
     file.write('\\usepackage{graphicx}\n')
     file.write('\\usepackage[margin=0.10in]{geometry}\n')
+    file.write('\\usepackage{tabu}\n')
     file.write('\n')
 
 
+def write_latex_image(file, image_size, image_filepath):
+    filename, fileext = os.path.splitext(image_filepath)
+    #thumbname_filename = filename + '_thumb' + fileext
+    file.write('\\begin{minipage}{' + str(image_size) + '\\textwidth} \\includegraphics[width=\linewidth, clip, trim={50 -10 50 -10}]{' + image_filepath + '} \\end{minipage} \n')
+
+
+def open_latex_table(filename, attr_names, attr_types):
+    assert len(attr_names) == len(attr_types)
+    num_attrs = len(attr_names)
+
+    num_image_attrs = 0
+    for i in range(num_attrs):
+        if attr_types[i] == AttrType.image:
+            num_image_attrs += 1
+
+    print "Saving the file..."
+    file = open(filename, 'w')
+
+    write_latex_header(file)
+
+    file.write('\\begin{document}\n')
+    file.write('\\begin{figure*}[tb]\n')
+    file.write('\\begin{tabu} to \\linewidth {')
+
+    for count_image_attrs in range(num_image_attrs):
+        file.write('@{}X[1,c,m]')
+    file.write('@{}}\n')
+
+    return file;
+
+
+def write_latex_table(file, instances, attr_names, attr_types):
+    assert len(attr_names) == len(attr_types)
+    num_attrs = len(attr_names)
+
+    num_image_attrs = 0
+    for i in range(num_attrs):
+        if attr_types[i] == AttrType.image:
+            num_image_attrs += 1
+
+    image_size = 1 / (1.12 * num_image_attrs)
+    num_instances = len(instances)
+
+    count_image_attrs = 0
+    for i in range(num_attrs):
+        if attr_types[i] == AttrType.image:
+            attr_name = attr_names[i]
+            attr_name = attr_name.replace('_', ' ')
+            attr_name = attr_name.replace('0', '.')
+            attr_name = attr_name.replace('1', '(')
+            attr_name = attr_name.replace('2', ')')
+            attr_name = attr_name.replace('Etal', '{\it et al}.')
+            file.write('\\Large{'+attr_name+'}')
+            count_image_attrs += 1
+            if count_image_attrs < num_image_attrs:
+                file.write(' & ')
+            else:
+                file.write('\\\\ \n')
+
+    file.write('\\toprule\n')
+
+    count_image_attrs = 0
+    for i in range(num_attrs):
+        if attr_types[i] == AttrType.image:
+            file.write('{\n')
+            file.write('\\renewcommand{\\arraystretch}{0.0}\n')
+            file.write('\\begin{tabular}{@{}c@{}}\n')
+            for instance_id in range(num_instances):
+                instance = instances[instance_id]
+                write_latex_image(file, image_size, instance[i])
+                if (instance_id + 1) < num_instances:
+                    file.write('\\\\ \n')
+            file.write('\end{tabular}\n')
+            count_image_attrs += 1
+            if count_image_attrs < num_image_attrs:
+                file.write('} & \n')
+            else:
+                file.write('}\n')
+
+
+def close_latex_table(file):
+    file.write('\\\\ \\bottomrule\n')
+    file.write('\\end{tabu}\n')
+    file.write('\\end{figure*}\n')
+    file.write('\\end{document}\n')
+
+
+'''
 def write_latex_image(file, image_size, image_filepath):
     filename, fileext = os.path.splitext(image_filepath)
     #thumbname_filename = filename + '_thumb' + fileext
@@ -293,18 +389,6 @@ def open_latex_table(filename, attr_names, attr_types):
         if (count_image_attrs + 1) < num_image_attrs:
             file.write('|')
     file.write('}\n')
-
-    '''
-    count_image_attrs = 0
-    for i in range(num_attrs):
-        if attr_types[i] == AttrType.image:
-            attr_name = attr_names[i].replace('_', ' ')
-            file.write(attr_name)
-            if (count_image_attrs + 1) < num_image_attrs:
-                file.write(' &\n')
-                count_image_attrs += 1
-    file.write('\\\\ \\hline\n')
-    '''
 
     return file;
 
@@ -342,7 +426,7 @@ def close_latex_table(file):
     file.write('\\end{tabular}\n')
     file.write('\\end{table}\n')
     file.write('\\end{document}\n')
-
+'''
 
 def parse_arguments(input_path_postfix, output_path_root, output_dir_prefix):
     ## Parse arguments

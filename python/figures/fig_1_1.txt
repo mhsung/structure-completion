@@ -1,4 +1,0 @@
-exp14_assembly_chairs,33
-exp14_assembly_chairs,4041
-exp3_assembly_airplanes,023
-exp3_assembly_airplanes,024

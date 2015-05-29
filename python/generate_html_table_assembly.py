@@ -23,11 +23,11 @@ input_path_postfix = '/part_assembly/'
 output_path_root = '/home/mhsung/app/cuboid-prediction/output/'
 output_dir_prefix = 'assembly_'
 
-attr_names = ['Name', 'View_Image',  'Input_Image',
+attr_names = ['Name', 'View_Image',  'Input_Image', 'Part_Structure_Image',
               'Assembly_Accuracy_Image', 'Assembly_Completeness_Image',
               'Assembly_Accuracy', 'Assembly_Completeness']
 
-attr_types = [librr.AttrType.text, librr.AttrType.image, librr.AttrType.image,
+attr_types = [librr.AttrType.text, librr.AttrType.image, librr.AttrType.image, librr.AttrType.image,
               librr.AttrType.image, librr.AttrType.image,
               librr.AttrType.number, librr.AttrType.number]
 
@@ -52,6 +52,7 @@ def load_instances(input_filepath, output_filepath, symemtry_part_index):
         image_filenames = []
         image_filenames.append(prefix + '_view.png')
         image_filenames.append(prefix + '_input.png')
+        image_filenames.append(prefix + '_assembly_cuboid.png')
         image_filenames.append(prefix + '_assembly_accuracy.png')
         image_filenames.append(prefix + '_assembly_completeness.png')
 
@@ -103,8 +104,8 @@ def load_instances(input_filepath, output_filepath, symemtry_part_index):
                 accuracy_values.append(all_values[0])
                 completeness_values.append(all_values[1])
 
-        instance = OutputInstance(prefix, relative_image_filepath[0], relative_image_filepath[1],
-                                  relative_image_filepath[2], relative_image_filepath[3],
+        instance = OutputInstance(prefix, relative_image_filepath[0], relative_image_filepath[1], relative_image_filepath[2],
+                                  relative_image_filepath[3], relative_image_filepath[4],
                                   accuracy_values[0], completeness_values[0])
 
         instances.append(instance)

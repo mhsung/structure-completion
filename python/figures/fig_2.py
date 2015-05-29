@@ -22,12 +22,11 @@ from enum import Enum
 
 
 attr_names = [#'Name',
-              'View_Image',
-              'Structure_Reconstruction_Image',
-              'Part_Assembly_Image',
-              #'Symmetry_Accuracy_Image',
-              #'Database_Accuracy_Image',
-              #'Fusion_Accuracy_Image',
+              'Input',
+              'Structure_Estimation_1Shen_Etal2',
+              'Accuracy_1Shen_Etal2',
+              'Structure_Estimation_1Ours2',
+              'Accuracy_1Ours2',
               #'Symmetry_Accuracy', 'Symmetry_Completeness',
               #'Database_Accuracy', 'Database_Completeness',
               #'Fusion_Accuracy', 'Fusion_Completeness'
@@ -37,8 +36,8 @@ attr_types = [#librr.AttrType.text,
               librr.AttrType.image,
               librr.AttrType.image,
               librr.AttrType.image,
-              #librr.AttrType.image,
-              #librr.AttrType.image,
+              librr.AttrType.image,
+              librr.AttrType.image,
               #librr.AttrType.image,
               #librr.AttrType.number, librr.AttrType.number,
               #librr.AttrType.number, librr.AttrType.number,
@@ -55,6 +54,15 @@ OutputInstance = namedtuple('OutputInstance', attr_names)
 def load_instances(input_filepath, output_filepath, mesh_list, symemtry_part_index):
     dirnames = glob.glob(input_filepath + '/*')
 
+    exp_name = os.path.basename(os.path.normpath(input_filepath + '/../'))
+    exp_output_filepath = output_filepath + '/images/' + exp_name
+    print(exp_name)
+    if not os.path.isdir(output_filepath + '/images/'):
+        os.mkdir(output_filepath + '/images/')
+    if not os.path.isdir(exp_output_filepath):
+        os.mkdir(exp_output_filepath)
+
+        
     instances = []
 
     for dirname in dirnames:
@@ -76,17 +84,20 @@ def load_instances(input_filepath, output_filepath, mesh_list, symemtry_part_ind
 
         absolute_image_filepath = []
         image_filenames = []
-        image_filenames.append(prefix + '_view.png')
-        #image_filenames.append(prefix + '_input.png')
+        #image_filenames.append(prefix + '_view.png')
+        image_filenames.append(prefix + '_input.png')
+
+        image_filenames.append('../../part_assembly/' + prefix + '/' + prefix + '_assembly_cuboid.png')
+        image_filenames.append('../../part_assembly/' + prefix + '/' + prefix + '_assembly_accuracy.png')
+
+
         image_filenames.append(prefix + '_' + str(candidate_index) + '.png')
         #image_filenames.append(prefix + '_' + str(candidate_index) + '_symmetry_accuracy.png')
         #image_filenames.append(prefix + '_' + str(candidate_index) + '_symmetry_completeness.png')
-        #image_filenames.append(prefix + '_' + str(candidate_index) + '_database_accuracy.png')
+        image_filenames.append(prefix + '_' + str(candidate_index) + '_database_accuracy.png')
         #image_filenames.append(prefix + '_' + str(candidate_index) + '_database_completeness.png')
         #image_filenames.append(prefix + '_' + str(candidate_index) + '_fusion_accuracy.png')
         #image_filenames.append(prefix + '_' + str(candidate_index) + '_fusion_completeness.png')
-
-        image_filenames.append('../../part_assembly/' + prefix + '/' + prefix + '_assembly_accuracy.png')
 
 
         for image_filename in image_filenames:
@@ -96,16 +107,18 @@ def load_instances(input_filepath, output_filepath, mesh_list, symemtry_part_ind
                 break
 
             if not os.path.exists(output_filepath + '/' + image_filename):
-                '''
                 # Copy the image.
-                shutil.copy(dirname + '/' + image_filename, output_filepath)
+                shutil.copy(dirname + '/' + image_filename, exp_output_filepath)
 
+                '''
                 # Create a thumbnail.
                 librr.create_thumbnails(output_filepath + '/' + image_filename, librr.thumbname_width)
                 '''
 
             # Get relative file path.
-            absolute_image_filepath.append(abs_dirname + '/' + image_filename)
+            #absolute_image_filepath.append(abs_dirname + '/' + image_filename)
+            absolute_image_filepath.append('images/' + exp_name + '/' + os.path.basename(image_filename))
+
 
         if not is_loaded:
             continue
@@ -137,8 +150,8 @@ def load_instances(input_filepath, output_filepath, mesh_list, symemtry_part_ind
                                   absolute_image_filepath[0],
                                   absolute_image_filepath[1],
                                   absolute_image_filepath[2],
-                                  #absolute_image_filepath[3],
-                                  #absolute_image_filepath[4],
+                                  absolute_image_filepath[3],
+                                  absolute_image_filepath[4],
                                   #absolute_image_filepath[5],
                                   #absolute_image_filepath[6],
                                   #absolute_image_filepath[7],
@@ -171,6 +184,7 @@ def main():
     file = librr.open_latex_table(latex_filename, attr_names, attr_types)
 
 
+    instances = []
     with open(sys.argv[1], 'r') as csv_file:
         datareader = csv.reader(csv_file, delimiter=',')
 
@@ -180,15 +194,10 @@ def main():
             mesh_list = []
             mesh_list.append(row[1])
 
-            if is_first_row:
-                is_first_row = False
-            else:
-                file.write('\\\\ \\hline\n')
-
             input_path = input_path_root + '/' + input_path_dir + '/' + input_path_postfix
-            instances = load_instances(input_path, output_path, mesh_list, -1)
-            librr.write_latex_table(file, instances, attr_names, attr_types)
-
+            instances = instances + load_instances(input_path, output_path, mesh_list, -1)
+    
+    librr.write_latex_table(file, instances, attr_names, attr_types)
     librr.close_latex_table(file)
     #os.system('pdflatex ' + latex_filename)
 
