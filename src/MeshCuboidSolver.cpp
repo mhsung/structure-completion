@@ -428,7 +428,8 @@ void segment_sample_points(
 	double squared_neighbor_distance = FLAGS_param_sparse_neighbor_distance *
 		FLAGS_param_sparse_neighbor_distance *
 		_cuboid_structure.mesh_->get_object_diameter();
-	double lambda = -squared_neighbor_distance / std::log(FLAGS_param_null_cuboid_probability);
+	//double lambda = -squared_neighbor_distance / std::log(FLAGS_param_null_cuboid_probability);
+	double lambda = 1.0;
 
 	unsigned int num_sample_points = _cuboid_structure.num_sample_points();
 	const int num_neighbors = std::min(FLAGS_param_num_sample_point_neighbors,
