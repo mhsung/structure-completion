@@ -36,22 +36,54 @@ Real MeshCuboidPredictor::get_single_potential(
 	assert(_transformation);
 
 	Real potential = 0.0;
+	unsigned int num_sample_points = 0;
 
 	// FIXME:
 	// This should be done in pre-processing.
-	unsigned int num_confidence_tol_sample_point = 0;
+	//unsigned int num_confidence_tol_sample_point = 0;
+	//for (std::vector<MeshSamplePoint *>::const_iterator sample_it = _cuboid->get_sample_points().begin();
+	//	sample_it != _cuboid->get_sample_points().end(); ++sample_it)
+	//{
+	//	assert(_label_index < (*sample_it)->label_index_confidence_.size());
+	//	if ((*sample_it)->label_index_confidence_[_label_index] >= FLAGS_param_min_sample_point_confidence)
+	//		++num_confidence_tol_sample_point;
+	//}
+
+	//if (num_confidence_tol_sample_point <
+	//	FLAGS_param_min_num_confidence_tol_sample_points * _cuboid->get_sample_points().size())
+	//{
+	//	potential = FLAGS_param_max_potential;
+	//}
+	
 	for (std::vector<MeshSamplePoint *>::const_iterator sample_it = _cuboid->get_sample_points().begin();
 		sample_it != _cuboid->get_sample_points().end(); ++sample_it)
 	{
-		assert(_label_index < (*sample_it)->label_index_confidence_.size());
-		if ((*sample_it)->label_index_confidence_[_label_index] >= FLAGS_param_min_sample_point_confidence)
-			++num_confidence_tol_sample_point;
+		if (_label_index >= (*sample_it)->label_index_confidence_.size())
+		{
+			// Dummy label.
+			return -std::log(FLAGS_param_null_cuboid_probability);
+		}
+
+		assert((*sample_it)->label_index_confidence_[_label_index] >= 0.0);
+		assert((*sample_it)->label_index_confidence_[_label_index] <= 1.0);
+		if ((*sample_it)->label_index_confidence_[_label_index] < 10E-12)
+		{
+			potential += 12;
+		}
+		else
+		{
+			potential -= std::log((*sample_it)->label_index_confidence_[_label_index]);
+		}
+		++num_sample_points;
 	}
 
-	if (num_confidence_tol_sample_point <
-		FLAGS_param_min_num_confidence_tol_sample_points * _cuboid->get_sample_points().size())
+	if (num_sample_points == 0)
 	{
-		potential = FLAGS_param_max_potential;
+		return -std::log(FLAGS_param_null_cuboid_probability);
+	}
+	else
+	{
+		potential /= num_sample_points;
 	}
 
 	return potential;
@@ -235,7 +267,7 @@ Real MeshCuboidPredictor::get_pair_quadratic_form(
 	assert(_cuboid_1); assert(_cuboid_2);
 	assert(_label_index_1 < num_labels_);
 	assert(_label_index_2 < num_labels_);
-	assert(_label_index_1 != _label_index_2);
+	//assert(_label_index_1 != _label_index_2);
 
 	const unsigned int num_attributes = MeshCuboidAttributes::k_num_attributes;
 	const unsigned int num_features = MeshCuboidFeatures::k_num_features;
@@ -320,7 +352,7 @@ Real MeshCuboidJointNormalRelationPredictor::get_pair_potential(
 
 	// NOTE:
 	// Now considering only different label pairs.
-	assert(_label_index_1 != _label_index_2);
+	//assert(_label_index_1 != _label_index_2);
 
 	Real potential = FLAGS_param_max_potential;
 
@@ -367,7 +399,7 @@ Real MeshCuboidJointNormalRelationPredictor::get_pair_quadratic_form(
 
 	// NOTE:
 	// Now considering only different label pairs.
-	assert(_label_index_1 != _label_index_2);
+	//assert(_label_index_1 != _label_index_2);
 
 	const unsigned int num_attributes = MeshCuboidAttributes::k_num_attributes;
 	const unsigned int num_features = MeshCuboidFeatures::k_num_features;
@@ -586,7 +618,7 @@ Real MeshCuboidCondNormalRelationPredictor::get_pair_potential(
 
 	// NOTE:
 	// Now considering only different label pairs.
-	assert(_label_index_1 != _label_index_2);
+	//assert(_label_index_1 != _label_index_2);
 
 	Real potential = FLAGS_param_max_potential;
 
@@ -615,7 +647,7 @@ Real MeshCuboidCondNormalRelationPredictor::get_pair_quadratic_form(
 
 	// NOTE:
 	// Now considering only different label pairs.
-	assert(_label_index_1 != _label_index_2);
+	//assert(_label_index_1 != _label_index_2);
 
 	const unsigned int num_attributes = MeshCuboidAttributes::k_num_attributes;
 	const unsigned int num_features = MeshCuboidFeatures::k_num_features;
@@ -749,7 +781,7 @@ Real MeshCuboidPCARelationPredictor::get_pair_potential(
 
 	// NOTE:
 	// Now considering only different label pairs.
-	assert(_label_index_1 != _label_index_2);
+	//assert(_label_index_1 != _label_index_2);
 
 	Real potential = 0.0;
 
@@ -788,7 +820,7 @@ Real MeshCuboidPCARelationPredictor::get_pair_quadratic_form(
 
 	// NOTE:
 	// Now considering only different label pairs.
-	assert(_label_index_1 != _label_index_2);
+	//assert(_label_index_1 != _label_index_2);
 
 	const unsigned int num_attributes = MeshCuboidAttributes::k_num_attributes;
 	const unsigned int num_features = MeshCuboidFeatures::k_num_features;
@@ -953,7 +985,7 @@ Real MeshCuboidCCARelationPredictor::get_pair_potential(
 
 	// NOTE:
 	// Now considering only different label pairs.
-	assert(_label_index_1 != _label_index_2);
+	//assert(_label_index_1 != _label_index_2);
 
 	Real potential = 0.0;
 

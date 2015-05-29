@@ -226,6 +226,250 @@ void MeshViewerCore::reconstruct(
 	setDrawMode(CUSTOM_VIEW);
 }
 
+
+void MeshViewerCore::render_evaluation()
+{
+	std::string mesh_filepath = FLAGS_data_root_path + FLAGS_mesh_path + std::string("/") + FLAGS_mesh_filename;
+	QFileInfo mesh_file(mesh_filepath.c_str());
+	std::string mesh_name = std::string(mesh_file.baseName().toLocal8Bit());
+	
+
+	//
+	MyMesh ground_truth_mesh;
+	MeshCuboidStructure ground_truth_cuboid_structure(&ground_truth_mesh);
+
+	bool ret = true;
+	ret = ret & ground_truth_cuboid_structure.load_labels((FLAGS_data_root_path +
+		FLAGS_label_info_path + FLAGS_label_info_filename).c_str());
+	ret = ret & ground_truth_cuboid_structure.load_label_symmetries((FLAGS_data_root_path +
+		FLAGS_label_info_path + FLAGS_label_symmetry_info_filename).c_str());
+
+	if (!ret)
+	{
+		do {
+			std::cout << "Error: Cannot open label information files.";
+			std::cout << '\n' << "Press the Enter key to continue.";
+		} while (std::cin.get() != '\n');
+	}
+
+	ret = load_object_info(ground_truth_mesh, ground_truth_cuboid_structure,
+		mesh_filepath.c_str(), LoadGroundTruthData);
+	assert(ret);
+	MeshCuboidEvaluator evaluator(&ground_truth_cuboid_structure);
+
+	setDrawMode(COLORED_POINT_SAMPLES);
+	//
+
+	unsigned int candidate_index = 0;
+	while (true)
+	{
+		std::stringstream output_file_prefix;
+		output_file_prefix << FLAGS_output_dir << "/" << mesh_name << std::string("/") << mesh_name
+			<< "_" << candidate_index;
+
+		std::string symmetry_point_filepath = output_file_prefix.str() + std::string("_symmetry.pts");
+		std::string database_point_filepath = output_file_prefix.str() + std::string("_database.pts");
+		std::string fusion_point_filepath = output_file_prefix.str() + std::string("_fusion.pts");
+
+		std::string symmetry_label_filepath = output_file_prefix.str() + std::string("_symmetry_label.arff");
+		std::string database_label_filepath = output_file_prefix.str() + std::string("_database_label.arff");
+		std::string fusion_label_filepath = output_file_prefix.str() + std::string("_fusion_label.arff");
+
+		std::stringstream output_filename_sstr;
+
+		// 1. Reconstruction using symmetry.
+		ret = load_result_info(mesh_, cuboid_structure_,
+			mesh_filepath.c_str(), symmetry_point_filepath.c_str(), symmetry_label_filepath.c_str(), NULL);
+		if (!ret) break;
+		open_modelview_matrix_file(FLAGS_pose_filename.c_str());
+		cuboid_structure_.compute_label_cuboids();
+
+		output_filename_sstr.clear(); output_filename_sstr.str("");
+		output_filename_sstr << output_file_prefix.str() << std::string("_symmetry_render");
+		evaluator.evaluate_point_to_point_distances(&cuboid_structure_, output_filename_sstr.str().c_str());
+
+		updateGL();
+		output_filename_sstr.clear(); output_filename_sstr.str("");
+		output_filename_sstr << output_file_prefix.str() << std::string("_symmetry_accuracy_render");
+		snapshot(output_filename_sstr.str().c_str());
+
+		cuboid_structure_ = ground_truth_cuboid_structure;
+		updateGL();
+		output_filename_sstr.clear(); output_filename_sstr.str("");
+		output_filename_sstr << output_file_prefix.str() << std::string("_symmetry_completeness_render");
+		snapshot(output_filename_sstr.str().c_str());
+
+
+		// 2. Reconstruction using database.
+		ret = load_result_info(mesh_, cuboid_structure_,
+			mesh_filepath.c_str(), database_point_filepath.c_str(), database_label_filepath.c_str(), NULL);
+		if (!ret) break;
+		open_modelview_matrix_file(FLAGS_pose_filename.c_str());
+		cuboid_structure_.compute_label_cuboids();
+
+		output_filename_sstr.clear(); output_filename_sstr.str("");
+		output_filename_sstr << output_file_prefix.str() << std::string("_database_render");
+		evaluator.evaluate_point_to_point_distances(&cuboid_structure_, output_filename_sstr.str().c_str());
+
+		updateGL();
+		output_filename_sstr.clear(); output_filename_sstr.str("");
+		output_filename_sstr << output_file_prefix.str() << std::string("_database_accuracy_render");
+		snapshot(output_filename_sstr.str().c_str());
+
+		cuboid_structure_ = ground_truth_cuboid_structure;
+		updateGL();
+		output_filename_sstr.clear(); output_filename_sstr.str("");
+		output_filename_sstr << output_file_prefix.str() << std::string("_database_completeness_render");
+		snapshot(output_filename_sstr.str().c_str());
+
+		// 3. Fusion.
+		ret = load_result_info(mesh_, cuboid_structure_,
+			mesh_filepath.c_str(), fusion_point_filepath.c_str(), fusion_label_filepath.c_str(), NULL);
+		if (!ret) break;
+		open_modelview_matrix_file(FLAGS_pose_filename.c_str());
+		cuboid_structure_.compute_label_cuboids();
+
+		output_filename_sstr.clear(); output_filename_sstr.str("");
+		output_filename_sstr << output_file_prefix.str() << std::string("_fusion_render");
+		evaluator.evaluate_point_to_point_distances(&cuboid_structure_, output_filename_sstr.str().c_str());
+
+		updateGL();
+		output_filename_sstr.clear(); output_filename_sstr.str("");
+		output_filename_sstr << output_file_prefix.str() << std::string("_fusion_accuracy_render");
+		snapshot(output_filename_sstr.str().c_str());
+
+		cuboid_structure_ = ground_truth_cuboid_structure;
+		updateGL();
+		output_filename_sstr.clear(); output_filename_sstr.str("");
+		output_filename_sstr << output_file_prefix.str() << std::string("_fusion_completeness_render");
+		snapshot(output_filename_sstr.str().c_str());
+
+		++candidate_index;
+	}
+}
+
+/*
+void MeshViewerCore::reconstruct_scan(
+	const char *_mesh_filepath,
+	const GLdouble *_snapshot_modelview_matrix,
+	const GLdouble *_occlusion_modelview_matrix,
+	const char *_output_file_prefix)
+{
+	bool ret;
+	std::stringstream output_filename_sstr;
+
+	QFileInfo file_info(_mesh_filepath);
+	std::string mesh_name(file_info.baseName().toLocal8Bit());
+	std::string sample_filepath = FLAGS_data_root_path + FLAGS_sample_path
+		+ std::string("/") + mesh_name + std::string(".pts");
+	std::string dense_sample_filepath = FLAGS_data_root_path + FLAGS_dense_sample_path
+		+ std::string("/") + mesh_name + std::string(".pts");
+
+
+	output_filename_sstr.clear(); output_filename_sstr.str("");
+	output_filename_sstr << _output_file_prefix << std::string(".arff");
+	cuboid_structure_.save_cuboids(output_filename_sstr.str());
+
+	//
+	ret = cuboid_structure_.load_dense_sample_points(dense_sample_filepath.c_str());
+	assert(ret);
+
+	set_modelview_matrix(_occlusion_modelview_matrix, false);
+	remove_occluded_points();
+	set_modelview_matrix(_snapshot_modelview_matrix);
+
+	MeshCuboidStructure cuboid_structure_copy(cuboid_structure_);
+	//
+
+
+	updateGL();
+	output_filename_sstr.clear(); output_filename_sstr.str("");
+	output_filename_sstr << _output_file_prefix;
+	snapshot(output_filename_sstr.str().c_str());
+
+
+	// 1. Reconstruction using symmetry.
+	cuboid_structure_.copy_sample_points_to_symmetric_position();
+
+	// NOTE:
+	// The label of reconstructed points are recorded as confidence values.
+	cuboid_structure_.set_sample_point_label_confidence_using_cuboids();
+
+	output_filename_sstr.clear(); output_filename_sstr.str("");
+	output_filename_sstr << _output_file_prefix << std::string("_symmetry");
+	cuboid_structure_.save_sample_points_to_ply(output_filename_sstr.str().c_str());
+	cuboid_structure_.save_sample_points((output_filename_sstr.str() + std::string(".pts")).c_str());
+	cuboid_structure_.save_sample_point_labels((output_filename_sstr.str() + std::string("_label.arff")).c_str());
+	MeshCuboidStructure symmetry_reconstruction(cuboid_structure_);
+
+	updateGL();
+	output_filename_sstr.clear(); output_filename_sstr.str("");
+	output_filename_sstr << _output_file_prefix << std::string("_symmetry");
+	snapshot(output_filename_sstr.str().c_str());
+
+
+	// 2. Reconstruction using database.
+	cuboid_structure_ = cuboid_structure_copy;
+	reconstruct_database_prior(_mesh_filepath);
+
+	// NOTE:
+	// The label of reconstructed points are recorded as confidence values.
+	cuboid_structure_.set_sample_point_label_confidence_using_cuboids();
+
+	output_filename_sstr.clear(); output_filename_sstr.str("");
+	output_filename_sstr << _output_file_prefix << std::string("_database");
+	cuboid_structure_.save_sample_points_to_ply(output_filename_sstr.str().c_str());
+	cuboid_structure_.save_sample_points((output_filename_sstr.str() + std::string(".pts")).c_str());
+	cuboid_structure_.save_sample_point_labels((output_filename_sstr.str() + std::string("_label.arff")).c_str());
+	MeshCuboidStructure database_reconstruction(cuboid_structure_);
+
+	updateGL();
+	output_filename_sstr.clear(); output_filename_sstr.str("");
+	output_filename_sstr << _output_file_prefix << std::string("_database");
+	snapshot(output_filename_sstr.str().c_str());
+
+
+	// 3. Fusion.
+	cuboid_structure_ = cuboid_structure_copy;
+	//MeshViewerCore::reconstruct_fusion_simple(symmetry_reconstruction, database_reconstruction);
+
+	MyMesh original_mesh;
+	MeshCuboidStructure original_cuboid_structure(&original_mesh);
+	//ret = load_object_info(original_mesh, original_cuboid_structure, _mesh_filepath, LoadSamplePoints);
+
+	ret = original_mesh.open_mesh(_mesh_filepath, false);
+	assert(ret);
+
+	std::cout << " - Load sample points." << std::endl;
+	ret = original_cuboid_structure.load_sample_points(sample_filepath.c_str(), false);
+	assert(ret);
+
+	reconstruct_fusion(_mesh_filepath,
+		_snapshot_modelview_matrix, _occlusion_modelview_matrix,
+		original_cuboid_structure, symmetry_reconstruction, database_reconstruction, cuboid_structure_);
+
+
+	// NOTE:
+	// The label of reconstructed points are recorded as confidence values.
+	cuboid_structure_.set_sample_point_label_confidence_using_cuboids();
+
+	output_filename_sstr.clear(); output_filename_sstr.str("");
+	output_filename_sstr << _output_file_prefix << std::string("_fusion");
+	cuboid_structure_.save_sample_points_to_ply(output_filename_sstr.str().c_str());
+	cuboid_structure_.save_sample_points((output_filename_sstr.str() + std::string(".pts")).c_str());
+	cuboid_structure_.save_sample_point_labels((output_filename_sstr.str() + std::string("_label.arff")).c_str());
+
+	updateGL();
+	output_filename_sstr.clear(); output_filename_sstr.str("");
+	output_filename_sstr << _output_file_prefix << std::string("_fusion");
+	snapshot(output_filename_sstr.str().c_str());
+
+	cuboid_structure_ = cuboid_structure_copy;
+
+	setDrawMode(CUSTOM_VIEW);
+}
+*/
+
 void MeshViewerCore::reconstruct_database_prior(
 	const char *_mesh_filepath,
 	const std::vector<LabelIndex> *_reconstructed_label_indices)

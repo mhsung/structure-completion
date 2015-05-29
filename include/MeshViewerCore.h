@@ -114,6 +114,8 @@ private:
 		const GLdouble *_occlusion_modelview_matrix,
 		const char *_output_file_prefix);
 
+	void render_evaluation();
+
 	void reconstruct_database_prior(
 		const char *_mesh_filepath,
 		const std::vector<LabelIndex> *_reconstructed_label_indices = NULL);

@@ -86,13 +86,13 @@ void optimize_attributes(
 	GLViewerCore *_viewer,
 	bool _use_nonlinear_constraints);
 
-void add_missing_cuboids_once_old(
+void add_missing_cuboids_once(
 	const std::vector<MeshCuboid *>& _given_cuboids,
 	const std::list<LabelIndex> &_missing_label_indices,
 	const MeshCuboidPredictor &_predictor,
 	std::vector<MeshCuboid *>& _new_cuboids);
 
-void add_missing_cuboids_once(
+void add_missing_cuboids_once_simple(
 	const MeshCuboid *_given_cuboids,
 	const std::list<LabelIndex> &_missing_label_indices,
 	const std::vector< std::vector<MeshCuboidJointNormalRelations *> > &_joint_normal_relations,
@@ -102,8 +102,8 @@ bool add_missing_cuboids(
 	MeshCuboidStructure &_cuboid_structure,
 	const Real _modelview_matrix[16],
 	const std::list<LabelIndex> &_missing_label_indices,
-	//const MeshCuboidPredictor &_predictor,
-	const std::vector< std::vector<MeshCuboidJointNormalRelations *> > &_joint_normal_relations,
+	const MeshCuboidPredictor &_predictor,
+	//const std::vector< std::vector<MeshCuboidJointNormalRelations *> > &_joint_normal_relations,
 	std::set<LabelIndex> &_ignored_label_indices);
 
 //void symmetrize_cuboids(

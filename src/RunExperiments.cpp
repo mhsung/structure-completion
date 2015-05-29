@@ -63,10 +63,16 @@ void MeshViewerCore::parse_arguments()
 		run_baseline_stats();
 		exit(EXIT_FAILURE);
 	}
-	else if (FLAGS_run_assembly_render)
+	else if (FLAGS_run_render_assembly)
 	{
 		std::cout << "mesh_filename = " << FLAGS_mesh_filename << std::endl;
 		render_part_assembly_cuboids();
+		exit(EXIT_FAILURE);
+	}
+	else if (FLAGS_run_render_evaluation)
+	{
+		std::cout << "mesh_filename = " << FLAGS_mesh_filename << std::endl;
+		render_evaluation();
 		exit(EXIT_FAILURE);
 	}
 }
@@ -1086,10 +1092,10 @@ void MeshViewerCore::predict()
 				// FIXME:
 				// Any missing cuboid may not be added.
 				// Then, you should escapt the loop.
-				//ret = add_missing_cuboids(new_cuboid_structure, occlusion_modelview_matrix,
-				//	missing_label_indices, joint_normal_predictor, ignored_label_indices);
 				ret = add_missing_cuboids(new_cuboid_structure, occlusion_modelview_matrix,
-					missing_label_indices, joint_normal_relations, ignored_label_indices);
+					missing_label_indices, joint_normal_predictor, ignored_label_indices);
+				//ret = add_missing_cuboids(new_cuboid_structure, occlusion_modelview_matrix,
+				//	missing_label_indices, joint_normal_relations, ignored_label_indices);
 
 				if (!ret)
 				{
