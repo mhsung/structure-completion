@@ -279,7 +279,7 @@ void MeshViewerCore::run_render_evaluation()
 
 		ret = load_result_info(mesh_, cuboid_structure_,
 			mesh_filepath.c_str(), point_filepath.c_str(), label_filepath.c_str(), NULL);
-		if (ret) break;
+		if (!ret) break;
 		open_modelview_matrix_file(FLAGS_pose_filename.c_str());
 		cuboid_structure_.compute_label_cuboids();
 

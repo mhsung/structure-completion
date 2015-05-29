@@ -257,22 +257,44 @@ void MeshCuboidEvaluator::evaluate_point_to_point_distances(
 
 	if (_record_error)
 	{
+		double eval_neighbor_distance_min_max_range = FLAGS_param_eval_max_neighbor_distance
+			- FLAGS_param_eval_min_neighbor_distance;
+		assert(eval_neighbor_distance_min_max_range);
+
 		// Accuracy.
 		for (SamplePointIndex sample_point_index = 0; sample_point_index < num_test_sample_points;
 			++sample_point_index)
 		{
-			_test_sample_points[sample_point_index]->error_ =
-				std::min((test_to_ground_truth_distances[sample_point_index]
-				/ FLAGS_param_eval_max_neighbor_distance), 1.0);
+			_test_sample_points[sample_point_index]->error_ = 0.0;
+
+			double distance = test_to_ground_truth_distances[sample_point_index];
+			if (distance >= FLAGS_param_eval_min_neighbor_distance)
+			{
+				double error = (distance - FLAGS_param_eval_min_neighbor_distance) / eval_neighbor_distance_min_max_range;
+				error = std::min(error, 1.0);
+
+				// Map (min, max) to 0.5, 1.0.
+				error = 0.5 + error * 0.5;
+				_test_sample_points[sample_point_index]->error_ = error;
+			}
 		}
 
 		// Completeness.
 		for (SamplePointIndex sample_point_index = 0; sample_point_index < num_ground_truth_sample_points;
 			++sample_point_index)
 		{
-			_ground_truth_sample_points[sample_point_index]->error_ =
-				std::min((ground_truth_to_test_distances[sample_point_index]
-				/ FLAGS_param_eval_max_neighbor_distance), 1.0);
+			_ground_truth_sample_points[sample_point_index]->error_ = 0.0;
+
+			double distance = ground_truth_to_test_distances[sample_point_index];
+			if (distance >= FLAGS_param_eval_min_neighbor_distance)
+			{
+				double error = (distance - FLAGS_param_eval_min_neighbor_distance) / eval_neighbor_distance_min_max_range;
+				error = std::min(error, 1.0);
+
+				// Map (min, max) to 0.5, 1.0.
+				error = 0.5 + error * 0.5;
+				_ground_truth_sample_points[sample_point_index]->error_ = error;
+			}
 		}
 	}
 
