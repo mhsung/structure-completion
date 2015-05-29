@@ -42,7 +42,7 @@ void run_part_ICP(
 	MeshCuboidStructure &_input,
 	const MeshCuboidStructure &_ground_truth);
 
-void create_local_coord_voxel_grid(
+void create_voxel_grid(
 	const MeshCuboid *_symmetry_cuboid,
 	const MeshCuboid *_database_cuboid,
 	MyMesh::Point &_local_coord_bbox_min,
@@ -58,8 +58,9 @@ void get_smoothed_voxel_visibility(
 	std::vector<Real> &_voxel_visibility);
 
 void merge_symmetric_cuboids_visibility(
-	const MeshCuboidVoxelGrid &_local_coord_voxels,
-	const unsigned int _reflection_axis_index,
+	const MeshCuboidSymmetryGroup *_symmetry_group,
+	const MeshCuboidVoxelGrid &_voxels_1,
+	const MeshCuboidVoxelGrid &_voxels_2,
 	std::vector<Real> &_voxel_visibility_1,
 	std::vector<Real> &_voxel_visibility_2);
 

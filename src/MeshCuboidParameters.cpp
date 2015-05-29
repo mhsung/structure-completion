@@ -25,6 +25,8 @@ DEFINE_double(param_min_cuboid_overall_visibility, 0.8, "");
 DEFINE_double(param_max_potential, 1.0E8, "");
 DEFINE_double(param_dummy_potential, 1.0E4, "");
 DEFINE_double(param_null_cuboid_probability, 0.1, "");
+DEFINE_double(param_fusion_visibility_smoothing_prior, 1.0, "");
+DEFINE_double(param_fusion_grid_size, 0.01, "");
 DEFINE_double(param_opt_single_energy_term_weight, 1.0E4, "");
 DEFINE_double(param_opt_symmetry_energy_term_weight, 1.0E6, "");
 DEFINE_double(param_part_assembly_window_size, 0.1, "");

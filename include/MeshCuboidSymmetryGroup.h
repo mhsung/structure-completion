@@ -96,6 +96,8 @@ public:
 		const Real _squared_neighbor_distance,
 		std::list<WeightedPointPair> &_sample_point_pairs) const;
 
+	MeshCuboidSymmetryGroupInfo get_symmetry_group_info()const { return info_; }
+
 protected:
 	const MeshCuboidSymmetryGroupInfo info_;
 	unsigned int num_symmetry_orders_;

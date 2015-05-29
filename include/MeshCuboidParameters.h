@@ -28,6 +28,8 @@ DECLARE_double(param_min_cuboid_overall_visibility);
 DECLARE_double(param_max_potential);
 DECLARE_double(param_dummy_potential);
 DECLARE_double(param_null_cuboid_probability);
+DECLARE_double(param_fusion_visibility_smoothing_prior);
+DECLARE_double(param_fusion_grid_size);
 DECLARE_double(param_opt_single_energy_term_weight);
 DECLARE_double(param_opt_symmetry_energy_term_weight);
 DECLARE_double(param_part_assembly_window_size);
