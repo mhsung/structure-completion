@@ -1403,7 +1403,7 @@ void MeshViewerCore::run_symmetry_detection_msh2pln()
 	snapshot(output_filename_sstr.str().c_str());
 
 	output_filename_sstr.clear(); output_filename_sstr.str("");
-	output_filename_sstr << mesh_output_path << filename_prefix << std::string("_symmetry_info.txt");
+	output_filename_sstr << mesh_output_path << filename_prefix << std::string("symmetry_info.txt");
 	cuboid_structure_.save_symmetry_groups(output_filename_sstr.str());
 
 
