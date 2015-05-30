@@ -1380,6 +1380,13 @@ void MeshViewerCore::run_symmetry_detection_msh2pln()
 		if (sample_point_pairs.size() > max_num_symmetric_point_pairs)
 		{
 			max_num_symmetric_point_pairs = sample_point_pairs.size();
+
+			if (!cuboid_structure_.reflection_symmetry_groups_.empty())
+			{
+				assert(cuboid_structure_.reflection_symmetry_groups_.size() == 1);
+				delete cuboid_structure_.reflection_symmetry_groups_.front();
+			}
+
 			cuboid_structure_.reflection_symmetry_groups_.clear();
 			cuboid_structure_.reflection_symmetry_groups_.push_back(new_symmetry_group);
 		}
@@ -1394,6 +1401,10 @@ void MeshViewerCore::run_symmetry_detection_msh2pln()
 	output_filename_sstr << mesh_output_path << filename_prefix << std::string("symm_detection");
 	updateGL();
 	snapshot(output_filename_sstr.str().c_str());
+
+	output_filename_sstr.clear(); output_filename_sstr.str("");
+	output_filename_sstr << mesh_output_path << filename_prefix << std::string("_symmetry_info.txt");
+	cuboid_structure_.save_symmetry_groups(output_filename_sstr.str());
 
 
 	if (!cuboid_structure_.reflection_symmetry_groups_.empty())
