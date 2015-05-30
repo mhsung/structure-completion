@@ -36,6 +36,8 @@ public:
 	bool load_cuboids(const std::string _filename, bool _verbose = true);
 	bool save_cuboids(const std::string _filename, bool _verbose = true) const;
 
+	bool save_symmetry_groups(const std::string _filename, bool _verbose = true) const;
+
 	void apply_mesh_transformation();
 
 	inline unsigned int num_sample_points()const {

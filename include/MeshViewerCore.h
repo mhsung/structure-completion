@@ -64,6 +64,7 @@ public:
 	void run_symmetry_detection_msh2pln();
 	void run_baseline_stats();
 	void run_render_evaluation();
+	void run_extract_symmetry_info();
 	void batch_render_point_clusters();
 	void batch_render_cuboids();
 	void batch_render_points();

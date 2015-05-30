@@ -441,6 +441,49 @@ bool MeshCuboidStructure::save_cuboids(const std::string _filename, bool _verbos
 	return true;
 }
 
+bool MeshCuboidStructure::save_symmetry_groups(const std::string _filename, bool _verbose) const
+{
+	std::ofstream file(_filename);
+	if (!file)
+	{
+		std::cerr << "Can't save file: \"" << _filename << "\"" << std::endl;
+		return false;
+	}
+
+	if (_verbose)
+		std::cout << "Saving " << _filename << "..." << std::endl;
+
+
+	for (std::vector< MeshCuboidReflectionSymmetryGroup* >::const_iterator it = reflection_symmetry_groups_.begin();
+		it != reflection_symmetry_groups_.end(); ++it)
+	{
+		MeshCuboidReflectionSymmetryGroup* symmetry_group = (*it);
+		assert(symmetry_group);
+
+		MyMesh::Normal n;
+		double t;
+		symmetry_group->get_reflection_plane(n, t);
+
+		file << "reflection," << n[0] << "," << n[1] << "," << n[2] << "," << t << std::endl;
+	}
+
+	for (std::vector< MeshCuboidRotationSymmetryGroup* >::const_iterator it = rotation_symmetry_groups_.begin();
+		it != rotation_symmetry_groups_.end(); ++it)
+	{
+		MeshCuboidRotationSymmetryGroup* symmetry_group = (*it);
+		assert(symmetry_group);
+
+		MyMesh::Normal n;
+		MyMesh::Point t;
+		symmetry_group->get_rotation_axis(n, t);
+
+		file << "rotation," << n[0] << "," << n[1] << "," << n[2] << ","
+			<< t[0] << "," << t[1] << "," << t[2] << "," << std::endl;
+	}
+
+	return true;
+}
+
 void MeshCuboidStructure::apply_mesh_transformation()
 {
 	assert(mesh_);

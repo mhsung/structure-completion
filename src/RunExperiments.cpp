@@ -75,6 +75,12 @@ void MeshViewerCore::parse_arguments()
 		run_render_evaluation();
 		exit(EXIT_FAILURE);
 	}
+	else if (FLAGS_run_extract_symmetry_info)
+	{
+		std::cout << "mesh_filename = " << FLAGS_mesh_filename << std::endl;
+		run_extract_symmetry_info();
+		exit(EXIT_FAILURE);
+	}
 }
 
 bool MeshViewerCore::load_object_info(
@@ -209,7 +215,7 @@ bool MeshViewerCore::load_object_info(
 		assert(_option != LoadGroundTruthData);
 
 		ret = _cuboid_structure.load_cuboids(_cuboid_filepath, _verbose);
-		assert(ret);
+		if (!ret) return false;
 
 		std::vector<MeshCuboid *> all_cuboids = _cuboid_structure.get_all_cuboids();
 		for (std::vector<MeshCuboid *>::iterator it = all_cuboids.begin(); it != all_cuboids.end(); ++it)

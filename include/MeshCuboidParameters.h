@@ -53,8 +53,9 @@ DECLARE_bool(run_symmetry_detection);
 DECLARE_bool(run_baseline);
 DECLARE_bool(run_render_assembly);
 DECLARE_bool(run_render_evaluation);
-DECLARE_string(mesh_filename);
+DECLARE_bool(run_extract_symmetry_info);
 
+DECLARE_string(mesh_filename);
 DECLARE_string(data_root_path);
 DECLARE_string(label_info_path);
 DECLARE_string(mesh_path);

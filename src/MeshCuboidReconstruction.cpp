@@ -416,6 +416,64 @@ void MeshViewerCore::run_render_evaluation()
 	}
 }
 
+void MeshViewerCore::run_extract_symmetry_info()
+{
+	std::string mesh_filepath = FLAGS_data_root_path + FLAGS_mesh_path + std::string("/") + FLAGS_mesh_filename;
+	QFileInfo mesh_file(mesh_filepath.c_str());
+	std::string mesh_name = std::string(mesh_file.baseName().toLocal8Bit());
+
+
+	//
+	bool ret = true;
+	ret = ret & cuboid_structure_.load_labels((FLAGS_data_root_path +
+		FLAGS_label_info_path + FLAGS_label_info_filename).c_str());
+	ret = ret & cuboid_structure_.load_label_symmetries((FLAGS_data_root_path +
+		FLAGS_label_info_path + FLAGS_label_symmetry_info_filename).c_str());
+
+	// Load symmetry groups.
+	ret = ret & cuboid_structure_.load_symmetry_groups((FLAGS_data_root_path +
+		FLAGS_label_info_path + FLAGS_symmetry_group_info_filename).c_str());
+
+	if (!ret)
+	{
+		do {
+			std::cout << "Error: Cannot open label information files.";
+			std::cout << '\n' << "Press the Enter key to continue.";
+		} while (std::cin.get() != '\n');
+	}
+	//
+
+	std::string cuboid_filepath;
+	std::stringstream result_file_prefix;
+	std::stringstream output_filename_sstr;
+
+	setDrawMode(CUSTOM_VIEW);
+	open_modelview_matrix_file(FLAGS_pose_filename.c_str());
+
+	unsigned int candidate_index = 0;
+	while (true)
+	{
+		result_file_prefix.clear(); result_file_prefix.str("");
+		result_file_prefix << FLAGS_output_dir << "/" << mesh_name << std::string("/") << mesh_name
+			<< "_" << candidate_index;
+
+		cuboid_filepath = result_file_prefix.str() + std::string(".arff");
+
+		ret = load_object_info(mesh_, cuboid_structure_, mesh_filepath.c_str(), LoadMesh, cuboid_filepath.c_str());
+		if (!ret) break;
+
+		//
+		cuboid_structure_.compute_symmetry_groups();
+		updateGL();
+		//
+		output_filename_sstr.clear(); output_filename_sstr.str("");
+		output_filename_sstr << result_file_prefix.str() << std::string("_symmetry_info.txt");
+		cuboid_structure_.save_symmetry_groups(output_filename_sstr.str());
+
+		++candidate_index;
+	}
+}
+
 /*
 void MeshViewerCore::reconstruct_scan(
 	const char *_mesh_filepath,

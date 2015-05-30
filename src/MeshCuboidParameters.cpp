@@ -50,6 +50,7 @@ DEFINE_bool(run_symmetry_detection, false, "");
 DEFINE_bool(run_baseline, false, "");
 DEFINE_bool(run_render_assembly, false, "");
 DEFINE_bool(run_render_evaluation, false, "");
+DEFINE_bool(run_extract_symmetry_info, false, "");
 DEFINE_string(mesh_filename, "", "");
 
 DEFINE_string(data_root_path, "D:/Data/shape2pose/", "");
