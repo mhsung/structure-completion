@@ -139,7 +139,7 @@ public:
 		std::vector<Real> &_visibility_values);
 
 	static void compute_view_plane_mask_range(const Real _modelview_matrix[16],
-		const std::vector<MyMesh::Point>& _points, const bool *_is_point_removed);
+		const std::vector<MyMesh::Point>& _points);
 
 	static void compute_view_plane_mask_visibility(const Real _modelview_matrix[16],
 		const std::vector<MyMesh::Point>& _points,

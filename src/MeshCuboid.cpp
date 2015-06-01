@@ -1098,7 +1098,7 @@ void MeshCuboid::compute_cuboid_surface_point_visibility(
 }
 
 void MeshCuboid::compute_view_plane_mask_range(const Real _modelview_matrix[16],
-	const std::vector<MyMesh::Point>& _points, const bool *_is_point_removed)
+	const std::vector<MyMesh::Point>& _points)
 {
 	FLAGS_param_view_plane_mask_min_x = 0;
 	FLAGS_param_view_plane_mask_min_y = 0;
@@ -1187,11 +1187,10 @@ void MeshCuboid::compute_view_plane_mask_range(const Real _modelview_matrix[16],
 			++sample_point_index)
 		{
 			Eigen::Vector3d sample_point_vec = view_plane_points_mat.col(sample_point_index);
-			if (_is_point_removed[sample_point_index] ||
-				(sample_point_vec[0] >= view_plane_mask_range_min[0]
+			if (sample_point_vec[0] >= view_plane_mask_range_min[0]
 				&& sample_point_vec[1] >= view_plane_mask_range_min[1]
 				&& sample_point_vec[0] <= view_plane_mask_range_max[0]
-				&& sample_point_vec[1] <= view_plane_mask_range_max[1]))
+				&& sample_point_vec[1] <= view_plane_mask_range_max[1])
 				++num_removed_points;
 		}
 

@@ -935,7 +935,9 @@ void MeshViewerCore::predict()
 	ret = load_object_info(mesh_, cuboid_structure_, mesh_filepath.c_str(), LoadDenseTestData);
 	if (!ret) return;
 	set_modelview_matrix(occlusion_modelview_matrix, false);
-	remove_occluded_points();
+	// NOTE:
+	// Sample view plane mask if the option is true.
+	remove_occluded_points(true);
 	
 	updateGL();
 	snapshot_filename_sstr.clear(); snapshot_filename_sstr.str("");
@@ -958,11 +960,7 @@ void MeshViewerCore::predict()
 
 	std::cout << " - Remove occluded points." << std::endl;
 	set_modelview_matrix(occlusion_modelview_matrix, false);
-
-	// NOTE:
-	// Sample view plane mask if the option is true.
-	remove_occluded_points(true);
-
+	remove_occluded_points();
 	set_modelview_matrix(snapshot_modelview_matrix);
 
 
