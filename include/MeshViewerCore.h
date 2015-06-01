@@ -50,8 +50,7 @@ public:
 	void open_cuboid_file(const char* _filename);
 	void create_mesh_cuboids();
 	void apply_mesh_labels_to_cuboids();
-
-	void remove_occluded_points(bool _sample_view_plane_mask = false);
+	void remove_occluded_points();
 
 	// Experiment functions.
 	void parse_arguments();

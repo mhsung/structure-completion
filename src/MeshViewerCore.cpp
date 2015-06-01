@@ -1287,7 +1287,7 @@ void MeshViewerCore::draw_openmesh(const std::string& _drawmode)
 	}
 }
 
-void MeshViewerCore::remove_occluded_points(bool _sample_view_plane_mask)
+void MeshViewerCore::remove_occluded_points()
 {
 	std::string curr_draw_mode = getDrawMode();
 	setDrawMode(FACE_INDEX_RENDERING);
@@ -1343,11 +1343,6 @@ void MeshViewerCore::remove_occluded_points(bool _sample_view_plane_mask)
 			const MeshSamplePoint *sample_point = cuboid_structure_.sample_points_[sample_point_index];
 			assert(sample_point);
 			sample_points[sample_point_index] = sample_point->point_;
-		}
-
-		if (_sample_view_plane_mask)
-		{
-			MeshCuboid::compute_view_plane_mask_range(modelview_matrix(), sample_points);
 		}
 
 		std::list<SamplePointIndex> occluded_sample_point_indices;

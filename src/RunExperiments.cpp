@@ -935,9 +935,28 @@ void MeshViewerCore::predict()
 	ret = load_object_info(mesh_, cuboid_structure_, mesh_filepath.c_str(), LoadDenseTestData);
 	if (!ret) return;
 	set_modelview_matrix(occlusion_modelview_matrix, false);
-	// NOTE:
-	// Sample view plane mask if the option is true.
-	remove_occluded_points(true);
+
+
+	if (FLAGS_param_use_view_plane_mask)
+	{
+		// Sample view plane mask if the option is true.
+		unsigned int num_sample_points = cuboid_structure_.num_sample_points();
+		if (num_sample_points > 0)
+		{
+			std::vector<MyMesh::Point> sample_points(num_sample_points);
+			for (SamplePointIndex sample_point_index = 0; sample_point_index < num_sample_points;
+				++sample_point_index)
+			{
+				const MeshSamplePoint *sample_point = cuboid_structure_.sample_points_[sample_point_index];
+				assert(sample_point);
+				sample_points[sample_point_index] = sample_point->point_;
+			}
+			MeshCuboid::compute_view_plane_mask_range(occlusion_modelview_matrix, sample_points);
+		}
+	}
+
+
+	remove_occluded_points();
 	
 	updateGL();
 	snapshot_filename_sstr.clear(); snapshot_filename_sstr.str("");
