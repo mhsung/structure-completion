@@ -1287,7 +1287,7 @@ void MeshViewerCore::draw_openmesh(const std::string& _drawmode)
 	}
 }
 
-void MeshViewerCore::remove_occluded_points()
+void MeshViewerCore::remove_occluded_points(bool _sample_view_plane_mask)
 {
 	std::string curr_draw_mode = getDrawMode();
 	setDrawMode(FACE_INDEX_RENDERING);
@@ -1331,6 +1331,46 @@ void MeshViewerCore::remove_occluded_points()
 				is_sample_point_removed[index] = false;
 		}
 	}
+
+	// Test 2D view plane mask for occlusion.
+	//
+	if (FLAGS_param_use_view_plane_mask && num_sample_points > 0)
+	{
+		unsigned int num_removed_sample_points = 0;
+		std::vector<MyMesh::Point> sample_points(num_sample_points);
+		for (SamplePointIndex sample_point_index = 0; sample_point_index < num_sample_points;
+			++sample_point_index)
+		{
+			const MeshSamplePoint *sample_point = cuboid_structure_.sample_points_[sample_point_index];
+			assert(sample_point);
+			sample_points[sample_point_index] = sample_point->point_;
+
+			if (is_sample_point_removed[sample_point_index])
+				++num_removed_sample_points;
+		}
+
+		if (_sample_view_plane_mask)
+		{
+			Real removed_point_proportion = static_cast<Real>(num_removed_sample_points) / num_sample_points;
+			if (removed_point_proportion < FLAGS_param_view_plane_mask_proportion)
+			{
+				MeshCuboid::compute_view_plane_mask_range(modelview_matrix(),
+					sample_points, is_sample_point_removed);
+			}
+		}
+
+		std::list<SamplePointIndex> occluded_sample_point_indices;
+		MeshCuboid::compute_view_plane_mask_visibility(modelview_matrix(),
+			sample_points, occluded_sample_point_indices);
+		for (std::list<SamplePointIndex>::iterator it = occluded_sample_point_indices.begin();
+			it != occluded_sample_point_indices.end(); ++it)
+		{
+			SamplePointIndex sample_point_index = *it;
+			assert(sample_point_index < num_sample_points);
+			is_sample_point_removed[sample_point_index] = true;
+		}
+	}
+	//
 
 	cuboid_structure_.remove_sample_points(is_sample_point_removed);
 	delete[] is_sample_point_removed;

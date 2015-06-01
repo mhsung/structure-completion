@@ -51,7 +51,7 @@ public:
 	void create_mesh_cuboids();
 	void apply_mesh_labels_to_cuboids();
 
-	void remove_occluded_points();
+	void remove_occluded_points(bool _sample_view_plane_mask = false);
 
 	// Experiment functions.
 	void parse_arguments();

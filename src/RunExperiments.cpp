@@ -958,7 +958,11 @@ void MeshViewerCore::predict()
 
 	std::cout << " - Remove occluded points." << std::endl;
 	set_modelview_matrix(occlusion_modelview_matrix, false);
-	remove_occluded_points();
+
+	// NOTE:
+	// Sample view plane mask if the option is true.
+	remove_occluded_points(true);
+
 	set_modelview_matrix(snapshot_modelview_matrix);
 
 

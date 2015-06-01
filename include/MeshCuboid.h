@@ -138,6 +138,12 @@ public:
 		const std::vector<MyMesh::Normal> *_test_normals,
 		std::vector<Real> &_visibility_values);
 
+	static void compute_view_plane_mask_range(const Real _modelview_matrix[16],
+		const std::vector<MyMesh::Point>& _points, const bool *_is_point_removed);
+
+	static void compute_view_plane_mask_visibility(const Real _modelview_matrix[16],
+		const std::vector<MyMesh::Point>& _points,
+		std::list<SamplePointIndex> &_masked_point_indices);
 
 	void set_axis_configuration(const unsigned int _axis_configuration_index);
 
