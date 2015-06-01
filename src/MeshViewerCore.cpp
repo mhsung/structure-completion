@@ -1334,7 +1334,7 @@ void MeshViewerCore::remove_occluded_points()
 
 	// Test 2D view plane mask for occlusion.
 	//
-	if (FLAGS_param_use_view_plane_mask && num_sample_points > 0)
+	if (FLAGS_use_view_plane_mask && num_sample_points > 0)
 	{
 		std::vector<MyMesh::Point> sample_points(num_sample_points);
 		for (SamplePointIndex sample_point_index = 0; sample_point_index < num_sample_points;

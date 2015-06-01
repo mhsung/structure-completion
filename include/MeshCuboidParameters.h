@@ -42,7 +42,7 @@ DECLARE_double(param_part_assembly_voxel_variance);
 //
 
 // Test 2D view plane mask for occlusion.
-DECLARE_bool(param_use_view_plane_mask);
+DECLARE_bool(use_view_plane_mask);
 DECLARE_double(param_view_plane_mask_proportion);
 DECLARE_double(param_view_plane_mask_min_x);
 DECLARE_double(param_view_plane_mask_min_y);

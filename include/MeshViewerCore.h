@@ -140,6 +140,8 @@ private:
 
 	void set_random_view_direction(bool _set_modelview_matrix = false);
 
+	void compute_view_plane_mask_range(const Real _modelview_matrix[16]);
+
 
 public:
 	virtual void mousePressEvent(const OpenMesh::Vec2f& _new_point_2d,

@@ -1080,7 +1080,7 @@ void MeshCuboid::compute_cuboid_surface_point_visibility(
 
 	// Test 2D view plane mask for occlusion.
 	//
-	if (FLAGS_param_use_view_plane_mask)
+	if (FLAGS_use_view_plane_mask)
 	{
 		std::list<SamplePointIndex> occluded_test_point_indices;
 		MeshCuboid::compute_view_plane_mask_visibility(_modelview_matrix,
@@ -1095,130 +1095,6 @@ void MeshCuboid::compute_cuboid_surface_point_visibility(
 		}
 	}
 	//
-}
-
-void MeshCuboid::compute_view_plane_mask_range(const Real _modelview_matrix[16],
-	const std::vector<MyMesh::Point>& _points)
-{
-	FLAGS_param_view_plane_mask_min_x = 0;
-	FLAGS_param_view_plane_mask_min_y = 0;
-	FLAGS_param_view_plane_mask_max_x = 0;
-	FLAGS_param_view_plane_mask_max_y = 0;
-
-
-	Eigen::Matrix3d rotation_mat;
-	Eigen::Vector3d translation_vec;
-
-	for (int row = 0; row < 3; ++row)
-		for (int col = 0; col < 3; ++col)
-			rotation_mat(row, col) = _modelview_matrix[4 * col + row];
-
-	for (int row = 0; row < 3; ++row)
-		translation_vec(row) = _modelview_matrix[4 * 3 + row];
-
-	unsigned int num_points = _points.size();
-	if (num_points == 0)
-		return;
-
-	Eigen::MatrixXd view_plane_points_mat = Eigen::MatrixXd(3, num_points);
-
-	Eigen::Vector2d view_plane_bbox_min;
-	Eigen::Vector2d view_plane_bbox_max;
-	view_plane_bbox_min[0] = view_plane_bbox_min[1] = std::numeric_limits<double>::max();
-	view_plane_bbox_max[0] = view_plane_bbox_max[1] = -std::numeric_limits<double>::max();
-
-	for (SamplePointIndex sample_point_index = 0; sample_point_index < num_points;
-		++sample_point_index)
-	{
-		Eigen::Vector3d point_vec;
-		for (int i = 0; i < 3; ++i)
-			point_vec(i) = _points[sample_point_index][i];
-
-		// Transformation.
-		point_vec = rotation_mat * point_vec + translation_vec;
-
-		view_plane_points_mat.col(sample_point_index) = point_vec;
-		for (int i = 0; i < 2; ++i)
-		{
-			view_plane_bbox_min[i] = std::min(view_plane_bbox_min[i], point_vec[i]);
-			view_plane_bbox_max[i] = std::max(view_plane_bbox_max[i], point_vec[i]);
-		}
-	}
-
-	Eigen::Vector2d view_plane_bbox_center = 0.5 * (view_plane_bbox_min + view_plane_bbox_max);
-	Eigen::Vector2d view_plane_bbox_size = view_plane_bbox_max - view_plane_bbox_min;
-
-	if (view_plane_bbox_size[0] == 0 || view_plane_bbox_size[1] == 0)
-		return;
-
-	Eigen::Vector2d view_plane_mask_range_center;
-	Eigen::Vector2d view_plane_mask_range_initial_size;
-	double scale_factor = 1.0;
-
-	// NOTE:
-	// Temporary share the same seed with random view point.
-	static SimpleRandomCong_t rng_cong;
-	simplerandom_cong_seed(&rng_cong, FLAGS_random_view_seed);
-
-	double center_x = static_cast<double>(simplerandom_cong_next(&rng_cong)) / std::numeric_limits<uint32_t>::max();
-	double center_y = static_cast<double>(simplerandom_cong_next(&rng_cong)) / std::numeric_limits<uint32_t>::max();
-	double size_ratio_x = static_cast<double>(simplerandom_cong_next(&rng_cong)) / std::numeric_limits<uint32_t>::max();
-	double size_ratio_y = static_cast<double>(simplerandom_cong_next(&rng_cong)) / std::numeric_limits<uint32_t>::max();
-
-	center_x -= 0.5;
-	center_y -= 0.5;
-	size_ratio_x += 0.5;
-	size_ratio_y += 0.5;
-
-	view_plane_mask_range_center[0] = view_plane_bbox_center[0] - center_x * view_plane_bbox_size[0];
-	view_plane_mask_range_center[1] = view_plane_bbox_center[1] - center_y * view_plane_bbox_size[1];
-	view_plane_mask_range_initial_size[0] = size_ratio_x * view_plane_bbox_size[0];
-	view_plane_mask_range_initial_size[1] = size_ratio_y * view_plane_bbox_size[1];
-
-
-	for (unsigned int iter = 0; iter < 100; ++iter)
-	{
-		Eigen::Vector2d view_plane_mask_range_size = scale_factor * view_plane_mask_range_initial_size;
-		Eigen::Vector2d view_plane_mask_range_min = view_plane_mask_range_center - view_plane_mask_range_size;
-		Eigen::Vector2d view_plane_mask_range_max = view_plane_mask_range_center + view_plane_mask_range_size;
-		unsigned int num_removed_points = 0;
-
-		for (SamplePointIndex sample_point_index = 0; sample_point_index < num_points;
-			++sample_point_index)
-		{
-			Eigen::Vector3d sample_point_vec = view_plane_points_mat.col(sample_point_index);
-			if (sample_point_vec[0] >= view_plane_mask_range_min[0]
-				&& sample_point_vec[1] >= view_plane_mask_range_min[1]
-				&& sample_point_vec[0] <= view_plane_mask_range_max[0]
-				&& sample_point_vec[1] <= view_plane_mask_range_max[1])
-				++num_removed_points;
-		}
-
-		Real removed_point_proportion = static_cast<Real>(num_removed_points) / num_points;
-		if (std::abs(removed_point_proportion - FLAGS_param_view_plane_mask_proportion) < 0.01)
-		{
-			break;
-		}
-		else if (removed_point_proportion < FLAGS_param_view_plane_mask_proportion)
-		{
-			// Increase the mask size.
-			scale_factor += std::pow(0.5, iter + 1);
-		}
-		else
-		{
-			// Decrease the mask size.
-			scale_factor -= std::pow(0.5, iter + 1);
-		}
-	}
-
-	Eigen::Vector2d view_plane_mask_range_size = scale_factor * view_plane_mask_range_initial_size;
-	Eigen::Vector2d view_plane_mask_range_min = view_plane_mask_range_center - view_plane_mask_range_size;
-	Eigen::Vector2d view_plane_mask_range_max = view_plane_mask_range_center + view_plane_mask_range_size;
-
-	FLAGS_param_view_plane_mask_min_x = view_plane_mask_range_min[0];
-	FLAGS_param_view_plane_mask_min_y = view_plane_mask_range_min[1];
-	FLAGS_param_view_plane_mask_max_x = view_plane_mask_range_max[0];
-	FLAGS_param_view_plane_mask_max_y = view_plane_mask_range_max[1];
 }
 
 void MeshCuboid::compute_view_plane_mask_visibility(const Real _modelview_matrix[16],

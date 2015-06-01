@@ -658,9 +658,31 @@ void MeshViewerCore::run_part_assembly()
 	}
 	else if (!open_mesh(mesh_filepath.c_str()))
 	{
-		std::cerr << "Error: The mesh file cannot be opened (" << mesh_filepath << ")." << std::endl;
+		std::cerr << "Error: The mesh file is not opened (" << mesh_filepath << ")." << std::endl;
 		return;
 	}
+
+	// View plane mask.
+	if (FLAGS_use_view_plane_mask)
+	{
+		std::string mesh_output_path = FLAGS_output_dir + std::string("/") + mesh_name;
+		std::string view_plane_mask_filename = mesh_output_path + std::string("/view_mask.txt");
+		std::ifstream view_plane_mask_file(view_plane_mask_filename.c_str());
+
+		if (!view_plane_mask_file.is_open())
+		{
+			std::cerr << "Error: The view plane mask file is not opened (" << view_plane_mask_filename << ")." << std::endl;
+			return;
+		}
+
+		std::string buffer;
+		std::getline(view_plane_mask_file, buffer); FLAGS_param_view_plane_mask_min_x = std::atof(buffer.c_str());
+		std::getline(view_plane_mask_file, buffer); FLAGS_param_view_plane_mask_min_y = std::atof(buffer.c_str());
+		std::getline(view_plane_mask_file, buffer); FLAGS_param_view_plane_mask_max_x = std::atof(buffer.c_str());
+		std::getline(view_plane_mask_file, buffer); FLAGS_param_view_plane_mask_max_y = std::atof(buffer.c_str());
+		view_plane_mask_file.close();
+	}
+
 
 	std::string filename_prefix = std::string("/") + mesh_name + std::string("_");
 	std::stringstream output_filename_sstr;
@@ -669,14 +691,6 @@ void MeshViewerCore::run_part_assembly()
 	std::string mesh_output_path = FLAGS_part_assembly_dir + std::string("/") + mesh_name;
 	output_dir.mkpath(FLAGS_part_assembly_dir.c_str());
 	output_dir.mkpath(mesh_output_path.c_str());
-
-	std::list<std::string> ignored_object_list;
-	ignored_object_list.push_back(mesh_name);
-
-	std::vector< std::vector<MeshCuboidJointNormalRelations *> > joint_normal_relations;
-	//MeshCuboidTrainer::load_joint_normal_relations(num_labels, "joint_normal_", joint_normal_relations);
-	trainer.get_joint_normal_relations(joint_normal_relations, &ignored_object_list);
-	MeshCuboidJointNormalRelationPredictor joint_normal_predictor(joint_normal_relations);
 
 
 	// Initialize basic information.
