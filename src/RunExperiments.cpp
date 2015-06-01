@@ -1279,7 +1279,7 @@ void MeshViewerCore::run_symmetry_detection_msh2pln()
 	}
 	else if (!open_mesh(mesh_filepath.c_str()))
 	{
-		std::cerr << "Error: The mesh file cannot be opened (" << mesh_filepath << ")." << std::endl;
+		std::cerr << "Error: The mesh file is not opened (" << mesh_filepath << ")." << std::endl;
 		return;
 	}
 
