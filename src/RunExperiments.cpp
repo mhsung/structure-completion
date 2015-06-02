@@ -1533,6 +1533,28 @@ void MeshViewerCore::run_baseline_stats()
 		return;
 	}
 
+	// View plane mask.
+	if (FLAGS_use_view_plane_mask)
+	{
+		std::string mesh_output_path = FLAGS_output_dir + std::string("/") + mesh_name;
+		std::string view_plane_mask_filename = mesh_output_path + std::string("/view_mask.txt");
+		std::ifstream view_plane_mask_file(view_plane_mask_filename.c_str());
+
+		if (!view_plane_mask_file.is_open())
+		{
+			std::cerr << "Error: The view plane mask file is not opened (" << view_plane_mask_filename << ")." << std::endl;
+			return;
+		}
+
+		std::string buffer;
+		std::getline(view_plane_mask_file, buffer); FLAGS_param_view_plane_mask_min_x = std::atof(buffer.c_str());
+		std::getline(view_plane_mask_file, buffer); FLAGS_param_view_plane_mask_min_y = std::atof(buffer.c_str());
+		std::getline(view_plane_mask_file, buffer); FLAGS_param_view_plane_mask_max_x = std::atof(buffer.c_str());
+		std::getline(view_plane_mask_file, buffer); FLAGS_param_view_plane_mask_max_y = std::atof(buffer.c_str());
+		view_plane_mask_file.close();
+	}
+
+
 	std::string filename_prefix = std::string("/") + mesh_name + std::string("_");
 	std::stringstream output_filename_sstr;
 
