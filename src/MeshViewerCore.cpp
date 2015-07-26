@@ -603,7 +603,8 @@ void MeshViewerCore::draw_scene(const std::string& _draw_mode)
 {
 	MeshViewerCoreT<MyMesh>::draw_scene(_draw_mode);
 
-	if (_draw_mode == CUSTOM_VIEW || _draw_mode == COLORED_POINT_SAMPLES || _draw_mode == COLORED_RENDERING)
+	if (_draw_mode == CUSTOM_VIEW || _draw_mode == POINT_SAMPLES ||
+		_draw_mode == COLORED_POINT_SAMPLES || _draw_mode == COLORED_RENDERING)
 	{
 		glDisable(GL_LIGHTING);
 		glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
@@ -1211,6 +1212,21 @@ void MeshViewerCore::draw_openmesh(const std::string& _drawmode)
 			}
 		}
 #endif
+	}
+	else if (_drawmode == POINT_SAMPLES)
+	{
+		for (std::vector<MeshSamplePoint *>::iterator it = cuboid_structure_.sample_points_.begin();
+			it != cuboid_structure_.sample_points_.end(); it++)
+		{
+			assert(*it);
+			GLdouble *point = &(*it)->point_[0];
+
+			glPointSize(2);
+			glBegin(GL_POINTS);
+			gray_color();
+			glVertex3dv(&point[0]);
+			glEnd();
+		}
 	}
 	else if (_drawmode == COLORED_POINT_SAMPLES)
 	{

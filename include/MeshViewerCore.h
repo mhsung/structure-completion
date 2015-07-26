@@ -19,6 +19,7 @@
 #define CUSTOM_VIEW				"Custom view"
 #define	COLORED_RENDERING		"Colored rendering"
 #define	FACE_INDEX_RENDERING	"Face index rendering"
+#define	POINT_SAMPLES			"Point rendering"
 #define	COLORED_POINT_SAMPLES	"Colored point samples"
 //#define COLOR_RANDOM_SEED		20091129
 #define COLOR_RANDOM_SEED		20091130
@@ -62,6 +63,7 @@ public:
 	void run_symmetry_detection();
 	void run_symmetry_detection_msh2pln();
 	void run_baseline_stats();
+	void run_render_output();
 	void run_render_evaluation();
 	void run_extract_symmetry_info();
 	void batch_render_point_clusters();
