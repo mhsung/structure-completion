@@ -282,7 +282,7 @@ void MeshViewerCore::run_render_output()
 		open_modelview_matrix_file(FLAGS_pose_filename.c_str());
 
 		output_filename_sstr.clear(); output_filename_sstr.str("");
-		output_filename_sstr << result_file_prefix.str() << std::string("_symmetry_accuracy_output");
+		output_filename_sstr << result_file_prefix.str() << std::string("_symmetry_output");
 		snapshot(output_filename_sstr.str().c_str());
 		cuboid_structure_ = ground_truth_cuboid_structure;
 
@@ -297,7 +297,7 @@ void MeshViewerCore::run_render_output()
 		open_modelview_matrix_file(FLAGS_pose_filename.c_str());
 
 		output_filename_sstr.clear(); output_filename_sstr.str("");
-		output_filename_sstr << result_file_prefix.str() << std::string("_database_accuracy_output");
+		output_filename_sstr << result_file_prefix.str() << std::string("_database_output");
 		snapshot(output_filename_sstr.str().c_str());
 		cuboid_structure_ = ground_truth_cuboid_structure;
 
@@ -312,7 +312,7 @@ void MeshViewerCore::run_render_output()
 		open_modelview_matrix_file(FLAGS_pose_filename.c_str());
 
 		output_filename_sstr.clear(); output_filename_sstr.str("");
-		output_filename_sstr << result_file_prefix.str() << std::string("_fusion_accuracy_output");
+		output_filename_sstr << result_file_prefix.str() << std::string("_fusion_output");
 		snapshot(output_filename_sstr.str().c_str());
 		cuboid_structure_ = ground_truth_cuboid_structure;
 
@@ -332,7 +332,7 @@ void MeshViewerCore::run_render_output()
 	{
 		open_modelview_matrix_file(FLAGS_pose_filename.c_str());
 		output_filename_sstr.clear(); output_filename_sstr.str("");
-		output_filename_sstr << result_file_prefix.str() << std::string("_assembly_accuracy_output");
+		output_filename_sstr << result_file_prefix.str() << std::string("_assembly_output");
 		snapshot(output_filename_sstr.str().c_str());
 		cuboid_structure_ = ground_truth_cuboid_structure;
 	}
@@ -351,7 +351,7 @@ void MeshViewerCore::run_render_output()
 	{
 		open_modelview_matrix_file(FLAGS_pose_filename.c_str());
 		output_filename_sstr.clear(); output_filename_sstr.str("");
-		output_filename_sstr << result_file_prefix.str() << std::string("_symm_detection_accuracy_output");
+		output_filename_sstr << result_file_prefix.str() << std::string("_symm_detection_output");
 		snapshot(output_filename_sstr.str().c_str());
 		cuboid_structure_ = ground_truth_cuboid_structure;
 	}
