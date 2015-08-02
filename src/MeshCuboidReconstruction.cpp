@@ -642,6 +642,8 @@ void MeshViewerCore::reconstruct_scan(
 	output_filename_sstr << _output_file_prefix;
 	snapshot(output_filename_sstr.str().c_str());
 
+	setDrawMode(POINT_SAMPLES);
+
 
 	// 1. Reconstruction using symmetry.
 	cuboid_structure_.copy_sample_points_to_symmetric_position();
