@@ -34,7 +34,7 @@
 class MeshViewerCore : public MeshViewerCoreT<MyMesh>
 {
 public:
-    /// default constructor
+	/// default constructor
 	MeshViewerCore(GLViewerBase &_widget);
 	virtual ~MeshViewerCore();
 
@@ -112,6 +112,12 @@ private:
 		const char* _cuboid_filepath);
 
 	void reconstruct(
+		const char *_mesh_filepath,
+		const GLdouble *_snapshot_modelview_matrix,
+		const GLdouble *_occlusion_modelview_matrix,
+		const char *_output_file_prefix);
+
+	void reconstruct_scan(
 		const char *_mesh_filepath,
 		const GLdouble *_snapshot_modelview_matrix,
 		const GLdouble *_occlusion_modelview_matrix,

@@ -60,15 +60,24 @@ DEFINE_bool(run_render_assembly, false, "");
 DEFINE_bool(run_render_output, false, "");
 DEFINE_bool(run_render_evaluation, false, "");
 DEFINE_bool(run_extract_symmetry_info, false, "");
+DEFINE_bool(no_evaluation, true, "");
 DEFINE_string(mesh_filename, "", "");
 
 DEFINE_string(data_root_path, "D:/Data/shape2pose/", "");
-DEFINE_string(label_info_path, "data/0_body/assembly_chairs/", "");
-DEFINE_string(mesh_path, "data/1_input/assembly_chairs/off/", "");
-DEFINE_string(sample_path, "data/2_analysis/assembly_chairs/points/even1000/", "");
-DEFINE_string(dense_sample_path, "data/2_analysis/assembly_chairs/points/random100000/", "");
-DEFINE_string(mesh_label_path, "data/1_input/assembly_chairs/gt/", "");
-DEFINE_string(sample_label_path, "data/4_experiments/exp1_assembly_chairs/1_prediction/", "");
+DEFINE_string(label_info_path, "data/0_body/dataset_name/", "");
+DEFINE_string(mesh_path, "data/1_input/dataset_name/off/", "");
+DEFINE_string(sample_path, "data/2_analysis/dataset_name/points/even1000/", "");
+DEFINE_string(dense_sample_path, "data/2_analysis/dataset_name/points/random100000/", "");
+DEFINE_string(mesh_label_path, "data/1_input/dataset_name/gt/", "");
+DEFINE_string(sample_label_path, "data/4_experiments/exp1_dataset_name/1_prediction/", "");
+
+DEFINE_string(retrieval_label_info_path, "data/0_body/dataset_name/", "");
+DEFINE_string(retrieval_mesh_path, "data/1_input/dataset_name/off/", "");
+DEFINE_string(retrieval_sample_path, "data/2_analysis/dataset_name/points/even1000/", "");
+DEFINE_string(retrieval_dense_sample_path, "data/2_analysis/dataset_name/points/random100000/", "");
+DEFINE_string(retrieval_mesh_label_path, "data/1_input/dataset_name/gt/", "");
+DEFINE_string(retrieval_sample_label_path, "data/4_experiments/exp1_dataset_name/1_prediction/", "");
+
 DEFINE_string(output_dir, "output", "");
 DEFINE_string(training_dir, "training", "");
 DEFINE_string(part_assembly_dir, "part_assembly", "");

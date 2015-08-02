@@ -604,7 +604,6 @@ void MeshViewerCore::run_extract_symmetry_info()
 	}
 }
 
-/*
 void MeshViewerCore::reconstruct_scan(
 	const char *_mesh_filepath,
 	const GLdouble *_snapshot_modelview_matrix,
@@ -666,7 +665,33 @@ void MeshViewerCore::reconstruct_scan(
 
 	// 2. Reconstruction using database.
 	cuboid_structure_ = cuboid_structure_copy;
+
+	// FIXME: Fix this hack!
+	std::string temp_label_info_path = FLAGS_label_info_path;
+	std::string temp_mesh_path = FLAGS_mesh_path;
+	std::string temp_sample_path = FLAGS_sample_path;
+	std::string temp_dense_sample_path = FLAGS_dense_sample_path;
+	std::string temp_mesh_label_path = FLAGS_mesh_label_path;
+	std::string temp_sample_label_path = FLAGS_sample_label_path;
+
+	FLAGS_label_info_path = FLAGS_retrieval_label_info_path;
+	FLAGS_mesh_path = FLAGS_retrieval_mesh_path;
+	FLAGS_sample_path = FLAGS_retrieval_sample_path;
+	FLAGS_dense_sample_path = FLAGS_retrieval_dense_sample_path;
+	FLAGS_mesh_label_path = FLAGS_retrieval_mesh_label_path;
+	FLAGS_sample_label_path = FLAGS_retrieval_sample_label_path;
+	//
+
 	reconstruct_database_prior(_mesh_filepath);
+
+	//
+	FLAGS_label_info_path = temp_label_info_path;
+	FLAGS_mesh_path = temp_mesh_path;
+	FLAGS_sample_path = temp_sample_path;
+	FLAGS_dense_sample_path = temp_dense_sample_path;
+	FLAGS_mesh_label_path = temp_mesh_label_path;
+	FLAGS_sample_label_path = temp_sample_label_path;
+	//
 
 	// NOTE:
 	// The label of reconstructed points are recorded as confidence values.
@@ -700,9 +725,10 @@ void MeshViewerCore::reconstruct_scan(
 	ret = original_cuboid_structure.load_sample_points(sample_filepath.c_str(), false);
 	assert(ret);
 
+	// NOTE: Do not add outlier samples.
 	reconstruct_fusion(_mesh_filepath,
 		_snapshot_modelview_matrix, _occlusion_modelview_matrix,
-		original_cuboid_structure, symmetry_reconstruction, database_reconstruction, cuboid_structure_);
+		original_cuboid_structure, symmetry_reconstruction, database_reconstruction, cuboid_structure_, false);
 
 
 	// NOTE:
@@ -724,7 +750,6 @@ void MeshViewerCore::reconstruct_scan(
 
 	setDrawMode(CUSTOM_VIEW);
 }
-*/
 
 void MeshViewerCore::reconstruct_database_prior(
 	const char *_mesh_filepath,

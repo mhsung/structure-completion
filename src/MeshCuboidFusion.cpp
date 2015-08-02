@@ -801,15 +801,13 @@ void reconstruct_fusion(const char *_mesh_filepath,
 	const MeshCuboidStructure &_original_cuboid_structure,
 	const MeshCuboidStructure &_symmetry_cuboid_structure,
 	const MeshCuboidStructure &_database_cuboid_structure,
-	MeshCuboidStructure &_output_cuboid_structure)
+	MeshCuboidStructure &_output_cuboid_structure,
+	bool _add_outliers)
 {
 	assert(_symmetry_cuboid_structure.num_labels() == _database_cuboid_structure.num_labels());
 
-	const Real neighbor_distance = FLAGS_param_sparse_neighbor_distance
-		* _output_cuboid_structure.mesh_->get_object_diameter();
-	const Real occlusion_radius = FLAGS_param_occlusion_test_neighbor_distance
-		* _output_cuboid_structure.mesh_->get_object_diameter();
-	const Real visibility_smoothing_prior = 1.0;
+	const Real occlusion_radius = FLAGS_param_fusion_grid_size;
+	const Real visibility_smoothing_prior = FLAGS_param_fusion_visibility_smoothing_prior;
 
 
 	_output_cuboid_structure.clear_sample_points();
@@ -929,15 +927,18 @@ void reconstruct_fusion(const char *_mesh_filepath,
 
 
 	// Add unvisited (unsegmented) sample points in symmetry reconstruction.
-	for (SamplePointIndex sample_point_index = 0; sample_point_index < _symmetry_cuboid_structure.num_sample_points();
-		++sample_point_index)
+	if (_add_outliers)
 	{
-		if (!is_symmetry_point_visited[sample_point_index])
+		for (SamplePointIndex sample_point_index = 0; sample_point_index < _symmetry_cuboid_structure.num_sample_points();
+			++sample_point_index)
 		{
-			const MeshSamplePoint *sample_point = _symmetry_cuboid_structure.sample_points_[sample_point_index];
-			assert(sample_point);
-			MeshSamplePoint *new_sample_point = _output_cuboid_structure.add_sample_point(
-				sample_point->point_, sample_point->normal_);
+			if (!is_symmetry_point_visited[sample_point_index])
+			{
+				const MeshSamplePoint *sample_point = _symmetry_cuboid_structure.sample_points_[sample_point_index];
+				assert(sample_point);
+				MeshSamplePoint *new_sample_point = _output_cuboid_structure.add_sample_point(
+					sample_point->point_, sample_point->normal_);
+			}
 		}
 	}
 

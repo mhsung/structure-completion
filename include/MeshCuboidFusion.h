@@ -83,6 +83,7 @@ void reconstruct_fusion(const char *_mesh_filepath,
 	const MeshCuboidStructure &_original_cuboid_structure,
 	const MeshCuboidStructure &_symmetry_reconstruction,
 	const MeshCuboidStructure &_database_reconstruction,
-	MeshCuboidStructure &_output_cuboid_structure);
+	MeshCuboidStructure &_output_cuboid_structure,
+	bool _add_outliers = true);
 
 #endif	// _MESH_CUBOID_FUSION_H_

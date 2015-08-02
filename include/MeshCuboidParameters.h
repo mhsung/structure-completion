@@ -63,8 +63,11 @@ DECLARE_bool(run_render_assembly);
 DECLARE_bool(run_render_output);
 DECLARE_bool(run_render_evaluation);
 DECLARE_bool(run_extract_symmetry_info);
+DECLARE_bool(no_evaluation);
 
 DECLARE_string(mesh_filename);
+
+// Dataset paths.
 DECLARE_string(data_root_path);
 DECLARE_string(label_info_path);
 DECLARE_string(mesh_path);
@@ -72,6 +75,16 @@ DECLARE_string(sample_path);
 DECLARE_string(dense_sample_path);
 DECLARE_string(mesh_label_path);
 DECLARE_string(sample_label_path);
+
+// NOTE: Set these paths when the input is scan data.
+// These paths are used in 'MeshViewerCore::reconstruct_scan()' function.
+DECLARE_string(retrieval_label_info_path);
+DECLARE_string(retrieval_mesh_path);
+DECLARE_string(retrieval_sample_path);
+DECLARE_string(retrieval_dense_sample_path);
+DECLARE_string(retrieval_mesh_label_path);
+DECLARE_string(retrieval_sample_label_path);
+
 DECLARE_string(output_dir);
 DECLARE_string(training_dir);
 DECLARE_string(part_assembly_dir);
