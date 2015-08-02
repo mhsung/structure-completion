@@ -63,12 +63,21 @@ DECLARE_bool(run_render_assembly);
 DECLARE_bool(run_render_output);
 DECLARE_bool(run_render_evaluation);
 DECLARE_bool(run_extract_symmetry_info);
+
+// NOTE: Set true when the input is scan data.
 DECLARE_bool(no_evaluation);
 
-DECLARE_string(mesh_filename);
+// NOTE: When jointly optimizing all reflection symmetry groups which have
+// orthogonal relations each other, the result might go wrong due to the
+// numerical issue in the solver. We therefore optimize for each reflection
+// symmetry group separately.
+DECLARE_bool(optimize_each_reflection_symmetry_group);
 
-// Dataset paths.
+
+// Input paths.
+DECLARE_string(mesh_filename);
 DECLARE_string(data_root_path);
+
 DECLARE_string(label_info_path);
 DECLARE_string(mesh_path);
 DECLARE_string(sample_path);
@@ -77,7 +86,7 @@ DECLARE_string(mesh_label_path);
 DECLARE_string(sample_label_path);
 
 // NOTE: Set these paths when the input is scan data.
-// These paths are used in 'MeshViewerCore::reconstruct_scan()' function.
+// These paths are only used in 'MeshViewerCore::reconstruct_scan()' function.
 DECLARE_string(retrieval_label_info_path);
 DECLARE_string(retrieval_mesh_path);
 DECLARE_string(retrieval_sample_path);
@@ -85,12 +94,14 @@ DECLARE_string(retrieval_dense_sample_path);
 DECLARE_string(retrieval_mesh_label_path);
 DECLARE_string(retrieval_sample_label_path);
 
+// Output paths.
 DECLARE_string(output_dir);
 DECLARE_string(training_dir);
 DECLARE_string(part_assembly_dir);
 DECLARE_string(symmetry_detection_dir);
 DECLARE_string(baseline_dir);
 
+// Additional data file names.
 DECLARE_string(label_info_filename);
 DECLARE_string(label_symmetry_info_filename);
 DECLARE_string(symmetry_group_info_filename);
@@ -98,6 +109,7 @@ DECLARE_string(pose_filename);
 DECLARE_string(occlusion_pose_filename);
 //DECLARE_string(occlusion_pose_filename);
 
+// File name prefixes.
 DECLARE_string(single_feature_filename_prefix);
 DECLARE_string(pair_feature_filename_prefix);
 DECLARE_string(single_stats_filename_prefix);

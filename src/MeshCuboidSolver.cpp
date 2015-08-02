@@ -1491,11 +1491,39 @@ void optimize_attributes(
 		sstr << "iteration [" << iteration << "]" << std::endl;
 		std::cout << sstr.str(); log_file << sstr.str();
 
-		//optimize_attributes_quadratic_once(all_cuboids, _predictor, _single_energy_term_weight);
-		optimize_attributes_once(
-			_cuboid_structure, _predictor,
-			_single_energy_term_weight, _symmetry_energy_term_weight,
-			_use_nonlinear_constraints);
+		// NOTE: When jointly optimizing all reflection symmetry groups which have
+		// orthogonal relations each other, the result might go wrong due to the
+		// numerical issue in the solver. We therefore optimize for each reflection
+		// symmetry group separately.
+		if (FLAGS_optimize_each_reflection_symmetry_group)
+		{
+			const std::vector<MeshCuboidReflectionSymmetryGroup *> all_reflection_symmetry_groups
+				= _cuboid_structure.reflection_symmetry_groups_;
+
+			for (MeshCuboidReflectionSymmetryGroup *reflection_symmetry_groups :
+				_cuboid_structure.reflection_symmetry_groups_)
+			{
+				std::vector<MeshCuboidReflectionSymmetryGroup *> each_reflection_symmetry_groups;
+				each_reflection_symmetry_groups.push_back(reflection_symmetry_groups);
+				_cuboid_structure.reflection_symmetry_groups_ = each_reflection_symmetry_groups;
+
+				//optimize_attributes_quadratic_once(all_cuboids, _predictor, _single_energy_term_weight);
+				optimize_attributes_once(
+					_cuboid_structure, _predictor,
+					_single_energy_term_weight, _symmetry_energy_term_weight,
+					_use_nonlinear_constraints);
+			}
+
+			_cuboid_structure.reflection_symmetry_groups_ = all_reflection_symmetry_groups;
+		}
+		else
+		{
+			//optimize_attributes_quadratic_once(all_cuboids, _predictor, _single_energy_term_weight);
+			optimize_attributes_once(
+				_cuboid_structure, _predictor,
+				_single_energy_term_weight, _symmetry_energy_term_weight,
+				_use_nonlinear_constraints);
+		}
 		
 		
 		if (_viewer) _viewer->updateGL();

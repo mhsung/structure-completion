@@ -60,10 +60,13 @@ DEFINE_bool(run_render_assembly, false, "");
 DEFINE_bool(run_render_output, false, "");
 DEFINE_bool(run_render_evaluation, false, "");
 DEFINE_bool(run_extract_symmetry_info, false, "");
-DEFINE_bool(no_evaluation, true, "");
-DEFINE_string(mesh_filename, "", "");
 
+DEFINE_bool(no_evaluation, true, "");
+DEFINE_bool(optimize_each_reflection_symmetry_group, true, "");
+
+DEFINE_string(mesh_filename, "", "");
 DEFINE_string(data_root_path, "D:/Data/shape2pose/", "");
+
 DEFINE_string(label_info_path, "data/0_body/dataset_name/", "");
 DEFINE_string(mesh_path, "data/1_input/dataset_name/off/", "");
 DEFINE_string(sample_path, "data/2_analysis/dataset_name/points/even1000/", "");

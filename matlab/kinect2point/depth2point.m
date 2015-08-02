@@ -1,4 +1,4 @@
-function [XYZ] = depth2point(dim)
+function [XYZ] = depth2point(A)
 
 % Kinect v1 parameters.
 % fc = [596.23110, 656.18287];
@@ -21,7 +21,7 @@ dscale = 1;
 
 
 [u,v] = meshgrid(1:width,1:height);
-Z = double(dim) *dscale;
+Z = double(A) * dscale;
 %K = [fx 0 cx; 0 fy cy; 0 0 1];
 %[xn,yn] = ImageToNormal(u,v,K,rd);
 
