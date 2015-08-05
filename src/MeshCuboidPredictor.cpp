@@ -285,6 +285,33 @@ Real MeshCuboidPredictor::get_pair_quadratic_form(
 	return 0;
 }
 
+Real MeshCuboidPredictor::get_pair_conditional_quadratic_form(
+	const MeshCuboid *_cuboid_1, const MeshCuboid *_cuboid_2,
+	const unsigned int _cuboid_index_1, const unsigned int _cuboid_index_2,
+	const LabelIndex _label_index_1, const LabelIndex _label_index_2,
+	Eigen::MatrixXd &_quadratic_term, Eigen::VectorXd &_linear_term, double& _constant_term)const
+{
+	assert(_cuboid_1); assert(_cuboid_2);
+	assert(_label_index_1 < num_labels_);
+	assert(_label_index_2 < num_labels_);
+	//assert(_label_index_1 != _label_index_2);
+
+	const unsigned int num_attributes = MeshCuboidAttributes::k_num_attributes;
+	const unsigned int num_features = MeshCuboidFeatures::k_num_features;
+	const unsigned int mat_size = _quadratic_term.cols();
+
+	assert(_quadratic_term.rows() == mat_size);
+	assert(_linear_term.rows() == mat_size);
+	assert(_cuboid_index_1 * num_attributes <= mat_size);
+	assert(_cuboid_index_2 * num_attributes <= mat_size);
+
+	_quadratic_term.setZero();
+	_linear_term.setZero();
+	_constant_term = 0;
+
+	return 0;
+}
+
 MeshCuboidJointNormalRelationPredictor::MeshCuboidJointNormalRelationPredictor(
 	const std::vector< std::vector<MeshCuboidJointNormalRelations *> > &_relations)
 	: MeshCuboidPredictor(_relations.size())
@@ -540,6 +567,154 @@ Real MeshCuboidJointNormalRelationPredictor::get_pair_quadratic_form(
 	//Eigen::IOFormat csv_format(Eigen::StreamPrecision, 0, ",");
 	//std::stringstream filename_sstr;
 	//filename_sstr << std::string("quadratic_mat_")
+	//	<< _cuboid_index_1 << std::string("_")
+	//	<< _cuboid_index_2 << std::string(".csv");
+
+	//std::ofstream csv_file(filename_sstr.str());
+	//Eigen::IOFormat csv_format(Eigen::StreamPrecision, 0, ",");
+	//csv_file << _quadratic_term.format(csv_format) << std::endl;
+	//csv_file.close();
+
+	return potential;
+}
+
+Real MeshCuboidJointNormalRelationPredictor::get_pair_conditional_quadratic_form(
+	const MeshCuboid *_cuboid_1, const MeshCuboid *_cuboid_2,
+	const unsigned int _cuboid_index_1, const unsigned int _cuboid_index_2,
+	const LabelIndex _label_index_1, const LabelIndex _label_index_2,
+	Eigen::MatrixXd &_quadratic_term, Eigen::VectorXd &_linear_term, Real& _constant_term) const
+{
+	assert(_cuboid_1); assert(_cuboid_2);
+	assert(_label_index_1 < num_labels_);
+	assert(_label_index_2 < num_labels_);
+
+	// NOTE:
+	// Now considering only different label pairs.
+	//assert(_label_index_1 != _label_index_2);
+
+	const unsigned int num_attributes = MeshCuboidAttributes::k_num_attributes;
+	const unsigned int num_features = MeshCuboidFeatures::k_num_features;
+	const unsigned int mat_size = _quadratic_term.cols();
+
+	assert(_quadratic_term.rows() == mat_size);
+	assert(_linear_term.rows() == mat_size);
+	assert(_cuboid_index_1 * num_attributes <= mat_size);
+	assert(_cuboid_index_2 * num_attributes <= mat_size);
+
+	_quadratic_term.setZero();
+	_linear_term.setZero();
+	_constant_term = 0;
+
+	const MeshCuboidJointNormalRelations *relation_12 = relations_[_label_index_1][_label_index_2];
+	if (!relation_12) return 0.0;
+
+
+	MeshCuboidFeatures features_1, features_2;
+	Eigen::MatrixXd attributes_to_features_map_1, attributes_to_features_map_2;
+
+	features_1.compute_features(_cuboid_1, &attributes_to_features_map_1);
+	features_2.compute_features(_cuboid_2, &attributes_to_features_map_2);
+
+	assert(attributes_to_features_map_1.rows() == num_features);
+	assert(attributes_to_features_map_2.rows() == num_features);
+
+	assert(attributes_to_features_map_1.cols() == num_attributes);
+	assert(attributes_to_features_map_2.cols() == num_attributes);
+
+	MeshCuboidTransformation transformation_1;
+	transformation_1.compute_transformation(_cuboid_1);
+	Eigen::MatrixXd rotation_1;
+	Eigen::MatrixXd translation_1;
+	transformation_1.get_linear_map_transformation(rotation_1, translation_1);
+
+
+	// (Ax + b)'C(Ax + b) = x'(A'CA)x + 2*(b'CA)x.
+	unsigned int start_index_1 = (_cuboid_index_1 * num_attributes);
+	unsigned int start_index_2 = (_cuboid_index_2 * num_attributes);
+
+	Eigen::MatrixXd A1_orig = Eigen::MatrixXd::Zero(2 * num_features, mat_size);
+
+
+	// The rotation is fixed, and attribute-to-feature map is a function of 'cuboid_1' attributes.
+	A1_orig.block<num_features, num_attributes>(0, start_index_1)
+		= A1_orig.block<num_features, num_attributes>(0, start_index_1)
+		+ rotation_1 * attributes_to_features_map_1;
+
+	// The translation is a function of 'cuboid_1' attributes.
+	A1_orig.block<num_features, num_attributes>(0, start_index_1)
+		= A1_orig.block<num_features, num_attributes>(0, start_index_1)
+		+ translation_1;
+
+	// The rotation is fixed, and attribute-to-feature map is a function of 'cuboid_2' attributes.
+	A1_orig.block<num_features, num_attributes>(num_features, start_index_2)
+		= A1_orig.block<num_features, num_attributes>(num_features, start_index_2)
+		+ rotation_1 * attributes_to_features_map_2;
+
+	// The translation is a function of 'cuboid_1' attributes.
+	A1_orig.block<num_features, num_attributes>(num_features, start_index_1)
+		= A1_orig.block<num_features, num_attributes>(num_features, start_index_1)
+		+ translation_1;
+
+	// NOTE:
+	// 'A2_orig' is not computed since here it is assumed that
+	// the local coordinates of 'cuboid_2' is unknown.
+	// See function 'MeshCuboidJointNormalRelationPredictor::get_pair_quadratic_form()'
+
+
+	// NOTE:
+	// Since the center point is always the origin in the local coordinates,
+	// it is not used as the feature values.
+	const unsigned int num_rows = MeshCuboidJointNormalRelations::k_mat_size / 2;
+	Eigen::MatrixXd A(num_rows, mat_size);
+	A.topRows(2 * num_features - MeshCuboidFeatures::k_corner_index)
+		= A1_orig.bottomRows(2 * num_features - MeshCuboidFeatures::k_corner_index);
+
+	Eigen::VectorXd b = -relation_12->get_mean();
+	assert(b.rows() == MeshCuboidJointNormalRelations::k_mat_size);
+	
+	// NOTE:
+	// Since the local coordinates of 'cuboid_2' is unknown,
+	// Features for only 1 -> 1 and 1 -> 2 are used.
+	b = b.segment(0, num_rows);
+
+	Eigen::MatrixXd C = relation_12->get_inv_cov();
+	assert(C.rows() == MeshCuboidJointNormalRelations::k_mat_size);
+	assert(C.cols() == MeshCuboidJointNormalRelations::k_mat_size);
+
+	// NOTE:
+	// Since the local coordinates of 'cuboid_2' is unknown,
+	// Features for only 1 -> 1 and 1 -> 2 are used.
+	C = C.block(0, 0, num_rows, num_rows);
+
+	_quadratic_term = A.transpose() * C * A;
+	_linear_term = (b.transpose() * C * A).transpose();
+	_constant_term = (b.transpose() * C * b);
+
+
+	MeshCuboidAttributes attributes_1, attributes_2;
+	attributes_1.compute_attributes(_cuboid_1);
+	attributes_2.compute_attributes(_cuboid_2);
+
+	Eigen::VectorXd x1 = attributes_1.get_attributes();
+	Eigen::VectorXd x2 = attributes_2.get_attributes();
+	Eigen::VectorXd x = Eigen::VectorXd::Zero(mat_size);
+	x.block<num_attributes, 1>(start_index_1, 0) = x1;
+	x.block<num_attributes, 1>(start_index_2, 0) = x2;
+
+	Real potential = 0;
+	potential += (x.transpose() * _quadratic_term * x);
+	potential += (2 * _linear_term.transpose() * x);
+	potential += _constant_term;
+
+
+#ifdef DEBUG_TEST
+	Real same_potential = relation_12->compute_conditional_error(_cuboid_1, _cuboid_2, &transformation_1);
+	CHECK_NUMERICAL_ERROR(__FUNCTION__, potential, same_potential);
+#endif
+
+	//Eigen::IOFormat csv_format(Eigen::StreamPrecision, 0, ",");
+	//std::stringstream filename_sstr;
+	//filename_sstr << std::string("conditional_quadratic_mat_")
 	//	<< _cuboid_index_1 << std::string("_")
 	//	<< _cuboid_index_2 << std::string(".csv");
 

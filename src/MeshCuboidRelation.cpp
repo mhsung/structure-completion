@@ -963,6 +963,49 @@ double MeshCuboidJointNormalRelations::compute_error(const MeshCuboid *_cuboid_1
 	return error;
 }
 
+double MeshCuboidJointNormalRelations::compute_conditional_error(const MeshCuboid *_cuboid_1, const MeshCuboid *_cuboid_2,
+	const MeshCuboidTransformation *_transformation_1) const
+{
+	Eigen::VectorXd conditional_pairwise_cuboid_feature;
+	assert(_transformation_1);
+
+	MeshCuboidFeatures features_1;
+	features_1.compute_features(_cuboid_1);
+
+	MeshCuboidFeatures features_2;
+	features_2.compute_features(_cuboid_2);
+
+	Eigen::VectorXd transformed_features_vec_11 = _transformation_1->get_transformed_features(features_1);
+	assert(std::abs(transformed_features_vec_11[0]) < NUMERIAL_ERROR_THRESHOLD);
+	assert(std::abs(transformed_features_vec_11[1]) < NUMERIAL_ERROR_THRESHOLD);
+	assert(std::abs(transformed_features_vec_11[2]) < NUMERIAL_ERROR_THRESHOLD);
+	assert(transformed_features_vec_11.rows() == MeshCuboidFeatures::k_num_features);
+
+	Eigen::VectorXd transformed_features_vec_12 = _transformation_1->get_transformed_features(features_2);
+	assert(transformed_features_vec_12.rows() == MeshCuboidFeatures::k_num_features);
+
+	// NOTE:
+	// Since the center point is always the origin in the local coordinates,
+	// it is not used as the feature values.
+	const int num_rows = 2 * MeshCuboidFeatures::k_num_features - MeshCuboidFeatures::k_corner_index;
+	conditional_pairwise_cuboid_feature.resize(num_rows);
+	conditional_pairwise_cuboid_feature <<
+		transformed_features_vec_11.bottomRows(
+		MeshCuboidFeatures::k_num_features - MeshCuboidFeatures::k_corner_index),
+		transformed_features_vec_12;
+
+	Eigen::VectorXd conditional_mean = mean_.segment(0, num_rows);
+	Eigen::MatrixXd conditional_inv_cov = inv_cov_.block(0, 9, num_rows, num_rows);
+
+	Eigen::VectorXd diff = conditional_pairwise_cuboid_feature - conditional_mean;
+
+	// Mahalanobis norm.
+	double error = diff.transpose() * conditional_inv_cov * diff;
+	assert(error >= 0);
+
+	return error;
+}
+
 MeshCuboidCondNormalRelations::MeshCuboidCondNormalRelations()
 {
 	assert(MeshCuboidFeatures::k_num_global_feature_values > 0);

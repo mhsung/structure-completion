@@ -35,6 +35,12 @@ public:
 		const LabelIndex _label_index_1, const LabelIndex _label_index_2,
 		Eigen::MatrixXd &_quadratic_term, Eigen::VectorXd &_linear_term, double& _constant_term)const;
 
+	// 1 is fixed and 2 is unknown.
+	virtual Real get_pair_conditional_quadratic_form(const MeshCuboid *_cuboid_1, const MeshCuboid *_cuboid_2,
+		const unsigned int _cuboid_index_1, const unsigned int _cuboid_index_2,
+		const LabelIndex _label_index_1, const LabelIndex _label_index_2,
+		Eigen::MatrixXd &_quadratic_term, Eigen::VectorXd &_linear_term, double& _constant_term)const;
+
 protected:
 	const unsigned int num_labels_;
 };
@@ -55,6 +61,12 @@ public:
 		const LabelIndex _label_index_1, const LabelIndex _label_index_2)const;
 
 	virtual Real get_pair_quadratic_form(const MeshCuboid *_cuboid_1, const MeshCuboid *_cuboid_2,
+		const LabelIndex _label_index_1, const LabelIndex _label_index_2,
+		const unsigned int _cuboid_index_1, const unsigned int _cuboid_index_2,
+		Eigen::MatrixXd &_quadratic_term, Eigen::VectorXd &_linear_term, double& _constant_term)const;
+
+	// 1 is fixed and 2 is unknown.
+	virtual Real get_pair_conditional_quadratic_form(const MeshCuboid *_cuboid_1, const MeshCuboid *_cuboid_2,
 		const LabelIndex _label_index_1, const LabelIndex _label_index_2,
 		const unsigned int _cuboid_index_1, const unsigned int _cuboid_index_2,
 		Eigen::MatrixXd &_quadratic_term, Eigen::VectorXd &_linear_term, double& _constant_term)const;

@@ -152,6 +152,10 @@ public:
 	double compute_error(const MeshCuboid *_cuboid_1, const MeshCuboid *_cuboid_2,
 		const MeshCuboidTransformation *_transformation_1, const MeshCuboidTransformation *_transformation_2)const;
 
+	// 1 is fixed and 2 is unknown.
+	double compute_conditional_error(const MeshCuboid *_cuboid_1, const MeshCuboid *_cuboid_2,
+		const MeshCuboidTransformation *_transformation_1)const;
+
 	const Eigen::VectorXd &get_mean()const { return mean_; }
 	const Eigen::MatrixXd &get_inv_cov()const { return inv_cov_; }
 

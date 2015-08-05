@@ -1662,19 +1662,15 @@ void add_missing_cuboids_once(
 	quadratic_term.setZero();
 	linear_term.setZero();
 
-	for (unsigned int cuboid_index_1 = 0; cuboid_index_1 < num_cuboids; ++cuboid_index_1)
+	// 'cuboid_1' is a fixed cuboid.
+	for (unsigned int cuboid_index_1 = 0; cuboid_index_1 < num_given_cuboids; ++cuboid_index_1)
 	{
 		MeshCuboid *cuboid_1 = all_cuboids[cuboid_index_1];
 		assert(cuboid_1);
 		LabelIndex label_index_1 = cuboid_1->get_label_index();
 
-		//for (unsigned int cuboid_index_2 = 0; cuboid_index_2 < num_cuboids; ++cuboid_index_2)
-		//{
-		//	if (cuboid_index_1 == cuboid_index_2) continue;
-
-		// Using bilateral relations.
-		// (A, B) and (B, A) pairs are the same.
-		for (unsigned int cuboid_index_2 = cuboid_index_1 + 1; cuboid_index_2 < num_cuboids; ++cuboid_index_2)
+		// 'cuboid_2' is a unknown cuboid.
+		for (unsigned int cuboid_index_2 = num_given_cuboids; cuboid_index_2 < num_cuboids; ++cuboid_index_2)
 		{
 			MeshCuboid *cuboid_2 = all_cuboids[cuboid_index_2];
 			assert(cuboid_2);
@@ -1684,7 +1680,7 @@ void add_missing_cuboids_once(
 			Eigen::VectorXd pair_linear_term(mat_size);
 			double pair_constant_term;
 
-			_predictor.get_pair_quadratic_form(cuboid_1, cuboid_2,
+			_predictor.get_pair_conditional_quadratic_form(cuboid_1, cuboid_2,
 				cuboid_index_1, cuboid_index_2,
 				label_index_1, label_index_2,
 				pair_quadratic_term, pair_linear_term, pair_constant_term);
@@ -1772,7 +1768,7 @@ void add_missing_cuboids_once(
 		}
 		new_bbox_center = new_bbox_center / MeshCuboid::k_num_corners;
 
-		cuboid->set_bbox_center(new_bbox_center);
+		//cuboid->set_bbox_center(new_bbox_center);
 		cuboid->set_bbox_corners(new_bbox_corners);
 
 		// Cuboidize.
