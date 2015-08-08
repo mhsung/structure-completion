@@ -1511,9 +1511,11 @@ void optimize_attributes(
 			const std::vector<MeshCuboidReflectionSymmetryGroup *> all_reflection_symmetry_groups
 				= _cuboid_structure.reflection_symmetry_groups_;
 
-			for (MeshCuboidReflectionSymmetryGroup *reflection_symmetry_groups :
-				_cuboid_structure.reflection_symmetry_groups_)
+			for (std::vector<MeshCuboidReflectionSymmetryGroup *>::const_iterator it =
+				all_reflection_symmetry_groups.begin(); it != all_reflection_symmetry_groups.end(); ++it)
 			{
+				MeshCuboidReflectionSymmetryGroup *reflection_symmetry_groups = (*it);
+
 				std::vector<MeshCuboidReflectionSymmetryGroup *> each_reflection_symmetry_groups;
 				each_reflection_symmetry_groups.push_back(reflection_symmetry_groups);
 				_cuboid_structure.reflection_symmetry_groups_ = each_reflection_symmetry_groups;
