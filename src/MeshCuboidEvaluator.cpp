@@ -480,8 +480,15 @@ void MeshCuboidEvaluator::evaluate_point_labeling(
 			}
 		}
 
-		Real label_accuracy = static_cast<Real>(num_correctly_labeled_samples) / num_labeled_samples;
-		file << symmetric_label_set_index << "," << label_accuracy;
+		if (num_labeled_samples == 0)
+		{
+			file << symmetric_label_set_index << ",none" << std::endl;
+		}
+		else
+		{
+			Real label_accuracy = static_cast<Real>(num_correctly_labeled_samples) / num_labeled_samples;
+			file << symmetric_label_set_index << "," << label_accuracy << std::endl;
+		}
 
 		num_total_labeled_samples += num_labeled_samples;
 		num_total_correctly_labeled_samples += num_correctly_labeled_samples;
@@ -489,7 +496,14 @@ void MeshCuboidEvaluator::evaluate_point_labeling(
 
 	Real total_label_accuracy = static_cast<Real>(num_total_correctly_labeled_samples) /
 		num_total_labeled_samples;
-	file << "all," << total_label_accuracy;
+	if (num_total_labeled_samples == 0)
+	{
+		file << "all,none" << std::endl;
+	}
+	else
+	{
+		file << "all," << total_label_accuracy << std::endl;
+	}
 
 	file.close();
 }
