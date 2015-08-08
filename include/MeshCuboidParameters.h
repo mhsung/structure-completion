@@ -48,6 +48,11 @@ DECLARE_double(param_view_plane_mask_min_x);
 DECLARE_double(param_view_plane_mask_min_y);
 DECLARE_double(param_view_plane_mask_max_x);
 DECLARE_double(param_view_plane_mask_max_y);
+
+DECLARE_bool(disable_symmetry_terms);
+DECLARE_bool(disable_per_point_classifier_terms);
+DECLARE_bool(disable_label_smoothness_terms);
+DECLARE_bool(disable_part_related_terms);
 // ---- //
 
 

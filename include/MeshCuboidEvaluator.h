@@ -17,17 +17,22 @@ public:
 		//const std::string _mesh_name,
 		//const std::string _cuboid_structure_name);
 
-	bool save_evaluate_results(
-		const MeshCuboidStructure *_test_cuboid_structure,
-		const char *_filename, bool _verbose = true);
+	//bool save_evaluate_results(
+	//	const MeshCuboidStructure *_test_cuboid_structure,
+	//	const char *_filename, bool _verbose = true);
 
 	void evaluate_point_to_point_distances(
 		const MeshCuboidStructure *_test_cuboid_structure,
 		const char *_filename);
+
+	// NOTE: Should be called only when mesh label file is already loaded.
+	void evaluate_point_labeling(
+		const MeshCuboidStructure *_test_cuboid_structure,
+		const char *_filename);
 	
 private:
-	void evaluate_all(
-		const MeshCuboidStructure *_test_cuboid_structure);
+	//void evaluate_all(
+	//	const MeshCuboidStructure *_test_cuboid_structure);
 
 	//void evaluate_segmentation(
 	//	const MeshCuboidStructure *_test_cuboid_structure);

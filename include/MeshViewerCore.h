@@ -111,6 +111,10 @@ private:
 		const char* _sample_label_filepath,
 		const char* _cuboid_filepath);
 
+	void evaluate_per_point_labeling(
+		const char *_mesh_filepath, 
+		const char *_output_file_prefix);
+
 	void reconstruct(
 		const char *_mesh_filepath,
 		const GLdouble *_snapshot_modelview_matrix,

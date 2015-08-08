@@ -492,6 +492,12 @@ void segment_sample_points(
 			assert(squared_distance >= 0);
 
 			double label_probability = sample_point->label_index_confidence_[label_index];
+
+			//
+			if (FLAGS_disable_per_point_classifier_terms)
+				label_probability = 1.0;
+			//
+
 			double energy = squared_distance - lambda * std::log(label_probability);
 
 			//if (cuboid->is_group_cuboid())
@@ -545,29 +551,32 @@ void segment_sample_points(
 	std::vector< Eigen::Triplet<double> > pair_potentials;
 	pair_potentials.reserve(num_sample_points * num_neighbors);
 
-	for (unsigned int point_index = 0; point_index < num_sample_points; ++point_index)
+	if (!FLAGS_disable_label_smoothness_terms)
 	{
-		for (unsigned int i = 0; i < 3; ++i)
-			q[i] = sample_points.col(point_index)[i];
-
-		int num_searched_neighbors = sample_kd_tree->annkFRSearch(q,
-			squared_neighbor_distance, num_neighbors, nn_idx, dd);
-
-		for (int i = 0; i < std::min(num_neighbors, num_searched_neighbors); i++)
+		for (unsigned int point_index = 0; point_index < num_sample_points; ++point_index)
 		{
-			unsigned int n_point_index = (int)nn_idx[i];
+			for (unsigned int i = 0; i < 3; ++i)
+				q[i] = sample_points.col(point_index)[i];
 
-			// NOTE: Avoid symmetric pairs.
-			if (n_point_index <= point_index)
-				continue;
+			int num_searched_neighbors = sample_kd_tree->annkFRSearch(q,
+				squared_neighbor_distance, num_neighbors, nn_idx, dd);
 
-			//
-			double distance = (std::sqrt(squared_neighbor_distance) - std::sqrt(dd[0]));
-			assert(distance >= 0);
-			//
+			for (int i = 0; i < std::min(num_neighbors, num_searched_neighbors); i++)
+			{
+				unsigned int n_point_index = (int)nn_idx[i];
 
-			double energy = distance * distance;
-			pair_potentials.push_back(Eigen::Triplet<double>(point_index, n_point_index, energy));
+				// NOTE: Avoid symmetric pairs.
+				if (n_point_index <= point_index)
+					continue;
+
+				//
+				double distance = (std::sqrt(squared_neighbor_distance) - std::sqrt(dd[0]));
+				assert(distance >= 0);
+				//
+
+				double energy = distance * distance;
+				pair_potentials.push_back(Eigen::Triplet<double>(point_index, n_point_index, energy));
+			}
 		}
 	}
 
@@ -767,25 +776,27 @@ void compute_labels_and_axes_configuration_potentials(
 			//assert(potential >= 0.0);
 
 			Real potential = 0.0;
-			if (_cuboids[cuboid_index]->get_label_index() != label_index)
-				potential = FLAGS_param_max_potential;
-
-			// NOTE:
-			// If label symmetry information is given, symmetric labels have zero potential value.
-			if (_label_symmetries)
+			if (!FLAGS_disable_per_point_classifier_terms)
 			{
-				assert((*_label_symmetries).size() == num_labels);
-				const std::list<LabelIndex> &label_symmetry = (*_label_symmetries)[label_index];
-				for (std::list<LabelIndex>::const_iterator it = label_symmetry.begin(); it != label_symmetry.end(); ++it)
+				if (_cuboids[cuboid_index]->get_label_index() != label_index)
+					potential = FLAGS_param_max_potential;
+
+				// NOTE:
+				// If label symmetry information is given, symmetric labels have zero potential value.
+				if (_label_symmetries)
 				{
-					if (_cuboids[cuboid_index]->get_label_index() == (*it))
+					assert((*_label_symmetries).size() == num_labels);
+					const std::list<LabelIndex> &label_symmetry = (*_label_symmetries)[label_index];
+					for (std::list<LabelIndex>::const_iterator it = label_symmetry.begin(); it != label_symmetry.end(); ++it)
 					{
-						potential = 0.0;
-						break;
+						if (_cuboids[cuboid_index]->get_label_index() == (*it))
+						{
+							potential = 0.0;
+							break;
+						}
 					}
 				}
 			}
-
 			_potential_mat(mat_index, mat_index) = potential;
 		}
 	}
@@ -1390,7 +1401,7 @@ void optimize_attributes_once(
 	const MeshCuboidPredictor& _predictor,
 	const double _single_energy_term_weight,
 	const double _symmetry_energy_term_weight,
-	bool _use_nonlinear_constraints)
+	bool _use_symmetry)
 {
 	const Real squared_neighbor_distance = FLAGS_param_sparse_neighbor_distance *
 		_cuboid_structure.mesh_->get_object_diameter();
@@ -1422,7 +1433,7 @@ void optimize_attributes_once(
 	Eigen::VectorXd linear_term = pair_linear_term + _single_energy_term_weight * single_linear_term;
 	double constant_term = pair_constant_term + _single_energy_term_weight * single_constant_term;
 
-	if (!_use_nonlinear_constraints)
+	if (!_use_symmetry)
 	{
 		all_reflection_symmetry_groups.clear();
 		all_rotation_symmetry_groups.clear();
@@ -1448,7 +1459,7 @@ void optimize_attributes(
 	const unsigned int _max_num_iterations,
 	const std::string _log_filename,
 	GLViewerCore *_viewer,
-	bool _use_nonlinear_constraints)
+	bool _use_symmetry)
 {
 	std::ofstream log_file(_log_filename, std::ofstream::out | std::ofstream::app);
 	assert(log_file);
@@ -1511,7 +1522,7 @@ void optimize_attributes(
 				optimize_attributes_once(
 					_cuboid_structure, _predictor,
 					_single_energy_term_weight, _symmetry_energy_term_weight,
-					_use_nonlinear_constraints);
+					_use_symmetry);
 			}
 
 			_cuboid_structure.reflection_symmetry_groups_ = all_reflection_symmetry_groups;
@@ -1522,7 +1533,7 @@ void optimize_attributes(
 			optimize_attributes_once(
 				_cuboid_structure, _predictor,
 				_single_energy_term_weight, _symmetry_energy_term_weight,
-				_use_nonlinear_constraints);
+				_use_symmetry);
 		}
 		
 		
@@ -1541,7 +1552,7 @@ void optimize_attributes(
 		//
 
 		// Cuboidize.
-		if (FLAGS_param_optimize_with_non_linear_constraints)
+		if (_use_symmetry)
 		{
 			// Cuboid axes are estimated in the optimization.
 			for (std::vector<MeshCuboid *>::const_iterator it = all_cuboids.begin();

@@ -259,7 +259,7 @@ bool MeshViewerCore::load_object_info(
 		}
 	}
 
-	mesh_.clear_colors();
+	_mesh.clear_colors();
 
 	return true;
 }
@@ -992,6 +992,15 @@ void MeshViewerCore::predict()
 
 	ret = load_object_info(mesh_, cuboid_structure_, mesh_filepath.c_str(), LoadTestData);
 	if (!ret) return;
+
+	// If evaluation is requested, load ground truth face labels as well.
+	if (!FLAGS_no_evaluation) {
+		std::string mesh_label_filepath = FLAGS_data_root_path + FLAGS_mesh_label_path +
+			std::string("/") + mesh_name + std::string(".seg");
+		ret = mesh_.load_face_label_simple(mesh_label_filepath.c_str(), false);
+		if (!ret) return;
+	}
+
 
 	std::cout << " - Remove occluded points." << std::endl;
 	set_modelview_matrix(occlusion_modelview_matrix, false);

@@ -664,27 +664,19 @@ Real MeshCuboidJointNormalRelationPredictor::get_pair_conditional_quadratic_form
 	// NOTE:
 	// Since the center point is always the origin in the local coordinates,
 	// it is not used as the feature values.
-	const unsigned int num_rows = MeshCuboidJointNormalRelations::k_mat_size / 2;
-	Eigen::MatrixXd A(num_rows, mat_size);
-	A.topRows(2 * num_features - MeshCuboidFeatures::k_corner_index)
-		= A1_orig.bottomRows(2 * num_features - MeshCuboidFeatures::k_corner_index);
-
-	Eigen::VectorXd b = -relation_12->get_mean();
-	assert(b.rows() == MeshCuboidJointNormalRelations::k_mat_size);
-	
-	// NOTE:
-	// Since the local coordinates of 'cuboid_2' is unknown,
-	// Features for only 1 -> 1 and 1 -> 2 are used.
-	b = b.segment(0, num_rows);
-
-	Eigen::MatrixXd C = relation_12->get_inv_cov();
-	assert(C.rows() == MeshCuboidJointNormalRelations::k_mat_size);
-	assert(C.cols() == MeshCuboidJointNormalRelations::k_mat_size);
+	const unsigned int num_rows =
+		2 * MeshCuboidFeatures::k_num_features - MeshCuboidFeatures::k_corner_index;
+	Eigen::MatrixXd A = A1_orig.bottomRows(num_rows);
 
 	// NOTE:
 	// Since the local coordinates of 'cuboid_2' is unknown,
 	// Features for only 1 -> 1 and 1 -> 2 are used.
-	C = C.block(0, 0, num_rows, num_rows);
+	Eigen::VectorXd b = -relation_12->get_mean().segment(0, num_rows);
+
+	// NOTE:
+	// Since the local coordinates of 'cuboid_2' is unknown,
+	// Features for only 1 -> 1 and 1 -> 2 are used.
+	Eigen::MatrixXd C = relation_12->get_inv_cov().block(0, 0, num_rows, num_rows);
 
 	_quadratic_term = A.transpose() * C * A;
 	_linear_term = (b.transpose() * C * A).transpose();

@@ -990,13 +990,11 @@ double MeshCuboidJointNormalRelations::compute_conditional_error(const MeshCuboi
 	const int num_rows = 2 * MeshCuboidFeatures::k_num_features - MeshCuboidFeatures::k_corner_index;
 	conditional_pairwise_cuboid_feature.resize(num_rows);
 	conditional_pairwise_cuboid_feature <<
-		transformed_features_vec_11.bottomRows(
-		MeshCuboidFeatures::k_num_features - MeshCuboidFeatures::k_corner_index),
+		transformed_features_vec_11.bottomRows(MeshCuboidFeatures::k_num_features - MeshCuboidFeatures::k_corner_index),
 		transformed_features_vec_12;
 
 	Eigen::VectorXd conditional_mean = mean_.segment(0, num_rows);
-	Eigen::MatrixXd conditional_inv_cov = inv_cov_.block(0, 9, num_rows, num_rows);
-
+	Eigen::MatrixXd conditional_inv_cov = inv_cov_.block(0, 0, num_rows, num_rows);
 	Eigen::VectorXd diff = conditional_pairwise_cuboid_feature - conditional_mean;
 
 	// Mahalanobis norm.

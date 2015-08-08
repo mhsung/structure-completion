@@ -126,9 +126,14 @@ void MeshViewerCore::reconstruct(
 		_mesh_filepath, LoadGroundTruthData);
 	assert(ret);
 	MeshCuboidEvaluator evaluator(&ground_truth_cuboid_structure);
-
-	setDrawMode(COLORED_POINT_SAMPLES);
 	//
+
+
+	// 0. Evaluate point labeling.
+	// NOTE: Assume that ground truth mesh face labels are already loaded.
+	output_filename_sstr.clear(); output_filename_sstr.str("");
+	output_filename_sstr << _output_file_prefix << std::string("_labeling_stats");
+	evaluator.evaluate_point_labeling(&cuboid_structure_, output_filename_sstr.str().c_str());
 
 
 	// 1. Reconstruction using symmetry.
@@ -146,6 +151,18 @@ void MeshViewerCore::reconstruct(
 	cuboid_structure_.save_sample_point_labels((output_filename_sstr.str() + std::string("_label.arff")).c_str());
 	MeshCuboidStructure symmetry_reconstruction(cuboid_structure_);
 	
+	// Extract symmetry information.
+	output_filename_sstr.clear(); output_filename_sstr.str("");
+	output_filename_sstr << _output_file_prefix << std::string("_symmetry_info.txt");
+	cuboid_structure_.save_symmetry_groups(output_filename_sstr.str());
+
+	setDrawMode(POINT_SAMPLES);
+	updateGL();
+	output_filename_sstr.clear(); output_filename_sstr.str("");
+	output_filename_sstr << _output_file_prefix << std::string("_symmetry_output");
+	snapshot(output_filename_sstr.str().c_str());
+
+	setDrawMode(COLORED_POINT_SAMPLES);
 	updateGL();
 	output_filename_sstr.clear(); output_filename_sstr.str("");
 	output_filename_sstr << _output_file_prefix << std::string("_symmetry_accuracy");
@@ -174,6 +191,13 @@ void MeshViewerCore::reconstruct(
 	cuboid_structure_.save_sample_point_labels((output_filename_sstr.str() + std::string("_label.arff")).c_str());
 	MeshCuboidStructure database_reconstruction(cuboid_structure_);
 
+	setDrawMode(POINT_SAMPLES);
+	updateGL();
+	output_filename_sstr.clear(); output_filename_sstr.str("");
+	output_filename_sstr << _output_file_prefix << std::string("_database_output");
+	snapshot(output_filename_sstr.str().c_str());
+
+	setDrawMode(COLORED_POINT_SAMPLES);
 	updateGL();
 	output_filename_sstr.clear(); output_filename_sstr.str("");
 	output_filename_sstr << _output_file_prefix << std::string("_database_accuracy");
@@ -210,6 +234,13 @@ void MeshViewerCore::reconstruct(
 	cuboid_structure_.save_sample_points((output_filename_sstr.str() + std::string(".pts")).c_str());
 	cuboid_structure_.save_sample_point_labels((output_filename_sstr.str() + std::string("_label.arff")).c_str());
 
+	setDrawMode(POINT_SAMPLES);
+	updateGL();
+	output_filename_sstr.clear(); output_filename_sstr.str("");
+	output_filename_sstr << _output_file_prefix << std::string("_fusion_output");
+	snapshot(output_filename_sstr.str().c_str());
+
+	setDrawMode(COLORED_POINT_SAMPLES);
 	updateGL();
 	output_filename_sstr.clear(); output_filename_sstr.str("");
 	output_filename_sstr << _output_file_prefix << std::string("_fusion_accuracy");

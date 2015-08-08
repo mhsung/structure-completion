@@ -20,6 +20,7 @@ MeshCuboidEvaluator::MeshCuboidEvaluator(
 	assert(ground_truth_cuboid_structure_);
 }
 
+/*
 bool MeshCuboidEvaluator::save_evaluate_results(
 	const MeshCuboidStructure *_test_cuboid_structure,
 	const char *_filename, bool _verbose)
@@ -69,11 +70,10 @@ void MeshCuboidEvaluator::evaluate_all(
 {
 	assert(_test_cuboid_structure);
 
-	//evaluate_segmentation(_test_cuboid_structure);
-	//evaluate_cuboid_distance(_test_cuboid_structure);
+	evaluate_segmentation(_test_cuboid_structure);
+	evaluate_cuboid_distance(_test_cuboid_structure);
 }
 
-/*
 void MeshCuboidEvaluator::evaluate_segmentation(
 	const MeshCuboidStructure *_test_cuboid_structure)
 {
@@ -406,4 +406,89 @@ void MeshCuboidEvaluator::evaluate_point_to_point_distances(
 		evaluate_point_to_point_distances( ground_truth_sample_points, test_sample_points,
 			output_filename_sstr.str().c_str());
 	}
+}
+
+void MeshCuboidEvaluator::evaluate_point_labeling(
+	const MeshCuboidStructure *_test_cuboid_structure,
+	const char *_filename)
+{
+	assert(_test_cuboid_structure);
+
+	const MyMesh *mesh = _test_cuboid_structure->mesh_;
+	assert(mesh);
+
+	std::ofstream file(_filename);
+	if (!file.good())
+	{
+		do {
+			std::cout << "Error: Cannot save file: '" << _filename << "'." << std::endl;
+			std::cout << '\n' << "Press the Enter key to continue.";
+		} while (std::cin.get() != '\n');
+	}
+
+	std::cout << "Saving '" << _filename << "'..." << std::endl;
+
+	// For entire object.
+	unsigned int num_total_labeled_samples = 0;
+	unsigned int num_total_correctly_labeled_samples = 0;
+
+	const unsigned int num_symmetric_label_sets
+		= ground_truth_cuboid_structure_->label_symmetries_.size();
+
+	for (unsigned int symmetric_label_set_index = 0;
+		symmetric_label_set_index < num_symmetric_label_sets; ++symmetric_label_set_index)
+	{
+		// For each symmetric part sets.
+		unsigned int num_labeled_samples = 0;
+		unsigned int num_correctly_labeled_samples = 0;
+
+		const std::list<LabelIndex> &label_symmetry
+			= ground_truth_cuboid_structure_->label_symmetries_[symmetric_label_set_index];
+
+		for (std::list<LabelIndex>::const_iterator it = label_symmetry.begin(); it != label_symmetry.end(); ++it)
+		{
+			LabelIndex label_index = (*it);
+			MeshCuboid *test_cuboid = NULL;
+
+			// NOTE:
+			// The current implementation assumes that there is only one part for each label.
+			assert(_test_cuboid_structure->label_cuboids_[label_index].size() <= 1);
+			if (!_test_cuboid_structure->label_cuboids_[label_index].empty())
+				test_cuboid = _test_cuboid_structure->label_cuboids_[label_index].front();
+
+			if (!!test_cuboid)
+				continue;
+
+			Label label = _test_cuboid_structure->get_label(label_index);
+
+			const std::vector<MeshSamplePoint *>& test_cuboid_sample_points
+				= test_cuboid->get_sample_points();
+			for (std::vector<MeshSamplePoint *>::const_iterator s_it = test_cuboid_sample_points.begin();
+				s_it != test_cuboid_sample_points.end(); ++s_it)
+			{
+				const MeshSamplePoint *sample_point = (*s_it);
+				assert(sample_point);
+				assert(sample_point->corr_fid_ < mesh->n_faces());
+				MyMesh::FaceHandle fh = mesh->face_handle(sample_point->corr_fid_);
+				Label face_label = mesh->property(mesh->face_label_, fh);
+
+				if (face_label == label)
+					++num_correctly_labeled_samples;
+
+				++num_labeled_samples;
+
+			}
+		}
+
+		num_total_labeled_samples += num_labeled_samples;
+		num_total_correctly_labeled_samples += num_correctly_labeled_samples;
+		Real label_accuracy = static_cast<Real>(num_correctly_labeled_samples) / num_labeled_samples;
+		file << symmetric_label_set_index << "," << label_accuracy;
+	}
+
+	Real total_label_accuracy = static_cast<Real>(num_total_correctly_labeled_samples) /
+		num_total_labeled_samples;
+	file << "all," << total_label_accuracy;
+
+	file.close();
 }

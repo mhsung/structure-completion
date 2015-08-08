@@ -3,7 +3,7 @@ clear all;
 addpath 'lib'
 addpath 'lib/kovesi'
 
-filename = 'table001.out';
+filename = 'chair003.out';
 
 
 %% parameters

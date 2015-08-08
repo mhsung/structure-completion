@@ -45,6 +45,11 @@ DEFINE_double(param_view_plane_mask_min_x, 0.0, "");
 DEFINE_double(param_view_plane_mask_min_y, 0.0, "");
 DEFINE_double(param_view_plane_mask_max_x, 0.0, "");
 DEFINE_double(param_view_plane_mask_max_y, 0.0, "");
+
+DEFINE_bool(disable_symmetry_terms, false, "");
+DEFINE_bool(disable_per_point_classifier_terms, false, "");
+DEFINE_bool(disable_label_smoothness_terms, false, "");
+DEFINE_bool(disable_part_related_terms, false, "");
 // ---- //
 
 
