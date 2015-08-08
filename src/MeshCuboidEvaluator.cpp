@@ -456,7 +456,7 @@ void MeshCuboidEvaluator::evaluate_point_labeling(
 			if (!_test_cuboid_structure->label_cuboids_[label_index].empty())
 				test_cuboid = _test_cuboid_structure->label_cuboids_[label_index].front();
 
-			if (!!test_cuboid)
+			if (!test_cuboid)
 				continue;
 
 			Label label = _test_cuboid_structure->get_label(label_index);
@@ -480,10 +480,11 @@ void MeshCuboidEvaluator::evaluate_point_labeling(
 			}
 		}
 
-		num_total_labeled_samples += num_labeled_samples;
-		num_total_correctly_labeled_samples += num_correctly_labeled_samples;
 		Real label_accuracy = static_cast<Real>(num_correctly_labeled_samples) / num_labeled_samples;
 		file << symmetric_label_set_index << "," << label_accuracy;
+
+		num_total_labeled_samples += num_labeled_samples;
+		num_total_correctly_labeled_samples += num_correctly_labeled_samples;
 	}
 
 	Real total_label_accuracy = static_cast<Real>(num_total_correctly_labeled_samples) /

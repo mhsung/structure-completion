@@ -132,7 +132,7 @@ void MeshViewerCore::reconstruct(
 	// 0. Evaluate point labeling.
 	// NOTE: Assume that ground truth mesh face labels are already loaded.
 	output_filename_sstr.clear(); output_filename_sstr.str("");
-	output_filename_sstr << _output_file_prefix << std::string("_labeling_stats");
+	output_filename_sstr << _output_file_prefix << std::string("_labeling_stats.csv");
 	evaluator.evaluate_point_labeling(&cuboid_structure_, output_filename_sstr.str().c_str());
 
 
@@ -641,6 +641,8 @@ void MeshViewerCore::reconstruct_scan(
 	const GLdouble *_occlusion_modelview_matrix,
 	const char *_output_file_prefix)
 {
+	std::cout << "Reconstructing scanned data (No evaluation)." << std::endl;
+
 	bool ret;
 	std::stringstream output_filename_sstr;
 
