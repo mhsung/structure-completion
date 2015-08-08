@@ -66,8 +66,8 @@ DEFINE_bool(run_render_output, false, "");
 DEFINE_bool(run_render_evaluation, false, "");
 DEFINE_bool(run_extract_symmetry_info, false, "");
 
-DEFINE_bool(no_evaluation, true, "");
-DEFINE_bool(optimize_each_reflection_symmetry_group, true, "");
+DEFINE_bool(no_evaluation, false, "");
+DEFINE_bool(optimize_individual_reflection_symmetry_group, true, "");
 
 DEFINE_string(mesh_filename, "", "");
 DEFINE_string(data_root_path, "D:/Data/shape2pose/", "");

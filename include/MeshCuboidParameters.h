@@ -76,7 +76,7 @@ DECLARE_bool(no_evaluation);
 // orthogonal relations each other, the result might go wrong due to the
 // numerical issue in the solver. We therefore optimize for each reflection
 // symmetry group separately.
-DECLARE_bool(optimize_each_reflection_symmetry_group);
+DECLARE_bool(optimize_individual_reflection_symmetry_group);
 
 
 // Input paths.

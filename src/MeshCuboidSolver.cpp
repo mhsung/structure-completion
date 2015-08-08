@@ -1506,7 +1506,7 @@ void optimize_attributes(
 		// orthogonal relations each other, the result might go wrong due to the
 		// numerical issue in the solver. We therefore optimize for each reflection
 		// symmetry group separately.
-		if (FLAGS_optimize_each_reflection_symmetry_group)
+		if (FLAGS_optimize_individual_reflection_symmetry_group)
 		{
 			const std::vector<MeshCuboidReflectionSymmetryGroup *> all_reflection_symmetry_groups
 				= _cuboid_structure.reflection_symmetry_groups_;
