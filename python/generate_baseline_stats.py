@@ -19,16 +19,16 @@ from PIL import Image
 from enum import Enum
 
 
-input_path_postfix = '/symmetry_detection/'
+input_path_postfix = '/baseline/'
 output_path_root = '/home/mhsung/app/cuboid-prediction/output/'
-output_dir_prefix = 'symm_detection_'
+output_dir_prefix = 'baseline_'
 
-attr_names = ['Name', 'View_Image',  'Input_Image', 'Symmetry9Axis_1Podolak9et09al02_Image',
-              'Podolak9et09al0_Accuracy_Image', 'Podolak9et09al0_Completeness_Image',
-              'Podolak9et09al0_Accuracy', 'Podolak9et09al0_Completeness']
+attr_names = ['Name', #'View_Image',  'Input_Image', 'Symmetry_Axis_Image',
+              #'Assembly_Accuracy_Image', 'Assembly_Completeness_Image',
+              'Baseline_Accuracy', 'Baseline_Completeness']
 
-attr_types = [librr.AttrType.text, librr.AttrType.image, librr.AttrType.image, librr.AttrType.image,
-              librr.AttrType.image, librr.AttrType.image,
+attr_types = [librr.AttrType.text, #librr.AttrType.image, librr.AttrType.image, librr.AttrType.image,
+              #librr.AttrType.image, librr.AttrType.image,
               librr.AttrType.number, librr.AttrType.number]
 
 OutputInstance = namedtuple('OutputInstance', attr_names)
@@ -50,22 +50,11 @@ def load_instances(input_filepath, output_filepath, symemtry_part_index):
 
         relative_image_filepath = []
         image_filenames = []
-        image_filenames.append(prefix + '_view.png')
-        image_filenames.append(prefix + '_input.png')
-        image_filenames.append(prefix + '_symm_detection_recon.png')
-        image_filenames.append(prefix + '_symm_detection_accuracy.png')
-        image_filenames.append(prefix + '_symm_detection_completeness.png')
-
-        # FIXME
-        if not os.path.exists(dirname + '/../../output/' + prefix + '/' + prefix + '_input.png'):
-            continue
-        if not os.path.exists(dirname + '/../../output/' + prefix + '/' + prefix + '_view.png'):
-            continue
-
-        shutil.copy(dirname + '/../../output/' + prefix + '/' + prefix + '_input.png',
-                dirname + '/' + prefix + '_input.png')
-        shutil.copy(dirname + '/../../output/' + prefix + '/' + prefix + '_view.png',
-                dirname + '/' + prefix + '_view.png')
+        #image_filenames.append(prefix + '_view.png')
+        #image_filenames.append(prefix + '_input.png')
+        #image_filenames.append(prefix + '_symm_detection_recon.png')
+        #image_filenames.append(prefix + '_symm_detection_accuracy.png')
+        #image_filenames.append(prefix + '_symm_detection_completeness.png')
 
 
         for image_filename in image_filenames:
@@ -90,7 +79,7 @@ def load_instances(input_filepath, output_filepath, symemtry_part_index):
         accuracy_values = []
         completeness_values = []
         csv_filename_postfixes = []
-        csv_filename_postfixes.append('_symm_detection_recon')
+        csv_filename_postfixes.append('_baseline')
 
         for csv_filename_postfix in csv_filename_postfixes:
             csv_filename = dirname + '/' + prefix + csv_filename_postfix + '.csv'
@@ -102,14 +91,15 @@ def load_instances(input_filepath, output_filepath, symemtry_part_index):
             all_values = librr.get_csv_value(csv_filename, librr.threshold)
 
             if not all_values:
+                print('Warning: NaN values (' + prefix + ')')
                 accuracy_values.append(float("NaN"))
                 completeness_values.append(float("NaN"))
             else:
                 accuracy_values.append(all_values[0])
                 completeness_values.append(all_values[1])
 
-        instance = OutputInstance(prefix, relative_image_filepath[0], relative_image_filepath[1], relative_image_filepath[2],
-                                  relative_image_filepath[3], relative_image_filepath[4],
+        instance = OutputInstance(prefix, #relative_image_filepath[0], relative_image_filepath[1], relative_image_filepath[2],
+                                  #relative_image_filepath[3], relative_image_filepath[4],
                                   accuracy_values[0], completeness_values[0])
 
         instances.append(instance)
@@ -122,8 +112,34 @@ def main():
             input_path_postfix, output_path_root, output_dir_prefix)
 
     instances = load_instances(input_path, output_path, -1)
-    html_filename = output_path + '/index.html'
-    librr.write_html_table(instances, attr_names, attr_types, dataset_name + ' (All)', html_filename)
+    filename = output_path + '/stats.csv'
+
+    print "Saving the file..."
+    print(filename)
+    file = open(filename, 'w')
+
+    num_attrs = len(attr_names)
+    assert(len(attr_types) == num_attrs)
+
+    for i in range(num_attrs):
+        if attr_types[i] == librr.AttrType.number:
+            all_attr_values = []
+            for instance in instances:
+                if not math.isnan(instance[i]):
+                    all_attr_values.append(float(instance[i]))
+
+            mean_value = np.average(np.array(all_attr_values))
+            median_value = np.median(np.array(all_attr_values))
+            stdev_value = np.std(np.array(all_attr_values))
+
+            attr_name = attr_names[i].replace('_', ' ')
+            file.write(attr_name + ',')
+            file.write("{0:0.3f}".format(mean_value) + ',')
+            file.write("{0:0.3f}".format(median_value) + ',')
+            file.write("{0:0.3f}".format(stdev_value) + ',')
+            file.write('\n')
+
+    file.close()
 
     '''
     # For each part

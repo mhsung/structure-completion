@@ -135,11 +135,11 @@ def main():
     plt.clf()
     
     title = 'comp'
-    plt.plot(x_values, all_accu_values[0], label='Recon. Symmetry (Ours)')
-    plt.plot(x_values, all_accu_values[1], label='Recon. Database (Ours)')
-    plt.plot(x_values, all_accu_values[2], label='Recon. Fusion (Ours)')
+    plt.plot(x_values, all_comp_values[0], label='Recon. Symmetry (Ours)')
+    plt.plot(x_values, all_comp_values[1], label='Recon. Database (Ours)')
+    plt.plot(x_values, all_comp_values[2], label='Recon. Fusion (Ours)')
     plt.plot(x_values, all_comp_values[3], label='Part Assembly')
-    plt.plot(x_values, all_accu_values[4], label='Symmetry Detection')
+    plt.plot(x_values, all_comp_values[4], label='Symmetry Detection')
     plt.legend(loc=4)
     plt.xlim(0, max_x_value)
     plt.ylim(0, 1)

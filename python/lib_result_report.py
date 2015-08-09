@@ -33,14 +33,16 @@ dataset_name_set = [
         'assembly_bicycles',
         'coseg_chairs',
         'assembly_desks',
-        'shapenet_tables']
+        'shapenet_tables',
+        'shapenet_laptops']
 symmetry_part_names_set = [
         ['seat', 'back', 'legs', 'wheels', 'leg_column', 'armrests'],
         ['body', 'wings', 'tail_wings', 'fuselages', 'body'],
         ['wheel', 'handle', 'paddle', 'front_column', 'rear_body', 'front_body', 'seat', 'chain'],
         ['seat', 'back', 'legs', 'wheels', 'leg_column'],
         ['plane', 'legs'],
-        ['top', 'legs']]
+        ['top', 'legs'],
+        ['keyboard', 'screen']]
 ##
 
 class AttrType(Enum):
@@ -122,17 +124,28 @@ def find_best_candidate(dirname, prefix):
 
 def write_html_header(file):
     file.write('<head>\n')
+    # Use local jquery libraries.
+    file.write('<script src="../jquery_lib/jquery-1.11.2.min.js"></script>\n')
+    file.write('<script src="../jquery_lib/jquery-migrate-1.2.1.min.js"></script>\n')
+    file.write('<script src="../jquery_lib/jquery.dataTables.min.js"></script>\n')
+    file.write('<script src="../jquery_lib/dataTables.colVis.js"></script>\n')
+    file.write('<link rel="stylesheet" type="text/css" href="../jquery_lib/jquery.dataTables.css">\n')
+    file.write('<link rel="stylesheet" type="text/css" href="../jquery_lib/dataTables.colVis.css">\n')
+    '''
     file.write('<script src="//code.jquery.com/jquery-1.11.2.min.js"></script>\n')
     file.write('<script src="//code.jquery.com/jquery-migrate-1.2.1.min.js"></script>\n')
     file.write('<script src="//cdn.datatables.net/1.10.6/js/jquery.dataTables.min.js"></script>\n')
     file.write('<script src="//datatables.net/release-datatables/extensions/ColVis/js/dataTables.colVis.js"></script>\n')
     file.write('<link rel="stylesheet" type="text/css" href="//cdn.datatables.net/1.10.6/css/jquery.dataTables.css">\n')
     file.write('<link rel="stylesheet" type="text/css" href="//datatables.net/release-datatables/extensions/ColVis/css/dataTables.colVis.css">\n')
+    '''
     file.write('\n')
     file.write('<script type="text/javascript">\n')
     file.write('$(document).ready(function() {\n')
 
     file.write('\tvar table = $(\'\#example\').DataTable( {\n')
+    # Disable sorting.
+    file.write('\t\tbSort: false,\n')
     file.write('\t\tdom: \'C<"clear">lfrtip\'\n')
     file.write('\t} );\n')
     file.write('\n')
@@ -202,7 +215,14 @@ def write_html_overall_stats(file, instances, attr_names, attr_types):
             median_value = np.median(np.array(all_attr_values))
             stdev_value = np.std(np.array(all_attr_values))
 
-            attr_name = attr_names[i].replace('_', ' ')
+            attr_name = attr_names[i]
+            attr_name = attr_name.replace('_', ' ')
+            attr_name = attr_name.replace('0', '.')
+            attr_name = attr_name.replace('1', '(')
+            attr_name = attr_name.replace('2', ')')
+            attr_name = attr_name.replace('3', '-')
+            attr_name = attr_name.replace('9', ' ')
+
             file.write('<td>' + attr_name + '</td>\n')
             file.write('<td>' + "{0:0.3f}".format(mean_value) + '</td>\n')
             file.write('<td>' + "{0:0.3f}".format(median_value) + '</td>\n')
@@ -236,6 +256,11 @@ def write_html_table(instances, attr_names, attr_types, title, filename):
     file.write('<tr>\n')
     for attr_name in attr_names:
         attr_name = attr_name.replace('_', '<br>')
+        attr_name = attr_name.replace('0', '.')
+        attr_name = attr_name.replace('1', '(')
+        attr_name = attr_name.replace('2', ')')
+        attr_name = attr_name.replace('3', '-')
+        attr_name = attr_name.replace('9', ' ')
         file.write('<th>'); file.write(attr_name); file.write('</th>\n')
     file.write('</tr>\n')
     file.write('</thead>\n')
@@ -244,6 +269,11 @@ def write_html_table(instances, attr_names, attr_types, title, filename):
     file.write('<tr>\n')
     for attr_name in attr_names:
         attr_name = attr_name.replace('_', '<br>')
+        attr_name = attr_name.replace('0', '.')
+        attr_name = attr_name.replace('1', '(')
+        attr_name = attr_name.replace('2', ')')
+        attr_name = attr_name.replace('3', '-')
+        attr_name = attr_name.replace('9', ' ')
         file.write('<th>'); file.write(attr_name); file.write('</th>\n')
     file.write('</tr>\n')
     file.write('</tfoot>\n')

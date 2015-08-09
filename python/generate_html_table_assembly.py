@@ -23,9 +23,9 @@ input_path_postfix = '/part_assembly/'
 output_path_root = '/home/mhsung/app/cuboid-prediction/output/'
 output_dir_prefix = 'assembly_'
 
-attr_names = ['Name', 'View_Image',  'Input_Image', 'Part_Structure_Image',
-              'Assembly_Accuracy_Image', 'Assembly_Completeness_Image',
-              'Assembly_Accuracy', 'Assembly_Completeness']
+attr_names = ['Name', 'View_Image',  'Input_Image', 'Structure_1Shen9et09al02_Image',
+              'Shen9et09al0_Accuracy_Image', 'Shen9et09al0_Completeness_Image',
+              'Shen9et09al0_Accuracy', 'Shen9et09al0_Completeness']
 
 attr_types = [librr.AttrType.text, librr.AttrType.image, librr.AttrType.image, librr.AttrType.image,
               librr.AttrType.image, librr.AttrType.image,

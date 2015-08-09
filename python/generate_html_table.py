@@ -23,13 +23,13 @@ output_path_root = '/home/mhsung/app/cuboid-prediction/output/'
 output_dir_prefix = ''
 
 attr_names = ['Name', 'View_Image',
-              'Input_Image', 'Structure_Reconstruction_Image',
-              'Symmetry_Accuracy_Image', 'Symmetry_Completeness_Image',
-              'Database_Accuracy_Image', 'Database_Completeness_Image',
-              'Fusion_Accuracy_Image', 'Fusion_Completeness_Image',
-              'Symmetry_Accuracy', 'Symmetry_Completeness',
-              'Database_Accuracy', 'Database_Completeness',
-              'Fusion_Accuracy', 'Fusion_Completeness']
+              'Input_Image', 'Structure_1Ours2_Image',
+              'Symmetry3only_1Ours2_Accuracy_Image', 'Symmetry3only_1Ours2_Completeness_Image',
+              'Database3only_1Ours2_Accuracy_Image', 'Database3only_1Ours2_Completeness_Image',
+              'Complete_1Ours2_Accuracy_Image', 'Complete_1Ours2_Completeness_Image',
+              'Symmetry3only_1Ours2_Accuracy', 'Symmetry3only_1Ours2_Completeness',
+              'Databass3only_1Ours2_Accuracy', 'Database3only_1Ours2_Completeness',
+              'Complete_1Ours2_Accuracy', 'Complete_1Ours2_Completeness']
 
 attr_types = [librr.AttrType.text, librr.AttrType.image,
               librr.AttrType.image, librr.AttrType.image,

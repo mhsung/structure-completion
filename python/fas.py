@@ -8,7 +8,7 @@
 import os, string, decimal, glob, re, subprocess, shlex, sys, datetime, time, getpass
 
 ######   Job Scheduling     ######
-maxJobs=128;
+maxJobs=500;
 usrName = getpass.getuser();
 
 def ScheduleJob(cmd, jobName, scriptFile):
