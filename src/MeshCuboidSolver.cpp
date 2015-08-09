@@ -866,9 +866,13 @@ void compute_labels_and_axes_configuration_potentials(
 					}
 					assert(label_1 != label_2);
 
-					Real potential = _predictor.get_pair_potential(
-						cuboid_1, cuboid_2, &attributes_1, &attributes_2,
-						&transformation_1, &transformation_2, label_index_1, label_index_2);
+					Real potential = 0.0;
+					if (!FLAGS_disable_part_related_terms)
+					{
+						potential = _predictor.get_pair_potential(
+							cuboid_1, cuboid_2, &attributes_1, &attributes_2,
+							&transformation_1, &transformation_2, label_index_1, label_index_2);
+					}
 					assert(potential >= 0.0);
 
 					// Symmetric matrix.
@@ -1428,6 +1432,12 @@ void optimize_attributes_once(
 		single_constant_term, pair_constant_term,
 		single_total_energy, pair_total_energy);
 
+	if (FLAGS_disable_part_related_terms)
+	{
+		pair_quadratic_term.setZero();
+		pair_linear_term.setZero();
+		pair_constant_term = 0.0;
+	}
 
 	Eigen::MatrixXd quadratic_term = pair_quadratic_term + _single_energy_term_weight * single_quadratic_term;
 	Eigen::VectorXd linear_term = pair_linear_term + _single_energy_term_weight * single_linear_term;
