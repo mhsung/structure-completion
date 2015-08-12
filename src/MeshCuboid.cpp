@@ -1884,21 +1884,55 @@ void MeshCuboid::points_to_cuboid_distances(const Eigen::MatrixXd& _points,
 Real MeshCuboid::distance_between_cuboids(
 	const MeshCuboid *_cuboid_1, const MeshCuboid *_cuboid_2)
 {
+	// NOTE: Assume that cuboid surface points exist.
 	assert(_cuboid_1);
 	assert(_cuboid_2);
 
-	Real max_distance = 0;
+	unsigned int num_cuboid_surface_points_1 = _cuboid_1->cuboid_surface_points_.size();
+	unsigned int num_cuboid_surface_points_2 = _cuboid_2->cuboid_surface_points_.size();
 
-	// Find the longest distance between two cuboid corners.
-	// FIXME:
-	// How to compute Hausdorff distance for cuboids?
-	for (unsigned int corner_index = 0; corner_index < k_num_corners; ++corner_index)
+	// TODO: Pre-compute KD-trees.
+	Eigen::MatrixXd cuboid_surface_points_1(3, num_cuboid_surface_points_1);
+	Eigen::MatrixXd cuboid_surface_points_2(3, num_cuboid_surface_points_2);
+
+	for (unsigned int point_index = 0; point_index < num_cuboid_surface_points_1; ++point_index)
 	{
-		MyMesh::Point corner_1 = _cuboid_1->get_bbox_corner(corner_index);
-		MyMesh::Point corner_2 = _cuboid_2->get_bbox_corner(corner_index);
-		max_distance = std::max(max_distance, (corner_1 - corner_2).norm());
+		for (unsigned int i = 0; i < 3; ++i)
+			cuboid_surface_points_1.col(point_index)(i) =
+			_cuboid_1->cuboid_surface_points_[point_index]->point_[i];
 	}
 
+	for (unsigned int point_index = 0; point_index < num_cuboid_surface_points_2; ++point_index)
+	{
+		for (unsigned int i = 0; i < 3; ++i)
+			cuboid_surface_points_2.col(point_index)(i) =
+			_cuboid_2->cuboid_surface_points_[point_index]->point_[i];
+	}
+
+	ANNpointArray ann_points_1 = NULL;
+	ANNkd_tree* ann_kd_tree_1 = ICP::create_kd_tree(cuboid_surface_points_1, ann_points_1);
+	assert(ann_kd_tree_1);
+
+	ANNpointArray ann_points_2 = NULL;
+	ANNkd_tree* ann_kd_tree_2 = ICP::create_kd_tree(cuboid_surface_points_2, ann_points_2);
+	assert(ann_kd_tree_2);
+
+	// 1 -> 2.
+	Eigen::VectorXd distances_12;
+	ICP::get_closest_points(ann_kd_tree_2, cuboid_surface_points_1, distances_12);
+	assert(distances_12.cols() == num_cuboid_surface_points_1);
+
+	// 2 -> 1.
+	Eigen::VectorXd distances_21;
+	ICP::get_closest_points(ann_kd_tree_1, cuboid_surface_points_2, distances_21);
+	assert(distances_21.cols() == num_cuboid_surface_points_2);
+
+	if (ann_points_1) annDeallocPts(ann_points_1);
+	if (ann_points_2) annDeallocPts(ann_points_2);
+	delete ann_kd_tree_1;
+	delete ann_kd_tree_2;
+
+	Real max_distance = (distances_12.maxCoeff(), distances_21.maxCoeff());
 	return max_distance;
 }
 

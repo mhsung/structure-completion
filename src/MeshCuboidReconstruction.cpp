@@ -129,11 +129,16 @@ void MeshViewerCore::reconstruct(
 	//
 
 
-	// 0. Evaluate point labeling.
+	// 0. Evaluate point labeling and cuboid distance.
 	// NOTE: Assume that ground truth mesh face labels are already loaded.
 	output_filename_sstr.clear(); output_filename_sstr.str("");
 	output_filename_sstr << _output_file_prefix << std::string("_labeling_stats.csv");
 	evaluator.evaluate_point_labeling(&cuboid_structure_, output_filename_sstr.str().c_str());
+
+	// NOTE: Cuboid surface points will be replaced.
+	output_filename_sstr.clear(); output_filename_sstr.str("");
+	output_filename_sstr << _output_file_prefix << std::string("_cuboid_distance.csv");
+	evaluator.evaluate_cuboid_distance(&cuboid_structure_, output_filename_sstr.str().c_str());
 
 
 	// 1. Reconstruction using symmetry.

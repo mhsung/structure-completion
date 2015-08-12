@@ -238,6 +238,8 @@ public:
 	bool is_point_inside_cuboid(const MyMesh::Point& _point)const;
 	void points_to_cuboid_distances(const Eigen::MatrixXd& _points,
 		Eigen::VectorXd &_distances);
+
+	// NOTE: Assume that cuboid surface points exist.
 	static Real distance_between_cuboids(
 		const MeshCuboid *_cuboid_1, const MeshCuboid *_cuboid_2);
 
