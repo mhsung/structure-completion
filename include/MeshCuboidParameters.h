@@ -5,7 +5,6 @@
 
 // -- Parameters -- //
 //
-DECLARE_bool(param_optimize_with_non_linear_constraints);
 DECLARE_bool(param_optimize_training_cuboids);
 
 DECLARE_int32(param_num_sample_point_neighbors);

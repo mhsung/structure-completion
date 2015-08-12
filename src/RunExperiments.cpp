@@ -472,11 +472,12 @@ void MeshViewerCore::compute_ground_truth_cuboids()
 		output_filename_sstr << FLAGS_training_dir << std::string("/") << mesh_name << std::string("_log.txt");
 
 		// Iterate only once.
+		const bool use_symmetry = !(FLAGS_disable_symmetry_terms);
 		MeshCuboidPredictor predictor(num_labels);
 		optimize_attributes(cuboid_structure_, NULL, predictor,
 			FLAGS_param_opt_single_energy_term_weight, FLAGS_param_opt_symmetry_energy_term_weight,
 			1, output_filename_sstr.str(), this,
-			FLAGS_param_optimize_with_non_linear_constraints);
+			use_symmetry);
 
 		updateGL();
 		output_filename_sstr.clear(); output_filename_sstr.str("");
@@ -587,11 +588,12 @@ void MeshViewerCore::train()
 				output_filename_sstr << FLAGS_training_dir << std::string("/") << mesh_name << std::string("_log.txt");
 
 				// Iterate only once.
+				const bool use_symmetry = !(FLAGS_disable_symmetry_terms);
 				MeshCuboidPredictor predictor(num_labels);
 				optimize_attributes(cuboid_structure_, NULL, predictor,
 					FLAGS_param_opt_single_energy_term_weight, FLAGS_param_opt_symmetry_energy_term_weight,
 					1, output_filename_sstr.str(), this,
-					FLAGS_param_optimize_with_non_linear_constraints);
+					use_symmetry);
 
 				updateGL();
 				output_filename_sstr.clear(); output_filename_sstr.str("");
@@ -1099,7 +1101,8 @@ void MeshViewerCore::predict()
 			FLAGS_param_opt_single_energy_term_weight, FLAGS_param_opt_symmetry_energy_term_weight,
 			FLAGS_param_opt_max_iterations, log_filename_sstr.str(), this, false);
 
-		if (FLAGS_param_optimize_with_non_linear_constraints)
+		const bool use_symmetry = !(FLAGS_disable_symmetry_terms);
+		if (use_symmetry)
 		{
 			cuboid_structure_.compute_symmetry_groups();
 
@@ -1143,7 +1146,7 @@ void MeshViewerCore::predict()
 
 				// FIXME:
 				// Any missing cuboid may not be added.
-				// Then, you should escapt the loop.
+				// Then, you should escape the loop.
 				ret = add_missing_cuboids(new_cuboid_structure, occlusion_modelview_matrix,
 					missing_label_indices, joint_normal_predictor, ignored_label_indices);
 				//ret = add_missing_cuboids(new_cuboid_structure, occlusion_modelview_matrix,

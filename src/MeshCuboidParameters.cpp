@@ -2,7 +2,6 @@
 
 // -- Parameters -- //
 //
-DEFINE_bool(param_optimize_with_non_linear_constraints, true, "");
 DEFINE_bool(param_optimize_training_cuboids, true, "");
 
 DEFINE_int32(param_num_sample_point_neighbors, 8, "");

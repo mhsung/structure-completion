@@ -549,10 +549,11 @@ void segment_sample_points(
 
 	// Pair potentials.
 	std::vector< Eigen::Triplet<double> > pair_potentials;
-	pair_potentials.reserve(num_sample_points * num_neighbors);
 
 	if (!FLAGS_disable_label_smoothness_terms)
 	{
+		pair_potentials.reserve(num_sample_points * num_neighbors);
+
 		for (unsigned int point_index = 0; point_index < num_sample_points; ++point_index)
 		{
 			for (unsigned int i = 0; i < 3; ++i)
