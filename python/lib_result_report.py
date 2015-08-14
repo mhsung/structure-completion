@@ -24,9 +24,6 @@ thumbname_width = 150
 
 
 ##
-dataset_name = ''
-symmetry_part_names = ''
-
 dataset_name_set = [
         'assembly_chairs',
         'assembly_airplanes',
@@ -173,7 +170,7 @@ def write_html_image(file, image_filepath):
     file.write('</a>')
 
 
-def write_html_part_links(file):
+def write_html_part_links(file, symmetry_part_names):
     file.write('Per-part Statistics: \n')
     file.write('<a href="./index.html"> All </a>\n')
     for symmetry_part_name in symmetry_part_names:
@@ -234,7 +231,7 @@ def write_html_overall_stats(file, instances, attr_names, attr_types):
     file.write('<p></p>\n')
 
 
-def write_html_table(instances, attr_names, attr_types, title, filename):
+def write_html_table(instances, symmetry_part_names, attr_names, attr_types, title, filename):
     assert len(attr_names) == len(attr_types)
     num_attrs = len(attr_names)
 
@@ -246,7 +243,7 @@ def write_html_table(instances, attr_names, attr_types, title, filename):
 
     file.write('<body>\n')
     file.write('<h2>' + title + '</h2>\n')
-    write_html_part_links(file)
+    write_html_part_links(file, symmetry_part_names)
     write_html_overall_stats(file, instances, attr_names, attr_types)
 
 
@@ -459,6 +456,9 @@ def close_latex_table(file):
 '''
 
 def parse_arguments(input_path_postfix, output_path_root, output_dir_prefix):
+    dataset_name = ''
+    symmetry_part_names = ''
+
     ## Parse arguments
     if len(sys.argv) < 2:
         print("Usage: " + sys.argv[0] + " experiment_path")

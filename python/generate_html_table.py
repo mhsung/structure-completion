@@ -7,6 +7,7 @@
 ##########
 
 import lib_result_report as librr
+import csv
 import glob
 import math
 import numpy as np
@@ -29,7 +30,8 @@ attr_names = ['Name', 'View_Image',
               'Complete_1Ours2_Accuracy_Image', 'Complete_1Ours2_Completeness_Image',
               'Symmetry3only_1Ours2_Accuracy', 'Symmetry3only_1Ours2_Completeness',
               'Databass3only_1Ours2_Accuracy', 'Database3only_1Ours2_Completeness',
-              'Complete_1Ours2_Accuracy', 'Complete_1Ours2_Completeness']
+              'Complete_1Ours2_Accuracy', 'Complete_1Ours2_Completeness',
+              'Per3point_Labeling_Accuracy']#, 'Cuboid_Distance_to_Ground_Truth']
 
 attr_types = [librr.AttrType.text, librr.AttrType.image,
               librr.AttrType.image, librr.AttrType.image,
@@ -38,10 +40,30 @@ attr_types = [librr.AttrType.text, librr.AttrType.image,
               librr.AttrType.image, librr.AttrType.image,
               librr.AttrType.number, librr.AttrType.number,
               librr.AttrType.number, librr.AttrType.number,
-              librr.AttrType.number, librr.AttrType.number]
+              librr.AttrType.number, librr.AttrType.number,
+              librr.AttrType.number]#, librr.AttrType.Number]
 
 OutputInstance = namedtuple('OutputInstance', attr_names)
 
+
+def read_value_from_csv_file(csv_filename, symemtry_part_index):
+    ret = float("NaN")
+    with open(csv_filename, 'r') as csv_file:
+        csv_reader = csv.reader(csv_file, delimiter=',')
+        for row in csv_reader:
+            if symemtry_part_index >= 0:
+                if row[0] == str(symemtry_part_index):
+                    if row[3] == 'none':
+                        ret = float("NaN")
+                    else:
+                        ret = float(row[3])
+            else:
+                if row[0] == 'all':
+                    if row[3] == 'none':
+                        ret = float("NaN")
+                    else:
+                        ret = float(row[3])
+    return ret
 
 def load_instances(input_filepath, output_filepath, symemtry_part_index):
     dirnames = glob.glob(input_filepath + '/*')
@@ -60,6 +82,7 @@ def load_instances(input_filepath, output_filepath, symemtry_part_index):
         candidate_index = librr.find_best_candidate(dirname, prefix)
         print('Candidate index: ' + str(candidate_index))
 
+        # Read images.
         relative_image_filepath = []
         image_filenames = []
         image_filenames.append(prefix + '_view.png')
@@ -91,6 +114,7 @@ def load_instances(input_filepath, output_filepath, symemtry_part_index):
         if not is_loaded:
             continue
 
+        # Read stats.
         accuracy_values = []
         completeness_values = []
         csv_filename_postfixes = []
@@ -105,14 +129,39 @@ def load_instances(input_filepath, output_filepath, symemtry_part_index):
                 csv_filename = dirname + '/' + prefix + csv_filename_postfix\
                                + '_' + str(symemtry_part_index) + '.csv'
 
-            all_values = librr.get_csv_value(csv_filename, librr.threshold)
-
-            if not all_values:
-                accuracy_values.append(float("NaN"))
-                completeness_values.append(float("NaN"))
+            if not os.path.exists(csv_filename):
+                print 'Warning: File does not exist: "' + csv_filename + '"'
+                is_loaded = False
+                break
             else:
-                accuracy_values.append(all_values[0])
-                completeness_values.append(all_values[1])
+                all_values = librr.get_csv_value(csv_filename, librr.threshold)
+                if not all_values:
+                    accuracy_values.append(float("NaN"))
+                    completeness_values.append(float("NaN"))
+                else:
+                    accuracy_values.append(all_values[0])
+                    completeness_values.append(all_values[1])
+
+        if not is_loaded:
+            continue
+
+        # Read per-point labeling accuracy.
+        csv_filename = dirname + '/' + prefix + '_' + str(candidate_index) + '_labeling_stats.csv'
+        if not os.path.exists(csv_filename):
+            print 'Warning: File does not exist: "' + csv_filename + '"'
+            continue
+        else:
+            per_point_labeling_accuracy = read_value_from_csv_file(csv_filename, symemtry_part_index)
+
+        '''
+        # Read cuboid distance to ground truth.
+        csv_filename = dirname + '/' + prefix + '_' + str(candidate_index) + '_cuboid_distance.csv'
+        if not os.path.exists(csv_filename):
+            print 'Warning: File does not exist: "' + csv_filename + '"'
+            continue
+        else:
+            cuboid_distance_to_ground_truth = read_value_from_csv_file(csv_filename, symemtry_part_index)
+        '''
 
         instance = OutputInstance(prefix, relative_image_filepath[0],
                                   relative_image_filepath[1], relative_image_filepath[2],
@@ -121,7 +170,8 @@ def load_instances(input_filepath, output_filepath, symemtry_part_index):
                                   relative_image_filepath[7], relative_image_filepath[8],
                                   accuracy_values[0], completeness_values[0],
                                   accuracy_values[1], completeness_values[1],
-                                  accuracy_values[2], completeness_values[2])
+                                  accuracy_values[2], completeness_values[2],
+                                  per_point_labeling_accuracy)#, cuboid_distance_to_ground_truth)
 
         instances.append(instance)
 
@@ -134,13 +184,14 @@ def main():
 
     instances = load_instances(input_path, output_path, -1)
     html_filename = output_path + '/index.html'
-    librr.write_html_table(instances, attr_names, attr_types, dataset_name + ' (All)', html_filename)
+    librr.write_html_table(instances, symmetry_part_names, attr_names, attr_types,
+            dataset_name + ' (All)', html_filename)
 
     # For each part
     for i in range(len(symmetry_part_names)):
         instances = load_instances(input_path, output_path, i)
         html_filename = output_path + '/' + symmetry_part_names[i] + '.html'
-        librr.write_html_table(instances, attr_names, attr_types,
+        librr.write_html_table(instances, symmetry_part_names, attr_names, attr_types,
                 dataset_name + ' (' + symmetry_part_names[i].title() + ')', html_filename)
 
 main()

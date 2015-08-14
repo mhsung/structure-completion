@@ -1920,12 +1920,12 @@ Real MeshCuboid::distance_between_cuboids(
 	// 1 -> 2.
 	Eigen::VectorXd distances_12;
 	ICP::get_closest_points(ann_kd_tree_2, cuboid_surface_points_1, distances_12);
-	assert(distances_12.cols() == num_cuboid_surface_points_1);
+	assert(distances_12.rows() == num_cuboid_surface_points_1);
 
 	// 2 -> 1.
 	Eigen::VectorXd distances_21;
 	ICP::get_closest_points(ann_kd_tree_1, cuboid_surface_points_2, distances_21);
-	assert(distances_21.cols() == num_cuboid_surface_points_2);
+	assert(distances_21.rows() == num_cuboid_surface_points_2);
 
 	if (ann_points_1) annDeallocPts(ann_points_1);
 	if (ann_points_2) annDeallocPts(ann_points_2);

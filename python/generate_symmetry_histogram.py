@@ -33,6 +33,9 @@ def load_instances(input_filepath, output_filepath, symemtry_part_index):
 
     dirnames = glob.glob(input_filepath + '/*')
 
+    print(output_file_prefix + '_ours.csv')
+    print(output_file_prefix + '_podolak.csv')
+
     ours_file = open(output_file_prefix + '_ours.csv', 'w')
     podolak_file = open(output_file_prefix + '_podolak.csv', 'w')
     
