@@ -1095,74 +1095,82 @@ void MeshViewerCore::predict()
 		++snapshot_index;
 
 
-		std::cout << "\n3. Optimize cuboid attributes." << std::endl;
-
-		optimize_attributes(cuboid_structure_, occlusion_modelview_matrix, joint_normal_predictor,
-			FLAGS_param_opt_single_energy_term_weight, FLAGS_param_opt_symmetry_energy_term_weight,
-			FLAGS_param_opt_max_iterations, log_filename_sstr.str(), this, false);
-
-		const bool use_symmetry = !(FLAGS_disable_symmetry_terms);
-		if (use_symmetry)
+		bool is_cuboid_added = false;
+		// When part relation terms are disabled, part pose optimization and additional candidate
+		// generation are NOT performed. We do part labeling since it does affect to the cuboid
+		// distance error measure.
+		if (!FLAGS_disable_part_relation_terms)
 		{
-			cuboid_structure_.compute_symmetry_groups();
+
+			std::cout << "\n3. Optimize cuboid attributes." << std::endl;
 
 			optimize_attributes(cuboid_structure_, occlusion_modelview_matrix, joint_normal_predictor,
 				FLAGS_param_opt_single_energy_term_weight, FLAGS_param_opt_symmetry_energy_term_weight,
-				FLAGS_param_opt_max_iterations, log_filename_sstr.str(), this, true);
-		}
+				FLAGS_param_opt_max_iterations, log_filename_sstr.str(), this, false);
 
-		updateGL();
-		snapshot_filename_sstr.clear(); snapshot_filename_sstr.str("");
-		snapshot_filename_sstr << FLAGS_output_dir + std::string("/Temp") << filename_prefix
-			<< std::string("c_") << cuboid_structure_name << std::string("_")
-			<< std::string("s_") << snapshot_index;
-		snapshot(snapshot_filename_sstr.str().c_str());
-		++snapshot_index;
-
-
-		std::cout << "\n4. Add missing cuboids." << std::endl;
-		assert(cuboid_structure_.num_labels() == num_labels);
-		std::list<LabelIndex> given_label_indices;
-		for (LabelIndex label_index = 0; label_index < num_labels; ++label_index)
-			if (!cuboid_structure_.label_cuboids_[label_index].empty())
-				given_label_indices.push_back(label_index);
-
-		std::list< std::list<LabelIndex> > missing_label_index_groups;
-		trainer.get_missing_label_index_groups(given_label_indices, missing_label_index_groups,
-			&ignored_label_indices);
-		
-
-		bool is_cuboid_added = (!missing_label_index_groups.empty());
-
-		if (!missing_label_index_groups.empty())
-		{
-			unsigned int missing_label_index_group_index = 0;
-
-			for (std::list< std::list<LabelIndex> >::iterator it = missing_label_index_groups.begin();
-				it != missing_label_index_groups.end(); ++it)
+			const bool use_symmetry = !(FLAGS_disable_symmetry_terms);
+			if (use_symmetry)
 			{
-				std::list<LabelIndex> &missing_label_indices = (*it);
-				MeshCuboidStructure new_cuboid_structure = cuboid_structure_;
+				cuboid_structure_.compute_symmetry_groups();
 
-				// FIXME:
-				// Any missing cuboid may not be added.
-				// Then, you should escape the loop.
-				ret = add_missing_cuboids(new_cuboid_structure, occlusion_modelview_matrix,
-					missing_label_indices, joint_normal_predictor, ignored_label_indices);
-				//ret = add_missing_cuboids(new_cuboid_structure, occlusion_modelview_matrix,
-				//	missing_label_indices, joint_normal_relations, ignored_label_indices);
+				optimize_attributes(cuboid_structure_, occlusion_modelview_matrix, joint_normal_predictor,
+					FLAGS_param_opt_single_energy_term_weight, FLAGS_param_opt_symmetry_energy_term_weight,
+					FLAGS_param_opt_max_iterations, log_filename_sstr.str(), this, true);
+			}
 
-				if (!ret)
+			updateGL();
+			snapshot_filename_sstr.clear(); snapshot_filename_sstr.str("");
+			snapshot_filename_sstr << FLAGS_output_dir + std::string("/Temp") << filename_prefix
+				<< std::string("c_") << cuboid_structure_name << std::string("_")
+				<< std::string("s_") << snapshot_index;
+			snapshot(snapshot_filename_sstr.str().c_str());
+			++snapshot_index;
+
+
+			std::cout << "\n4. Add missing cuboids." << std::endl;
+			assert(cuboid_structure_.num_labels() == num_labels);
+			std::list<LabelIndex> given_label_indices;
+			for (LabelIndex label_index = 0; label_index < num_labels; ++label_index)
+				if (!cuboid_structure_.label_cuboids_[label_index].empty())
+					given_label_indices.push_back(label_index);
+
+			std::list< std::list<LabelIndex> > missing_label_index_groups;
+			trainer.get_missing_label_index_groups(given_label_indices, missing_label_index_groups,
+				&ignored_label_indices);
+
+
+			is_cuboid_added = (!missing_label_index_groups.empty());
+
+			if (!missing_label_index_groups.empty())
+			{
+				unsigned int missing_label_index_group_index = 0;
+
+				for (std::list< std::list<LabelIndex> >::iterator it = missing_label_index_groups.begin();
+					it != missing_label_index_groups.end(); ++it)
 				{
-					is_cuboid_added = false;
-				}
-				else
-				{
-					std::stringstream new_cuboid_structure_name;
-					new_cuboid_structure_name << cuboid_structure_name << missing_label_index_group_index;
-					cuboid_structure_candidates.push_front(
-						std::make_pair(new_cuboid_structure_name.str(), new_cuboid_structure));
-					++missing_label_index_group_index;
+					std::list<LabelIndex> &missing_label_indices = (*it);
+					MeshCuboidStructure new_cuboid_structure = cuboid_structure_;
+
+					// FIXME:
+					// Any missing cuboid may not be added.
+					// Then, you should escape the loop.
+					ret = add_missing_cuboids(new_cuboid_structure, occlusion_modelview_matrix,
+						missing_label_indices, joint_normal_predictor, ignored_label_indices);
+					//ret = add_missing_cuboids(new_cuboid_structure, occlusion_modelview_matrix,
+					//	missing_label_indices, joint_normal_relations, ignored_label_indices);
+
+					if (!ret)
+					{
+						is_cuboid_added = false;
+					}
+					else
+					{
+						std::stringstream new_cuboid_structure_name;
+						new_cuboid_structure_name << cuboid_structure_name << missing_label_index_group_index;
+						cuboid_structure_candidates.push_front(
+							std::make_pair(new_cuboid_structure_name.str(), new_cuboid_structure));
+						++missing_label_index_group_index;
+					}
 				}
 			}
 		}
