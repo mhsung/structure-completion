@@ -31,7 +31,7 @@ attr_names = ['Name', 'View_Image',
               'Symmetry3only_1Ours2_Accuracy', 'Symmetry3only_1Ours2_Completeness',
               'Databass3only_1Ours2_Accuracy', 'Database3only_1Ours2_Completeness',
               'Complete_1Ours2_Accuracy', 'Complete_1Ours2_Completeness',
-              'Per3point_Labeling_Accuracy']#, 'Cuboid_Distance_to_Ground_Truth']
+              'Per3point_Labeling_Accuracy', 'Cuboid_Distance_to_Ground_Truth']
 
 attr_types = [librr.AttrType.text, librr.AttrType.image,
               librr.AttrType.image, librr.AttrType.image,
@@ -41,28 +41,28 @@ attr_types = [librr.AttrType.text, librr.AttrType.image,
               librr.AttrType.number, librr.AttrType.number,
               librr.AttrType.number, librr.AttrType.number,
               librr.AttrType.number, librr.AttrType.number,
-              librr.AttrType.number]#, librr.AttrType.Number]
+              librr.AttrType.number, librr.AttrType.number]
 
 OutputInstance = namedtuple('OutputInstance', attr_names)
 
 
-def read_value_from_csv_file(csv_filename, symemtry_part_index):
+def read_value_from_csv_file(csv_filename, symemtry_part_index, value_index):
     ret = float("NaN")
     with open(csv_filename, 'r') as csv_file:
         csv_reader = csv.reader(csv_file, delimiter=',')
         for row in csv_reader:
             if symemtry_part_index >= 0:
                 if row[0] == str(symemtry_part_index):
-                    if row[3] == 'none':
+                    if row[value_index] == 'none':
                         ret = float("NaN")
                     else:
-                        ret = float(row[3])
+                        ret = float(row[value_index])
             else:
                 if row[0] == 'all':
-                    if row[3] == 'none':
+                    if row[value_index] == 'none':
                         ret = float("NaN")
                     else:
-                        ret = float(row[3])
+                        ret = float(row[value_index])
     return ret
 
 def load_instances(input_filepath, output_filepath, symemtry_part_index):
@@ -151,17 +151,15 @@ def load_instances(input_filepath, output_filepath, symemtry_part_index):
             print 'Warning: File does not exist: "' + csv_filename + '"'
             continue
         else:
-            per_point_labeling_accuracy = read_value_from_csv_file(csv_filename, symemtry_part_index)
+            per_point_labeling_accuracy = read_value_from_csv_file(csv_filename, symemtry_part_index, 3)
 
-        '''
         # Read cuboid distance to ground truth.
         csv_filename = dirname + '/' + prefix + '_' + str(candidate_index) + '_cuboid_distance.csv'
         if not os.path.exists(csv_filename):
             print 'Warning: File does not exist: "' + csv_filename + '"'
             continue
         else:
-            cuboid_distance_to_ground_truth = read_value_from_csv_file(csv_filename, symemtry_part_index)
-        '''
+            cuboid_distance_to_ground_truth = read_value_from_csv_file(csv_filename, symemtry_part_index, 1)
 
         instance = OutputInstance(prefix, relative_image_filepath[0],
                                   relative_image_filepath[1], relative_image_filepath[2],
@@ -171,7 +169,7 @@ def load_instances(input_filepath, output_filepath, symemtry_part_index):
                                   accuracy_values[0], completeness_values[0],
                                   accuracy_values[1], completeness_values[1],
                                   accuracy_values[2], completeness_values[2],
-                                  per_point_labeling_accuracy)#, cuboid_distance_to_ground_truth)
+                                  per_point_labeling_accuracy, cuboid_distance_to_ground_truth)
 
         instances.append(instance)
 
