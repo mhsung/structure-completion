@@ -366,9 +366,6 @@ void MeshCuboidEvaluator::evaluate_cuboid_distance(
 
 	std::cout << "Saving '" << _filename << "'..." << std::endl;
 
-	// For entire object.
-	Real total_max_cuboid_distance = -1;
-
 	const unsigned int num_symmetric_label_sets
 		= ground_truth_cuboid_structure_->label_symmetries_.size();
 
@@ -412,15 +409,65 @@ void MeshCuboidEvaluator::evaluate_cuboid_distance(
 			file << "none" << std::endl;
 		else
 			file << max_cuboid_distance << std::endl;
-
-		total_max_cuboid_distance = std::max(max_cuboid_distance, total_max_cuboid_distance);
 	}
+
+
+	// For entire object.
+	std::vector<MeshCuboidSurfacePoint *> all_test_cuboid_surface_points;
+	std::vector<MeshCuboidSurfacePoint *> all_ground_truth_cuboid_surface_points;
+
+	_test_cuboid_structure->get_all_cuboid_surface_points(all_test_cuboid_surface_points);
+	ground_truth_cuboid_structure_->get_all_cuboid_surface_points(all_ground_truth_cuboid_surface_points);
+
+	unsigned int num_test_cuboid_surface_points = all_test_cuboid_surface_points.size();
+	unsigned int num_ground_truth_cuboid_surface_points = all_ground_truth_cuboid_surface_points.size();
+
+	// TODO: Pre-compute KD-trees.
+	Eigen::MatrixXd test_cuboid_surface_points_mat(3, num_test_cuboid_surface_points);
+	Eigen::MatrixXd ground_truth_cuboid_surface_points_mat(3, num_ground_truth_cuboid_surface_points);
+
+	for (unsigned int point_index = 0; point_index < num_test_cuboid_surface_points; ++point_index)
+	{
+		for (unsigned int i = 0; i < 3; ++i)
+			test_cuboid_surface_points_mat.col(point_index)(i) =
+			all_test_cuboid_surface_points[point_index]->point_[i];
+	}
+
+	for (unsigned int point_index = 0; point_index < num_ground_truth_cuboid_surface_points; ++point_index)
+	{
+		for (unsigned int i = 0; i < 3; ++i)
+			ground_truth_cuboid_surface_points_mat.col(point_index)(i) =
+			all_ground_truth_cuboid_surface_points[point_index]->point_[i];
+	}
+
+	ANNpointArray ann_points_1 = NULL;
+	ANNkd_tree* ann_kd_tree_1 = ICP::create_kd_tree(test_cuboid_surface_points_mat, ann_points_1);
+	assert(ann_kd_tree_1);
+
+	ANNpointArray ann_points_2 = NULL;
+	ANNkd_tree* ann_kd_tree_2 = ICP::create_kd_tree(ground_truth_cuboid_surface_points_mat, ann_points_2);
+	assert(ann_kd_tree_2);
+
+	// 1 -> 2.
+	Eigen::VectorXd distances_12;
+	ICP::get_closest_points(ann_kd_tree_2, test_cuboid_surface_points_mat, distances_12);
+	assert(distances_12.rows() == num_test_cuboid_surface_points);
+
+	// 2 -> 1.
+	Eigen::VectorXd distances_21;
+	ICP::get_closest_points(ann_kd_tree_1, ground_truth_cuboid_surface_points_mat, distances_21);
+	assert(distances_21.rows() == num_ground_truth_cuboid_surface_points);
+
+	if (ann_points_1) annDeallocPts(ann_points_1);
+	if (ann_points_2) annDeallocPts(ann_points_2);
+	delete ann_kd_tree_1;
+	delete ann_kd_tree_2;
+
+	Real total_max_cuboid_distance = (distances_12.maxCoeff(), distances_21.maxCoeff());
 
 	file << "all,";
 	if (total_max_cuboid_distance < 0)
 		file << "none" << std::endl;
 	else
 		file << total_max_cuboid_distance << std::endl;
-
-	file.close();
 }

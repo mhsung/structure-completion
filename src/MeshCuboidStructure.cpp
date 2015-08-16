@@ -1453,6 +1453,19 @@ std::vector<MeshCuboid *> MeshCuboidStructure::get_all_cuboids() const
 	return all_cuboids;
 }
 
+void MeshCuboidStructure::get_all_cuboid_surface_points(
+	std::vector<MeshCuboidSurfacePoint *> &all_cuboid_surface_points) const
+{
+	all_cuboid_surface_points.clear();
+	const std::vector<MeshCuboid *> all_cuboids = get_all_cuboids();
+	for (std::vector<MeshCuboid *>::const_iterator it = all_cuboids.begin();
+		it != all_cuboids.end(); ++it) {
+		assert(*it);
+		all_cuboid_surface_points.insert(all_cuboid_surface_points.end(),
+			(*it)->get_cuboid_surface_points().begin(), (*it)->get_cuboid_surface_points().end());
+	}
+}
+
 MeshSamplePoint *MeshCuboidStructure::add_sample_point(
 	const MyMesh::Point& _point, const MyMesh::Normal& _normal)
 {

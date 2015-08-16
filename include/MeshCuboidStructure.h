@@ -75,7 +75,10 @@ public:
 
 	bool save_sample_point_labels(const char *_filename, bool _verbose = true) const;
 
-	std::vector<MeshCuboid *> get_all_cuboids()const;
+	std::vector<MeshCuboid *> get_all_cuboids() const;
+
+	void get_all_cuboid_surface_points(
+		std::vector<MeshCuboidSurfacePoint *> &all_cuboid_surface_points) const;
 
 	// Get sample point labels from the confidence values.
 	void get_sample_point_label_indices_from_confidences(std::vector<LabelIndex> &_sample_point_label_indices);
