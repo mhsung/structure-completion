@@ -141,6 +141,9 @@ bool MeshViewerCore::load_object_info(
 	_cuboid_structure.clear_cuboids();
 	_cuboid_structure.clear_sample_points();
 
+	std::stringstream cuboid_filepath_sstr; cuboid_filepath_sstr.str("");
+	if (_cuboid_filepath) cuboid_filepath_sstr << _cuboid_filepath;
+
 	if ((&_mesh) == (&mesh_))
 	{
 		ret = open_mesh(_mesh_filepath);
@@ -196,8 +199,12 @@ bool MeshViewerCore::load_object_info(
 
 		_cuboid_structure.apply_mesh_face_labels_to_sample_points();
 
-		if (_verbose) std::cout << " - Compute ground truth cuboids." << std::endl;
-		_cuboid_structure.compute_label_cuboids();
+		// NOTE: Cuboid filepath should NOT be given in this case.
+		assert(_cuboid_filepath == NULL);
+
+		// Set ground truth cuboid file path.
+		cuboid_filepath_sstr.clear(); cuboid_filepath_sstr.str("");
+		cuboid_filepath_sstr << FLAGS_training_dir << std::string("/") << mesh_name << std::string(".arff");
 	}
 	else if (_option == LoadTestData || _option == LoadDenseTestData)
 	{
@@ -218,11 +225,16 @@ bool MeshViewerCore::load_object_info(
 		}
 	}
 
-	if (_cuboid_filepath)
+	if (cuboid_filepath_sstr.str() != "")
 	{
-		assert(_option != LoadGroundTruthCuboids);
+		QFileInfo cuboid_file(cuboid_filepath_sstr.str().c_str());
+		if (!cuboid_file.exists())
+		{
+			std::cerr << "Error: The cuboid file does not exist (" << cuboid_filepath_sstr.str() << ")." << std::endl;
+			return false;
+		}
 
-		ret = _cuboid_structure.load_cuboids(_cuboid_filepath, _verbose);
+		ret = _cuboid_structure.load_cuboids(cuboid_filepath_sstr.str().c_str(), _verbose);
 		if (!ret) return false;
 
 		std::vector<MeshCuboid *> all_cuboids = _cuboid_structure.get_all_cuboids();
