@@ -3,7 +3,7 @@ clear all;
 addpath 'lib'
 addpath 'lib/kovesi'
 
-filename = 'table002.out';
+filename = 'table004.out';
 
 
 %% parameters
@@ -28,7 +28,7 @@ Depth_filtered = medfilt2(Depth,[8 8]);
 % Depth_filtered = bfilter2(Depth_filtered,filter_w,filter_sigma);
 A = Depth_filtered * max_A;
 
-depth_image_brightness = 3;
+depth_image_brightness = 1;
 Depth = Depth * depth_image_brightness;
 Depth_filtered = Depth_filtered * depth_image_brightness;
 hold on; imshow(Depth); title('Depth image'); hold off;

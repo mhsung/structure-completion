@@ -927,18 +927,15 @@ void reconstruct_fusion(const char *_mesh_filepath,
 
 
 	// Add unvisited (unsegmented) sample points in symmetry reconstruction.
-	if (_add_outliers)
+	for (SamplePointIndex sample_point_index = 0; sample_point_index < _symmetry_cuboid_structure.num_sample_points();
+		++sample_point_index)
 	{
-		for (SamplePointIndex sample_point_index = 0; sample_point_index < _symmetry_cuboid_structure.num_sample_points();
-			++sample_point_index)
+		if (!is_symmetry_point_visited[sample_point_index])
 		{
-			if (!is_symmetry_point_visited[sample_point_index])
-			{
-				const MeshSamplePoint *sample_point = _symmetry_cuboid_structure.sample_points_[sample_point_index];
-				assert(sample_point);
-				MeshSamplePoint *new_sample_point = _output_cuboid_structure.add_sample_point(
-					sample_point->point_, sample_point->normal_);
-			}
+			const MeshSamplePoint *sample_point = _symmetry_cuboid_structure.sample_points_[sample_point_index];
+			assert(sample_point);
+			MeshSamplePoint *new_sample_point = _output_cuboid_structure.add_sample_point(
+				sample_point->point_, sample_point->normal_);
 		}
 	}
 
