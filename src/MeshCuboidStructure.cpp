@@ -1630,14 +1630,6 @@ void MeshCuboidStructure::apply_mesh_face_labels_to_cuboids()
 	query_label_index_ = num_labels();
 }
 
-void MeshCuboidStructure::get_mesh_face_label_cuboids(bool _add_sample_points_from_mesh_vertices)
-{
-	// Apple mesh face labels to sample points.
-	apply_mesh_face_labels_to_sample_points();
-
-	compute_label_cuboids();
-}
-
 void MeshCuboidStructure::compute_label_cuboids()
 {
 	clear_cuboids();

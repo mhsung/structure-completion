@@ -180,7 +180,7 @@ bool MeshViewerCore::load_object_info(
 
 		_cuboid_structure.apply_mesh_face_labels_to_sample_points();
 	}
-	else if (_option == LoadGroundTruthData)
+	else if (_option == LoadGroundTruthCuboids)
 	{
 		if (_verbose) std::cout << " - Load mesh face labels." << std::endl;
 		ret = _mesh.load_face_label_simple(mesh_label_filepath.c_str(), false);
@@ -194,8 +194,10 @@ bool MeshViewerCore::load_object_info(
 		ret = _cuboid_structure.load_sample_points(dense_sample_filepath.c_str(), false);
 		assert(ret);
 
+		_cuboid_structure.apply_mesh_face_labels_to_sample_points();
+
 		if (_verbose) std::cout << " - Compute ground truth cuboids." << std::endl;
-		_cuboid_structure.get_mesh_face_label_cuboids();
+		_cuboid_structure.compute_label_cuboids();
 	}
 	else if (_option == LoadTestData || _option == LoadDenseTestData)
 	{
@@ -218,7 +220,7 @@ bool MeshViewerCore::load_object_info(
 
 	if (_cuboid_filepath)
 	{
-		assert(_option != LoadGroundTruthData);
+		assert(_option != LoadGroundTruthCuboids);
 
 		ret = _cuboid_structure.load_cuboids(_cuboid_filepath, _verbose);
 		if (!ret) return false;
@@ -453,8 +455,11 @@ void MeshViewerCore::compute_ground_truth_cuboids()
 		return;
 	}
 
-	ret = load_object_info(mesh_, cuboid_structure_, mesh_filepath.c_str(), LoadGroundTruthData);
+	ret = load_object_info(mesh_, cuboid_structure_, mesh_filepath.c_str(), LoadDenseSamplePoints);
 	if (!ret) return;
+
+	// Compute initial ground truth cuboids.
+	cuboid_structure_.compute_label_cuboids();
 
 	mesh_.clear_colors();
 	open_modelview_matrix_file(FLAGS_pose_filename.c_str());

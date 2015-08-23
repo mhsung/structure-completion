@@ -188,7 +188,9 @@ void MeshViewerCore::open_mesh_face_label_file(const char* _filename)
 
 void MeshViewerCore::create_mesh_cuboids()
 {
-	cuboid_structure_.get_mesh_face_label_cuboids();
+	// Apple mesh face labels to sample points.
+	cuboid_structure_.apply_mesh_face_labels_to_sample_points();
+	cuboid_structure_.compute_label_cuboids();
 	updateGL();
 }
 

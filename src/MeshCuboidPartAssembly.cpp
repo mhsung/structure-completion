@@ -776,7 +776,7 @@ void MeshViewerCore::run_part_assembly()
 	}
 
 	ret = load_object_info(ground_truth_mesh, ground_truth_cuboid_structure,
-		mesh_filepath.c_str(), LoadGroundTruthData);
+		mesh_filepath.c_str(), LoadGroundTruthCuboids);
 	assert(ret);
 	MeshCuboidEvaluator evaluator(&ground_truth_cuboid_structure);
 

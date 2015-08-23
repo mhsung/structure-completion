@@ -90,7 +90,7 @@ private:
 		LoadMesh,
 		LoadSamplePoints,
 		LoadDenseSamplePoints,
-		LoadGroundTruthData,
+		LoadGroundTruthCuboids,
 		LoadTestData,
 		LoadDenseTestData
 	} LoadObjectInfoOption;

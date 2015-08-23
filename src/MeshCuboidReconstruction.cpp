@@ -123,7 +123,7 @@ void MeshViewerCore::reconstruct(
 	}
 
 	ret = load_object_info(ground_truth_mesh, ground_truth_cuboid_structure,
-		_mesh_filepath, LoadGroundTruthData);
+		_mesh_filepath, LoadGroundTruthCuboids);
 	assert(ret);
 	MeshCuboidEvaluator evaluator(&ground_truth_cuboid_structure);
 	//
@@ -288,7 +288,7 @@ void MeshViewerCore::run_render_output()
 	}
 
 	ret = load_object_info(ground_truth_mesh, ground_truth_cuboid_structure,
-		mesh_filepath.c_str(), LoadGroundTruthData);
+		mesh_filepath.c_str(), LoadGroundTruthCuboids);
 	assert(ret);
 	MeshCuboidEvaluator evaluator(&ground_truth_cuboid_structure);
 
@@ -419,7 +419,7 @@ void MeshViewerCore::run_render_evaluation()
 	}
 
 	ret = load_object_info(ground_truth_mesh, ground_truth_cuboid_structure,
-		mesh_filepath.c_str(), LoadGroundTruthData);
+		mesh_filepath.c_str(), LoadGroundTruthCuboids);
 	assert(ret);
 	MeshCuboidEvaluator evaluator(&ground_truth_cuboid_structure);
 

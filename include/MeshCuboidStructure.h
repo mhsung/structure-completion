@@ -103,10 +103,6 @@ public:
 	// but not modify existing parts except their labels.
 	void apply_mesh_face_labels_to_cuboids();
 
-	// Apple mesh face labels to sample points,
-	// and re-create parts based on sample point labels.
-	void get_mesh_face_label_cuboids(bool _add_sample_points_from_mesh_vertices = false);
-
 	// Find the largest part for each label.
 	void find_the_largest_label_cuboids();
 
