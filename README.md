@@ -1,5 +1,12 @@
-cuboid-prediction
+## Data-driven Structural Priors for Shape Completion
+SIGGRAPH Asia 2015
+Minhyuk Sung, Vladimir G. Kim, Roland Angst, Leonidas Guibas
+
 =================
+
+## Installation
+See 'lib/install_libraries.sh' for required libraries.
+
 
 ## Prepare a new dataset
 
