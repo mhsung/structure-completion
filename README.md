@@ -1,14 +1,14 @@
-## Data-driven Structural Priors for Shape Completion
-SIGGRAPH Asia 2015
-Minhyuk Sung, Vladimir G. Kim, Roland Angst, Leonidas Guibas
+### Data-driven Structural Priors for Shape Completion<p>
+SIGGRAPH Asia 2015<p>
+Minhyuk Sung, Vladimir G. Kim, Roland Angst, Leonidas Guibas<p>
 
 =================
 
-## Installation
+### Installation
 See 'lib/install_libraries.sh' for required libraries.
 
 
-## Prepare a new dataset
+### Prepare a new dataset
 
 0. Prepare mesh files and label files (*.off, *.gt)<br>
 Make sure that all mesh files have *UNIT LENGTH* from the bounding box center to the farthest point.
@@ -61,7 +61,7 @@ For example, all legs of chairs are considered as symmetric each other when trai
 <br>
 
 
-## Train/test local point classifiers
+### Train/test local point classifiers
 
 Make sure that all files are prepared as mentioned above.
 
@@ -91,7 +91,7 @@ The prediction files are generated in<br>
 <br>
 
 
-## Run experiments
+### Run experiments
 
 0. Compile code<br>
 In `../../build/OSMesaViewer/build`, `make`.<br>
@@ -155,7 +155,7 @@ Tex files and relates image files are generated in `($cuboid-prediction)/report`
 <br>
 
 
-## Parameters
+### Parameters
 
 The followings are remarkable parameters (can be set by adding in the `arguments.txt` file):<br>
 
@@ -192,7 +192,7 @@ The view plane 2D occlusion mask is created so that this proportion of points ar
 <br>
 
 
-## Experiment result files
+### Experiment result files
 `($shape2pose)/data/0_body/`, `($shape2pose)/data/1_input/`<br>
 assembly_airplanes<br>
 assembly_bicycles<br>
