@@ -3,7 +3,7 @@ clear all;
 addpath 'lib'
 addpath 'lib/kovesi'
 
-filename = 'table004.out';
+filename = 'depth_70.out';
 
 
 %% parameters
@@ -31,10 +31,10 @@ A = Depth_filtered * max_A;
 depth_image_brightness = 1;
 Depth = Depth * depth_image_brightness;
 Depth_filtered = Depth_filtered * depth_image_brightness;
-hold on; imshow(Depth); title('Depth image'); hold off;
-hold on; imshow(Depth_filtered); title('Depth image (filtered)'); hold off;
-imwrite(Depth, 'depth_image.png');
-imwrite(Depth_filtered, 'depth_image_filtered.png');
+hold on; imshow(3 * Depth); title('Depth image'); hold off;
+hold on; imshow(3 * Depth_filtered); title('Depth image (filtered)'); hold off;
+imwrite(3 * Depth, 'depth_image.png');
+imwrite(3 * Depth_filtered, 'depth_image_filtered.png');
 fclose(fileID);
 
 %%

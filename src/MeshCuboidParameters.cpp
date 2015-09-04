@@ -108,7 +108,6 @@ DEFINE_string(joint_normal_relation_filename_prefix, "joint_normal_", "");
 DEFINE_string(cond_normal_relation_filename_prefix, "conditional_normal_", "");
 DEFINE_string(object_list_filename, "object_list.txt", "");
 
-DEFINE_double(occlusion_test_radius, 0.01, "");
 DEFINE_int32(random_view_seed, 20150416, "");
 
 // To be removed.

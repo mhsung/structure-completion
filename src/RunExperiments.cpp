@@ -2331,7 +2331,7 @@ void MeshViewerCore::run_occlusion_test()
 
 	std::array<Eigen::Matrix<float, Eigen::Dynamic, Eigen::Dynamic, Eigen::RowMajor>, 4> occlusion_test_result;
 	occlusion_test_widget_->get_occlusion_test_result(
-		static_cast<float>(FLAGS_occlusion_test_radius), occlusion_test_result);
+		static_cast<float>(FLAGS_param_occlusion_test_neighbor_distance), occlusion_test_result);
 
 	occlusion_test_points_.clear();
 	occlusion_test_points_.reserve(occlusion_test_result[0].rows() * occlusion_test_result[0].cols());
