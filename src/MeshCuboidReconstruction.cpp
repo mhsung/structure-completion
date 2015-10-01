@@ -291,8 +291,6 @@ void MeshViewerCore::run_render_output()
 		mesh_filepath.c_str(), LoadGroundTruthCuboids);
 	assert(ret);
 	MeshCuboidEvaluator evaluator(&ground_truth_cuboid_structure);
-
-	setDrawMode(POINT_SAMPLES);
 	//
 
 	std::string point_filepath;
@@ -304,8 +302,31 @@ void MeshViewerCore::run_render_output()
 	while (true)
 	{
 		result_file_prefix.clear(); result_file_prefix.str("");
-		result_file_prefix << FLAGS_output_dir << "/" << mesh_name << std::string("/") << mesh_name
+		result_file_prefix << FLAGS_output_dir << "/" << mesh_name << "/" << mesh_name
 			<< "_" << candidate_index;
+
+		// 0. Render resulting cuboids.
+		point_filepath = FLAGS_output_dir + std::string("/") + mesh_name + std::string("/")
+			+ mesh_name + std::string("_input.pts");
+		std::string cuboid_filename = result_file_prefix.str() + std::string(".arff");
+
+		ret = load_result_info(mesh_, cuboid_structure_,
+			mesh_filepath.c_str(), point_filepath.c_str(), NULL, cuboid_filename.c_str());
+		if (!ret) break;
+		open_modelview_matrix_file(FLAGS_pose_filename.c_str());
+
+		//
+		cuboid_structure_.compute_symmetry_groups();
+		//
+
+		setDrawMode(CUSTOM_VIEW);
+		draw_cuboid_axes_ = false;
+		output_filename_sstr.clear(); output_filename_sstr.str("");
+		output_filename_sstr << result_file_prefix.str();
+		snapshot(output_filename_sstr.str().c_str());
+
+		cuboid_structure_.clear_cuboids();
+		setDrawMode(POINT_SAMPLES);
 
 
 		// 1. Reconstruction using symmetry.
@@ -354,6 +375,8 @@ void MeshViewerCore::run_render_output()
 
 		++candidate_index;
 	}
+
+	setDrawMode(POINT_SAMPLES);
 
 	// 4. Part Assembly.
 	result_file_prefix.clear(); result_file_prefix.str("");

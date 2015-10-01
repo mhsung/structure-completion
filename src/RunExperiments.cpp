@@ -235,7 +235,11 @@ bool MeshViewerCore::load_object_info(
 		}
 
 		ret = _cuboid_structure.load_cuboids(cuboid_filepath_sstr.str().c_str(), _verbose);
-		if (!ret) return false;
+		if (!ret)
+		{
+			std::cerr << "Error: Can't load cuboid (" << cuboid_filepath_sstr.str() << ")." << std::endl;
+			return false;
+		}
 
 		std::vector<MeshCuboid *> all_cuboids = _cuboid_structure.get_all_cuboids();
 		for (std::vector<MeshCuboid *>::iterator it = all_cuboids.begin(); it != all_cuboids.end(); ++it)
