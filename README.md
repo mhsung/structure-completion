@@ -1,15 +1,16 @@
-### Data-driven Structural Priors for Shape Completion<p>
-Minhyuk Sung, Vladimir G. Kim, Roland Angst, and Leonidas Guibas<p>
-SIGGRAPH Asia 2015<p>
+### Data-driven Structural Priors for Shape Completion<br>
+Minhyuk Sung, Vladimir G. Kim, Roland Angst, and Leonidas Guibas<br>
+SIGGRAPH Asia 2015<br>
+<p>
 
-Citation:
+**Citation:**<br>
 Please cite our paper if you use this code:<br>
 >Minhyuk Sung, Vladimir G. Kim, Roland Angst, and Leonidas Guibas<br>
 Data-driven Structural Priors for Shape Completion,<br>
 ACM Transactions on Graphics (Proc. SIGGRAPH Asia 2015)<br>
 <p>
 
-License:<br>
+**License:**<br>
 This software is under Open Source MIT License.<br>
 <br>
 The MIT License (MIT)<br>
