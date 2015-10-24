@@ -445,14 +445,20 @@ void MeshViewerCore::run_render_evaluation()
 		mesh_filepath.c_str(), LoadGroundTruthCuboids);
 	assert(ret);
 	MeshCuboidEvaluator evaluator(&ground_truth_cuboid_structure);
-
-	setDrawMode(COLORED_POINT_SAMPLES);
 	//
 
 	std::string point_filepath;
 	std::string label_filepath;
 	std::stringstream result_file_prefix;
 	std::stringstream output_filename_sstr;
+
+	cuboid_structure_ = ground_truth_cuboid_structure;
+
+	setDrawMode(POINT_SAMPLES);
+	updateGL();
+	output_filename_sstr.clear(); output_filename_sstr.str("");
+	output_filename_sstr << result_file_prefix.str() << std::string("_ground_truth");
+	snapshot(output_filename_sstr.str().c_str());
 
 	unsigned int candidate_index = 0;
 	while (true)
@@ -476,12 +482,22 @@ void MeshViewerCore::run_render_evaluation()
 		output_filename_sstr << result_file_prefix.str() << std::string("_symmetry");
 		evaluator.evaluate_point_to_point_distances(&cuboid_structure_, output_filename_sstr.str().c_str());
 
+		// Accuracy
+		setDrawMode(POINT_SAMPLES);
+		updateGL();
+		output_filename_sstr.clear(); output_filename_sstr.str("");
+		output_filename_sstr << result_file_prefix.str() << std::string("_symmetry_output");
+		snapshot(output_filename_sstr.str().c_str());
+
+		setDrawMode(COLORED_POINT_SAMPLES);
 		updateGL();
 		output_filename_sstr.clear(); output_filename_sstr.str("");
 		output_filename_sstr << result_file_prefix.str() << std::string("_symmetry_accuracy");
 		snapshot(output_filename_sstr.str().c_str());
 
+		// Completeness
 		cuboid_structure_ = ground_truth_cuboid_structure;
+		setDrawMode(COLORED_POINT_SAMPLES);
 		updateGL();
 		output_filename_sstr.clear(); output_filename_sstr.str("");
 		output_filename_sstr << result_file_prefix.str() << std::string("_symmetry_completeness");
@@ -502,12 +518,22 @@ void MeshViewerCore::run_render_evaluation()
 		output_filename_sstr << result_file_prefix.str() << std::string("_database");
 		evaluator.evaluate_point_to_point_distances(&cuboid_structure_, output_filename_sstr.str().c_str());
 
+		// Accuracy
+		setDrawMode(POINT_SAMPLES);
+		updateGL();
+		output_filename_sstr.clear(); output_filename_sstr.str("");
+		output_filename_sstr << result_file_prefix.str() << std::string("_database_output");
+		snapshot(output_filename_sstr.str().c_str());
+
+		setDrawMode(COLORED_POINT_SAMPLES);
 		updateGL();
 		output_filename_sstr.clear(); output_filename_sstr.str("");
 		output_filename_sstr << result_file_prefix.str() << std::string("_database_accuracy");
 		snapshot(output_filename_sstr.str().c_str());
 
+		// Completeness
 		cuboid_structure_ = ground_truth_cuboid_structure;
+		setDrawMode(COLORED_POINT_SAMPLES);
 		updateGL();
 		output_filename_sstr.clear(); output_filename_sstr.str("");
 		output_filename_sstr << result_file_prefix.str() << std::string("_database_completeness");
@@ -528,12 +554,22 @@ void MeshViewerCore::run_render_evaluation()
 		output_filename_sstr << result_file_prefix.str() << std::string("_fusion");
 		evaluator.evaluate_point_to_point_distances(&cuboid_structure_, output_filename_sstr.str().c_str());
 
+		// Accuracy
+		setDrawMode(POINT_SAMPLES);
+		updateGL();
+		output_filename_sstr.clear(); output_filename_sstr.str("");
+		output_filename_sstr << result_file_prefix.str() << std::string("_fusion_output");
+		snapshot(output_filename_sstr.str().c_str());
+
+		setDrawMode(COLORED_POINT_SAMPLES);
 		updateGL();
 		output_filename_sstr.clear(); output_filename_sstr.str("");
 		output_filename_sstr << result_file_prefix.str() << std::string("_fusion_accuracy");
 		snapshot(output_filename_sstr.str().c_str());
 
+		// Completeness
 		cuboid_structure_ = ground_truth_cuboid_structure;
+		setDrawMode(COLORED_POINT_SAMPLES);
 		updateGL();
 		output_filename_sstr.clear(); output_filename_sstr.str("");
 		output_filename_sstr << result_file_prefix.str() << std::string("_fusion_completeness");
@@ -561,12 +597,21 @@ void MeshViewerCore::run_render_evaluation()
 		output_filename_sstr << result_file_prefix.str() << std::string("_assembly");
 		evaluator.evaluate_point_to_point_distances(&cuboid_structure_, output_filename_sstr.str().c_str());
 
+		// Accuracy
+		setDrawMode(POINT_SAMPLES);
+		updateGL();
+		output_filename_sstr.clear(); output_filename_sstr.str("");
+		output_filename_sstr << result_file_prefix.str() << std::string("_assembly_output");
+		snapshot(output_filename_sstr.str().c_str());
+
+		setDrawMode(COLORED_POINT_SAMPLES);
 		updateGL();
 		output_filename_sstr.clear(); output_filename_sstr.str("");
 		output_filename_sstr << result_file_prefix.str() << std::string("_assembly_accuracy");
 		snapshot(output_filename_sstr.str().c_str());
 
-		cuboid_structure_ = ground_truth_cuboid_structure;
+		// Completeness
+		setDrawMode(COLORED_POINT_SAMPLES);
 		updateGL();
 		output_filename_sstr.clear(); output_filename_sstr.str("");
 		output_filename_sstr << result_file_prefix.str() << std::string("_assembly_completeness");
@@ -592,12 +637,22 @@ void MeshViewerCore::run_render_evaluation()
 		output_filename_sstr << result_file_prefix.str() << std::string("_symm_detection_recon");
 		evaluator.evaluate_point_to_point_distances(&cuboid_structure_, output_filename_sstr.str().c_str());
 
+		// Accuracy
+		setDrawMode(POINT_SAMPLES);
+		updateGL();
+		output_filename_sstr.clear(); output_filename_sstr.str("");
+		output_filename_sstr << result_file_prefix.str() << std::string("_symm_detection_output");
+		snapshot(output_filename_sstr.str().c_str());
+
+		setDrawMode(COLORED_POINT_SAMPLES);
 		updateGL();
 		output_filename_sstr.clear(); output_filename_sstr.str("");
 		output_filename_sstr << result_file_prefix.str() << std::string("_symm_detection_accuracy");
 		snapshot(output_filename_sstr.str().c_str());
 
+		// Completeness
 		cuboid_structure_ = ground_truth_cuboid_structure;
+		setDrawMode(COLORED_POINT_SAMPLES);
 		updateGL();
 		output_filename_sstr.clear(); output_filename_sstr.str("");
 		output_filename_sstr << result_file_prefix.str() << std::string("_symm_detection_completeness");
