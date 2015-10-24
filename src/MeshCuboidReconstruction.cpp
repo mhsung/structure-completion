@@ -452,6 +452,10 @@ void MeshViewerCore::run_render_evaluation()
 	std::stringstream result_file_prefix;
 	std::stringstream output_filename_sstr;
 
+	open_modelview_matrix_file(FLAGS_pose_filename.c_str());
+	result_file_prefix.clear(); result_file_prefix.str("");
+	result_file_prefix << FLAGS_output_dir << "/" << mesh_name << std::string("/") << mesh_name;
+
 	cuboid_structure_ = ground_truth_cuboid_structure;
 
 	setDrawMode(POINT_SAMPLES);
