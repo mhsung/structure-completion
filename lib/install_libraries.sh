@@ -61,7 +61,7 @@ cd ../../
 
 # glog
 rm -rf glog-0.3.3
-wget https://google-glog.googlecode.com/files/glog-0.3.3.tar.gz --no-check-cerificate
+wget https://google-glog.googlecode.com/files/glog-0.3.3.tar.gz --no-check-certificate
 tar xvf glog-0.3.3.tar.gz
 rm -rf glog-0.3.3.tar.gz
 cd glog-0.3.3
