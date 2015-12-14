@@ -60,11 +60,9 @@ make test
 cd ../../
 
 # glog
-rm -rf glog-0.3.3
-wget https://google-glog.googlecode.com/files/glog-0.3.3.tar.gz --no-check-certificate
-tar xvf glog-0.3.3.tar.gz
-rm -rf glog-0.3.3.tar.gz
-cd glog-0.3.3
+rm -rf glog
+git clone https://github.com/google/glog.git
+cd glog
 mkdir build
 ./configure --prefix=$(pwd)/build
 make
