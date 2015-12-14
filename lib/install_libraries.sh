@@ -32,11 +32,11 @@ fi
 cd ../
 
 # Eigen
-rm -rf eigen-3.2.2
-wget https://bitbucket.org/eigen/eigen/get/3.2.2.tar.gz --no-check-certificate
-tar xvf 3.2.2.tar.gz
-rm -rf 3.2.2.tar.gz
-mv eigen-eigen-* eigen-3.2.2
+rm -rf eigen-3.2.7
+wget https://bitbucket.org/eigen/eigen/get/3.2.7.tar.gz --no-check-certificate
+tar xvf 3.2.7.tar.gz
+rm -rf 3.2.7.tar.gz
+mv eigen-eigen-* eigen-3.2.7
 
 # gflags
 git clone https://github.com/gflags/gflags.git
