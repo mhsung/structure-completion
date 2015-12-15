@@ -61,7 +61,7 @@ elseif (WIN32)
 include_directories (
   ${LIBRARY_ROOT_PATH}/Ipopt-3.11.0/include/coin
   ${LIBRARY_ROOT_PATH}/glew-1.11.0/include
-  #${LIBRARY_ROOT_PATH}/glog-0.3.3/src/windows
+  #${LIBRARY_ROOT_PATH}/glog/src/windows
 )
 
 link_directories (
@@ -70,7 +70,7 @@ link_directories (
   ${LIBRARY_ROOT_PATH}/glew-1.11.0/lib/Release/x64/
   ${LIBRARY_ROOT_PATH}/Ipopt-3.11.0/lib/x64/ReleaseMKL/
   #${LIBRARY_ROOT_PATH}/ceres-solver-1.10.0/build/lib/
-  #${LIBRARY_ROOT_PATH}/glog-0.3.3/x64/
+  #${LIBRARY_ROOT_PATH}/glog/x64/
 )
 
 set (libraries
