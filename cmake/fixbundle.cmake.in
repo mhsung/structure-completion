@@ -54,7 +54,7 @@ include (BundleUtilities)
 #  get_filename_component(_GlutDir "@GLUT_glut_LIBRARY@" PATH)
 
 #  # fix all dependencies
-#  fixup_bundle (@CMAKE_BINARY_DIR@/Build/bin/@targetName@ "${_qtplugins}" "/usr/lib;${_qtdirs};${_GlutDir}")
+#  fixup_bundle (@CMAKE_BINARY_DIR@/Build/bin/@target_name@ "${_qtplugins}" "/usr/lib;${_qtdirs};${_GlutDir}")
 #
 #endif()
 
