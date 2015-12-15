@@ -14,7 +14,7 @@ set (LIBRARY_ROOT_PATH ${CMAKE_CURRENT_LIST_DIR}/../../../lib CACHE PATH "The di
 set (OPENMESH_DIR ${LIBRARY_ROOT_PATH}/OpenMesh CACHE PATH "The directory where the OpenMesh files can be found.")
 
 
-set (CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} ${CMAKE_SOURCE_DIR}/cmake ${CMAKE_CURRENT_LIST_DIR}/cmake ${OPENMESH_DIR}/cmake)
+set (CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} ${CMAKE_CURRENT_LIST_DIR} ${OPENMESH_DIR}/cmake)
 set (CMAKE_DEBUG_POSTFIX "d")
 
 # add our macro directory to cmake search path
@@ -60,8 +60,7 @@ endif()
 
 if (APPLE)
   add_custom_target (fixbundle ALL
-    COMMAND ${CMAKE_COMMAND} -P "${CMAKE_BINARY_DIR}/fixbundle.cmake"
-    )
+    COMMAND ${CMAKE_COMMAND} -P "${CMAKE_BINARY_DIR}/fixbundle.cmake" )
 endif()
 
 
@@ -70,7 +69,9 @@ endif()
 # ========================================================================
 if (WIN32)
   # prepare bundle generation cmake file and add a build target for it
-  configure_file ("${OPENMESH_DIR}/cmake/fixbundle.cmake.win.in"
+  # NOTE: use the 'fixbundle.cmake.win.in' in the current directory
+  # instead of the same file in '${OPENMESH_DIR}/cmake'
+  configure_file ("${CMAKE_CURRENT_LIST_DIR}/fixbundle.cmake.win.in"
     "${CMAKE_BINARY_DIR}/fixbundle.win.cmake" @ONLY IMMEDIATE)
 
   if ( NOT "${CMAKE_GENERATOR}" MATCHES "MinGW Makefiles" )
@@ -82,7 +83,9 @@ endif()
 
 if (APPLE)
   # prepare bundle generation cmake file and add a build target for it
-  configure_file ("${OPENMESH_DIR}/cmake/fixbundle.cmake.in"
+  # NOTE: use the 'fixbundle.cmake.in' in the current directory
+  # instead of the same file in '${OPENMESH_DIR}/cmake'
+  configure_file ("${CMAKE_CURRENT_LIST_DIR}/fixbundle.cmake.in"
     "${CMAKE_BINARY_DIR}/fixbundle.cmake" @ONLY IMMEDIATE)
 
   # let bundle generation depend on all targets
@@ -155,7 +158,7 @@ endif()
 # ========================================================================
 # Link source files and libraries
 # ========================================================================
-include (${CMAKE_CURRENT_LIST_DIR}/LinkLibraries.cmake)
+include (LinkLibraries)
 
 include_directories (
   ${CMAKE_SOURCE_DIR}/src/

@@ -37,8 +37,8 @@ include_directories (
 
 link_directories (
   ${LIBRARY_ROOT_PATH}/ann-1.1.2/lib/
-  ${LIBRARY_ROOT_PATH}/glew-1.12.0/build/lib/
   ${LIBRARY_ROOT_PATH}/gflags/build/lib/
+  ${LIBRARY_ROOT_PATH}/glew-1.12.0/build/lib/
   ${LIBRARY_ROOT_PATH}/Ipopt-3.12.1/build/lib/
   #${LIBRARY_ROOT_PATH}/ceres-solver-1.10.0/build/lib/
   #${LIBRARY_ROOT_PATH}/glog/build/lib/
@@ -46,8 +46,8 @@ link_directories (
 
 set (libraries
   ANN
-  GLEW
   gflags
+  GLEW
   ipopt
   coinmetis
   coinmumps
@@ -66,21 +66,21 @@ include_directories (
 
 link_directories (
   ${LIBRARY_ROOT_PATH}/ann-1.1.2/build/bin/
+  ${LIBRARY_ROOT_PATH}/gflags/build/lib/
   ${LIBRARY_ROOT_PATH}/glew-1.11.0/lib/Release/x64/
   ${LIBRARY_ROOT_PATH}/Ipopt-3.11.0/lib/x64/ReleaseMKL/
+  #${LIBRARY_ROOT_PATH}/ceres-solver-1.10.0/build/lib/
+  #${LIBRARY_ROOT_PATH}/glog-0.3.3/x64/
 )
 
 set (libraries
   ANN
+  gflags
   glew32
   IpOptFSS
   IpOpt-vc10
-  debug ${LIBRARY_ROOT_PATH}/gflags/build/lib/Debug/gflags.lib
-  optimized ${LIBRARY_ROOT_PATH}/gflags/build/lib/Release/gflags.lib
-  #debug ${LIBRARY_ROOT_PATH}/ceres-solver-1.10.0/build/lib/ceres-debug.lib
-  #optimized ${LIBRARY_ROOT_PATH}/ceres-solver-1.10.0/build/lib/ceres.lib
-  #debug ${LIBRARY_ROOT_PATH}/glog-0.3.3/x64/Debug/libglog.lib
-  #optimized ${LIBRARY_ROOT_PATH}/glog-0.3.3/x64/Release/libglog.lib
+  #debug ceres-debug optimized ceres
+  #libglog
 )
 
 endif()
