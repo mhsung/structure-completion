@@ -10,6 +10,7 @@ include_directories (
   ${CMAKE_CURRENT_LIST_DIR}/../interface/simplerandom
   #${CMAKE_CURRENT_LIST_DIR}/../shader
   ${LIBRARY_ROOT_PATH}/ann-1.1.2/include
+  ${LIBRARY_ROOT_PATH}/gflags/build/include
   ${LIBRARY_ROOT_PATH}/eigen-3.2.7
   ${LIBRARY_ROOT_PATH}/TRW_S-v1.3
   ${LIBRARY_ROOT_PATH}/wingsit_QP
@@ -30,7 +31,6 @@ if (UNIX)
 
 include_directories (
   ${LIBRARY_ROOT_PATH}/Ipopt-3.12.1/build/include/coin
-  ${LIBRARY_ROOT_PATH}/gflags/build/include
   ${LIBRARY_ROOT_PATH}/glew-1.12.0/include
   #${LIBRARY_ROOT_PATH}/glog/build/include
 )
@@ -60,7 +60,6 @@ elseif (WIN32)
 
 include_directories (
   ${LIBRARY_ROOT_PATH}/Ipopt-3.11.0/include/coin
-  ${LIBRARY_ROOT_PATH}/gflags-2.1.1/build/include
   ${LIBRARY_ROOT_PATH}/glew-1.11.0/include
   #${LIBRARY_ROOT_PATH}/glog-0.3.3/src/windows
 )
@@ -68,20 +67,20 @@ include_directories (
 link_directories (
   ${LIBRARY_ROOT_PATH}/ann-1.1.2/build/bin/
   ${LIBRARY_ROOT_PATH}/glew-1.11.0/lib/Release/x64/
-  ${LIBRARY_ROOT_PATH}/gflags-2.1.1/build/lib/${CMAKE_BUILD_TYPE}
   ${LIBRARY_ROOT_PATH}/Ipopt-3.11.0/lib/x64/ReleaseMKL/
-  #${LIBRARY_ROOT_PATH}/ceres-solver-1.10.0/build/lib/${CMAKE_BUILD_TYPE}
-  #${LIBRARY_ROOT_PATH}/glog-0.3.3/x64/${CMAKE_BUILD_TYPE}
 )
 
 set (libraries
   ANN
   glew32
-  gflags
   IpOptFSS
   IpOpt-vc10
-  #debug ceres-debug optimized ceres
-  #libglog
+  debug ${LIBRARY_ROOT_PATH}/gflags/build/lib/Debug/gflags.lib
+  optimized ${LIBRARY_ROOT_PATH}/gflags/build/lib/Release/gflags.lib
+  #debug ${LIBRARY_ROOT_PATH}/ceres-solver-1.10.0/build/lib/ceres-debug.lib
+  #optimized ${LIBRARY_ROOT_PATH}/ceres-solver-1.10.0/build/lib/ceres.lib
+  #debug ${LIBRARY_ROOT_PATH}/glog-0.3.3/x64/Debug/libglog.lib
+  #optimized ${LIBRARY_ROOT_PATH}/glog-0.3.3/x64/Release/libglog.lib
 )
 
 endif()
