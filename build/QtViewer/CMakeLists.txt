@@ -1,7 +1,7 @@
 cmake_minimum_required (VERSION 2.8)
-set (targetName QtViewer)
+set (target_name QtViewer)
 
-project (${targetName})
+project (${target_name})
 
 # import common lists
 include (${CMAKE_CURRENT_SOURCE_DIR}/../../cmake/CMakeListsCommon.cmake)

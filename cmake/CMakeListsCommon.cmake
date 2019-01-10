@@ -4,8 +4,8 @@
 # Last Modified: Dec. 2015
 ##################################
 
-# 'targetName' must be given
-if (NOT DEFINED targetName)
+# 'target_name' must be given
+if (NOT DEFINED target_name)
   message (FATAL_ERROR "Error: Build one of the subdirectories of 'build' directory")
 endif()
 
@@ -76,7 +76,7 @@ if (WIN32)
 
   if ( NOT "${CMAKE_GENERATOR}" MATCHES "MinGW Makefiles" )
     # let bundle generation depend on all targets
-    add_dependencies (fixbundle ${targetName})
+    add_dependencies (fixbundle ${target_name})
   endif()
 endif()
 
@@ -89,7 +89,7 @@ if (APPLE)
     "${CMAKE_BINARY_DIR}/fixbundle.cmake" @ONLY IMMEDIATE)
 
   # let bundle generation depend on all targets
-  add_dependencies (fixbundle ${targetName})
+  add_dependencies (fixbundle ${target_name})
 
   # Required for Snow leopard, and the latest qt. Then the resources have to be copied
   if ( EXISTS "/opt/local/libexec/qt4-mac/lib/QtGui.framework/Versions/4/Resources/qt_menu.nib" )
@@ -133,13 +133,13 @@ if (NOT "${CMAKE_GENERATOR}" MATCHES "MinGW Makefiles" )
   # Add ui apps as dependency before fixbundle 
   if ( WIN32 AND NOT "${CMAKE_GENERATOR}" MATCHES "MinGW Makefiles")
     # let bundle generation depend on all targets
-    add_dependencies (fixbundle ${targetName})
+    add_dependencies (fixbundle ${target_name})
   endif()
 
   # Add ui apps as dependency before fixbundle 
   if (APPLE)
     # let bundle generation depend on all targets
-    add_dependencies (fixbundle ${targetName})
+    add_dependencies (fixbundle ${target_name})
   endif()
 
   if (WIN32)
@@ -196,22 +196,22 @@ acg_qt4_autouic (uic_targets ${ui})
 acg_qt4_automoc (moc_targets ${headers})
 
 if (WIN32)
-  acg_add_executable (${targetName} WIN32 ${uic_targets} ${sources} ${headers} ${moc_targets})
+  acg_add_executable (${target_name} WIN32 ${uic_targets} ${sources} ${headers} ${moc_targets})
   # link to qtmain library to get WinMain function for a non terminal app
-  target_link_libraries (${targetName} ${QT_QTMAIN_LIBRARY})
+  target_link_libraries (${target_name} ${QT_QTMAIN_LIBRARY})
 else ()
-  acg_add_executable (${targetName} ${uic_targets} ${sources} ${headers} ${moc_targets})
+  acg_add_executable (${target_name} ${uic_targets} ${sources} ${headers} ${moc_targets})
 endif ()
 
-target_link_libraries (${targetName}
+target_link_libraries (${target_name}
   ${OPENGL_LIBRARIES}
   ${GLUT_LIBRARIES}
   ${QT_LIBRARIES}
 )
 
-target_link_libraries (${targetName}
+target_link_libraries (${target_name}
   debug OpenMeshCore${CMAKE_DEBUG_POSTFIX} optimized OpenMeshCore
   debug OpenMeshTools${CMAKE_DEBUG_POSTFIX} optimized OpenMeshTools
 )
 
-target_link_libraries (${targetName} ${libraries})
+target_link_libraries (${target_name} ${libraries})
